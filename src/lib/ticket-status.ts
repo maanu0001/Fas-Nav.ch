@@ -1,6 +1,11 @@
-import type { TicketStatus } from "@prisma/client";
+import type { Role, TicketStatus } from "@prisma/client";
 
-import { TICKET_STATUSES_FINAL } from "@/lib/constants";
+import {
+  TICKET_STATUSES_AWAITING_CUSTOMER,
+  TICKET_STATUSES_AWAITING_TEAM,
+  TICKET_STATUSES_FINAL,
+} from "@/lib/constants";
+import { isStaff } from "@/lib/rbac";
 import { truncate } from "@/lib/utils";
 
 /**
@@ -54,4 +59,23 @@ export function ticketReplyNotificationTitle(input: {
 }): string {
   const einleitung = input.forStaff ? "Neue Antwort in Ticket" : "Antwort auf Ticket";
   return `${einleitung} #${input.number}: ${truncate(input.subject, TICKET_SUBJECT_MAX)}`;
+}
+
+/**
+ * Zustände, die der Ticketzähler in der Seitenleiste mitzählt.
+ *
+ * Der Zähler beantwortet für jede Rolle dieselbe Frage – „worauf muss ich
+ * reagieren?" –, und die Antwort ist je nach Seite die entgegengesetzte:
+ * Admin und Team arbeiten die Tickets ab, die auf sie warten; eine
+ * Organisation die, in denen wir auf ihre Rückmeldung warten. Beide Listen
+ * enthalten keine abgeschlossenen Zustände, ein geschlossenes Ticket taucht
+ * also in keinem Zähler auf.
+ *
+ * Wer welche Tickets überhaupt sieht, entscheidet diese Funktion bewusst
+ * nicht: Dafür ist `ticketScope` zuständig, und beide Bedingungen werden
+ * miteinander verbunden. So kann hier kein Zähler entstehen, der mehr zählt
+ * als die Rolle sehen darf.
+ */
+export function ticketBadgeStatuses(role: Role): TicketStatus[] {
+  return isStaff(role) ? TICKET_STATUSES_AWAITING_TEAM : TICKET_STATUSES_AWAITING_CUSTOMER;
 }

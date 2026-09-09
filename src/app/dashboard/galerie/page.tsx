@@ -1,40 +1,22 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { GalleryManager } from "@/components/dashboard/gallery-manager";
-import { PageHeader } from "@/components/dashboard/page-header";
-import { FEATURE_KEYS } from "@/lib/constants";
 import { requireOrganizationContext } from "@/lib/dashboard-context";
-import { prisma } from "@/lib/prisma";
-import { featureAccess } from "@/lib/subscription";
+import { organizationGalleryPath } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Galerie" };
-
-export default async function GalleryPage() {
+/**
+ * Alter Weg zur eigenen Galerie.
+ *
+ * Es gibt nur noch eine Galerieseite je Organisation, und sie liegt unter
+ * dieser Organisation. Damit prüfen Menüweg und direkte Adresse dieselbe
+ * Berechtigung an derselben Stelle – vorher waren es zwei Seiten mit zwei
+ * Prüfungen, und genau daran ist der Verweis für Admin und Team gescheitert.
+ *
+ * Diese Adresse bleibt als Umleitung bestehen, damit gespeicherte Verweise
+ * und Lesezeichen weiterhin funktionieren.
+ */
+export default async function GalleryRedirectPage() {
   const context = await requireOrganizationContext();
-
-  const media = await prisma.media.findMany({
-    where: { organizationId: context.organization.id, type: "GALLERY" },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true, url: true, thumbnailUrl: true, alt: true, caption: true },
-  });
-
-  const access = featureAccess(context.subscription, FEATURE_KEYS.GALLERY);
-
-  return (
-    <>
-      <PageHeader
-        title="Galerie"
-        description="Bilder für deine öffentliche Seite. Erlaubt sind PNG, JPG und WebP."
-      />
-
-      <GalleryManager
-        organizationId={context.organization.id}
-        initial={media}
-        limit={access.limit}
-        enabled={access.enabled}
-      />
-    </>
-  );
+  redirect(organizationGalleryPath(context.organization.id));
 }

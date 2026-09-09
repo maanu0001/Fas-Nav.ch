@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  TICKET_STATUSES_AWAITING_CUSTOMER,
   TICKET_STATUSES_AWAITING_TEAM,
   TICKET_STATUSES_FINAL,
   TICKET_STATUS_LABELS,
@@ -9,10 +10,11 @@ import {
 import {
   nextTicketStatus,
   TICKET_SUBJECT_MAX,
+  ticketBadgeStatuses,
   ticketReplyNotificationTitle,
   ticketStatusChanged,
 } from "@/lib/ticket-status";
-import type { TicketStatus } from "@prisma/client";
+import type { Role, TicketStatus } from "@prisma/client";
 
 /**
  * Tests der Statusautomatik.
@@ -190,5 +192,69 @@ describe("ticketReplyNotificationTitle", () => {
   it("lässt kurze Betreffzeilen unangetastet", () => {
     const betreff = "K".repeat(TICKET_SUBJECT_MAX);
     assert.ok(ticketReplyNotificationTitle({ number: 9, subject: betreff }).endsWith(betreff));
+  });
+});
+
+/**
+ * Der Zähler in der Seitenleiste.
+ *
+ * Er beantwortet je Rolle dieselbe Frage aus entgegengesetzter Richtung:
+ * Worauf muss *ich* reagieren? Für das Team sind das die Tickets, die auf uns
+ * warten, für eine Organisation die, in denen wir auf sie warten.
+ */
+describe("ticketBadgeStatuses", () => {
+  it("zählt für Admin und Team die Tickets, die auf das Team warten", () => {
+    for (const role of ["ADMIN", "TEAM"] as Role[]) {
+      assert.deepEqual(ticketBadgeStatuses(role), TICKET_STATUSES_AWAITING_TEAM);
+      assert.ok(ticketBadgeStatuses(role).includes("OPEN"));
+    }
+  });
+
+  it("zählt für Fasnacht und Gugge die eigenen offenen Rückmeldungen", () => {
+    for (const role of ["FASNACHT", "GUGGE"] as Role[]) {
+      assert.deepEqual(ticketBadgeStatuses(role), TICKET_STATUSES_AWAITING_CUSTOMER);
+      assert.ok(ticketBadgeStatuses(role).includes("WAITING_FOR_CUSTOMER"));
+    }
+  });
+
+  it("zählt in keiner Rolle abgeschlossene Tickets", () => {
+    for (const role of ["ADMIN", "TEAM", "FASNACHT", "GUGGE"] as Role[]) {
+      for (const status of TICKET_STATUSES_FINAL) {
+        assert.ok(
+          !ticketBadgeStatuses(role).includes(status),
+          `${role} zählt ${status} mit`,
+        );
+      }
+    }
+  });
+
+  it("gibt den beiden Seiten nie dieselbe Liste", () => {
+    // Sonst zeigte der Zähler einer Organisation die Arbeit des Teams an –
+    // genau der Fehler, der hier behoben wurde.
+    const team = ticketBadgeStatuses("ADMIN");
+    const organisation = ticketBadgeStatuses("FASNACHT");
+    for (const status of organisation) {
+      assert.ok(!team.includes(status), `${status} steht in beiden Listen`);
+    }
+  });
+
+  it("passt zu dem, was die Antwortautomatik erzeugt", () => {
+    // Antwortet das Team, wartet das Ticket auf die Organisation und muss in
+    // deren Zähler auftauchen – und umgekehrt.
+    const nachTeamantwort = nextTicketStatus({
+      current: "OPEN",
+      fromStaff: true,
+      isInternal: false,
+    });
+    assert.ok(ticketBadgeStatuses("GUGGE").includes(nachTeamantwort));
+    assert.ok(!ticketBadgeStatuses("TEAM").includes(nachTeamantwort));
+
+    const nachKundenantwort = nextTicketStatus({
+      current: "WAITING_FOR_CUSTOMER",
+      fromStaff: false,
+      isInternal: false,
+    });
+    assert.ok(ticketBadgeStatuses("TEAM").includes(nachKundenantwort));
+    assert.ok(!ticketBadgeStatuses("GUGGE").includes(nachKundenantwort));
   });
 });

@@ -1,4 +1,4 @@
-import { handleApiError, jsonOk, parseBody } from "@/lib/api";
+import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
@@ -11,6 +11,18 @@ export async function PUT(request: Request) {
   try {
     const actor = await requirePermission("manageSettings");
     const body = await parseBody(request, siteSettingsSchema);
+
+    // Mailwerte gehören ausschliesslich in ihren eigenen Endpunkt. Dort wird
+    // das Passwort verschlüsselt; hier käme es im Klartext in die Datenbank.
+    // Zwei Wege zu denselben Daten, von denen einer die Verschlüsselung
+    // umgeht, wären genau ein Weg zu viel.
+    const mailSchluessel = body.settings.filter((s) => s.key.startsWith("mail."));
+    if (mailSchluessel.length) {
+      return jsonError(
+        "Mail-Einstellungen werden unter „E-Mail / Mailversand“ verwaltet.",
+        400,
+      );
+    }
 
     await prisma.$transaction(
       body.settings.map((setting) =>

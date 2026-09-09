@@ -283,6 +283,9 @@ model User {
   role           Role
   isActive       Boolean   @default(true)
   phone          String?
+  /// E-Mail bei neuen Ticketantworten erhalten. Standard an, weil eine
+  /// unbeantwortete Rückfrage sonst unbemerkt liegen bleibt.
+  ticketEmails   Boolean   @default(true)
   locale         String    @default("de-CH")
   lastLoginAt    DateTime?
   createdAt      DateTime  @default(now())

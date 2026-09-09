@@ -43,12 +43,6 @@ services:
       UPLOAD_DIR: /app/public/uploads
       NEXT_PUBLIC_UPLOAD_BASE_URL: /uploads
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-8}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      MAIL_FROM: ${MAIL_FROM:-Fas-Nav.ch <noreply@fas-nav.ch>}
       CONTACT_NOTIFY_EMAIL: ${CONTACT_NOTIFY_EMAIL:-}
       # Merkwort für den geplanten Erinnerungslauf. Ohne Wert nimmt der
       # Endpunkt nur Aufrufe angemeldeter Administratoren an.

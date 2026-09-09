@@ -18,8 +18,13 @@ export type NavGroup = {
  * Navigationsstruktur je Rolle.
  * Ausgeblendete Einträge sind zusätzlich serverseitig geschützt –
  * die Navigation ist reine Benutzerführung, keine Sicherheitsgrenze.
+ *
+ * `organizationId` ist die gerade aktive Organisation eines
+ * Organisationskontos. Sie wird für die Galerie gebraucht, die – wie jede
+ * Galerie – unter ihrer Organisation liegt. Ohne aktive Organisation bleibt
+ * der Weg über die Umleitung unter „/dashboard/galerie" bestehen.
  */
-export function dashboardNavigation(role: Role): NavGroup[] {
+export function dashboardNavigation(role: Role, organizationId?: string | null): NavGroup[] {
   if (isStaff(role)) {
     return [
       {
@@ -71,9 +76,11 @@ export function dashboardNavigation(role: Role): NavGroup[] {
         items: [
           { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
           { href: "/dashboard/logs", label: "Logs", icon: "scroll" },
-          ...(isAdmin(role)
-            ? [{ href: "/dashboard/einstellungen", label: "Einstellungen", icon: "settings" }]
-            : []),
+          // Die Einstellungen enthalten für jede Rolle das eigene Konto –
+          // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile
+          // darin bleiben der Administration vorbehalten und werden auf der
+          // Seite selbst geprüft, nicht durch Ausblenden im Menü.
+          { href: "/dashboard/einstellungen", label: "Einstellungen", icon: "settings" },
         ],
       },
     ];
@@ -89,7 +96,11 @@ export function dashboardNavigation(role: Role): NavGroup[] {
       items: [
         { href: "/dashboard/seite", label: "Meine Seite", icon: "layout" },
         { href: "/dashboard/veranstaltungen", label: "Veranstaltungen", icon: "calendar" },
-        { href: "/dashboard/galerie", label: "Galerie", icon: "image" },
+        {
+          href: organizationId ? organizationGalleryPath(organizationId) : "/dashboard/galerie",
+          label: "Galerie",
+          icon: "image",
+        },
         { href: "/dashboard/qr-code", label: "QR-Code", icon: "layout" },
         { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
       ],
@@ -103,4 +114,22 @@ export function dashboardNavigation(role: Role): NavGroup[] {
       ],
     },
   ];
+}
+
+/**
+ * Adresse der Galerie einer Organisation.
+ *
+ * Es gibt genau eine Galerieseite je Organisation, und sie steht unter der
+ * Organisation, zu der sie gehört. Das ist der Grund für diese Funktion:
+ * Der Editor hat zuvor fest auf „/dashboard/galerie" verwiesen – die Galerie
+ * der *eigenen* Organisation. Für Admin und Team, die eine fremde
+ * Organisation bearbeiten, führte der Verweis deshalb ins Leere, während
+ * dieselbe Galerie über die Adresse direkt erreichbar war.
+ *
+ * Wer den Verweis baut, muss also immer die Organisation nennen, um die es
+ * geht. Die Berechtigung prüft die Zielseite anschliessend selbst; dieser
+ * Pfad ist reine Wegweisung.
+ */
+export function organizationGalleryPath(organizationId: string): string {
+  return `/dashboard/organisationen/${organizationId}/galerie`;
 }

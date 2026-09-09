@@ -30,7 +30,7 @@ type Params = { params: Promise<{ id: string }> };
  */
 export default async function OrganizationGalleryPage({ params }: Params) {
   const { id } = await params;
-  await requireOrganizationAccessPage(id, "edit");
+  const zugriff = await requireOrganizationAccessPage(id, "edit");
 
   const organization = await prisma.organization.findUnique({
     where: { id },
@@ -54,11 +54,18 @@ export default async function OrganizationGalleryPage({ params }: Params) {
       <PageHeader
         title="Galerie"
         description={`Bilder für die öffentliche Seite von ${organization.name}. Erlaubt sind PNG, JPG und WebP.`}
-        breadcrumbs={[
-          { href: "/dashboard/organisationen", label: "Organisationen" },
-          { href: `/dashboard/organisationen/${id}`, label: organization.name },
-          { label: "Galerie" },
-        ]}
+        // Die Brotkrumen führen dorthin zurück, wo die Rolle auch hinkommt:
+        // Admin und Team über die Organisationsliste, ein Organisationskonto
+        // auf sein Dashboard. Die Seite selbst ist für beide dieselbe.
+        breadcrumbs={
+          zugriff.viaStaff
+            ? [
+                { href: "/dashboard/organisationen", label: "Organisationen" },
+                { href: `/dashboard/organisationen/${id}`, label: organization.name },
+                { label: "Galerie" },
+              ]
+            : [{ href: "/dashboard", label: "Dashboard" }, { label: "Galerie" }]
+        }
       />
 
       <GalleryManager

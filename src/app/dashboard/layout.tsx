@@ -3,16 +3,13 @@ import type { Metadata } from "next";
 import { DashboardShell } from "@/components/dashboard/sidebar";
 import { MaintenanceScreen } from "@/components/maintenance/maintenance-screen";
 import { getDashboardContext } from "@/lib/dashboard-context";
-import {
-  PUBLICATION_STATUS_LABELS,
-  ROLE_LABELS,
-  TICKET_STATUSES_AWAITING_TEAM,
-} from "@/lib/constants";
+import { PUBLICATION_STATUS_LABELS, ROLE_LABELS } from "@/lib/constants";
 import { maintenanceScreenFor } from "@/lib/maintenance";
 import { dashboardNavigation } from "@/lib/navigation";
 import { prisma } from "@/lib/prisma";
 import { openContactRequestCounts } from "@/lib/queries/contact-requests";
 import { ticketScope } from "@/lib/queries/tickets";
+import { ticketBadgeStatuses } from "@/lib/ticket-status";
 import { can } from "@/lib/rbac";
 import type { Role } from "@prisma/client";
 
@@ -50,10 +47,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             name: context.user.name,
             email: context.user.email,
           }),
-          // Nur Tickets, bei denen das Team am Zug ist. „Warten auf Kunde“,
-          // gelöst und geschlossen zählen nicht mit – sonst zeigte der Zähler
-          // Arbeit an, die gerade woanders liegt.
-          { status: { in: TICKET_STATUSES_AWAITING_TEAM } },
+          // Der Zähler zeigt, worauf die eigene Seite reagieren muss: Admin
+          // und Team sehen die Tickets, die auf sie warten, Organisationen
+          // die, in denen wir auf ihre Rückmeldung warten. Abgeschlossene
+          // zählen in keinem Fall mit. Zusammen mit ticketScope oben kann so
+          // nichts gezählt werden, was die Rolle nicht sehen darf.
+          { status: { in: ticketBadgeStatuses(role) } },
         ],
       },
     }),
@@ -62,7 +61,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <DashboardShell
-      navigation={dashboardNavigation(role)}
+      navigation={dashboardNavigation(role, context.organization?.id ?? null)}
       user={{
         name: context.user.name,
         email: context.user.email,

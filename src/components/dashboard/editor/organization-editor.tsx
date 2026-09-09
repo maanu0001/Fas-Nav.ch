@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Eye, Save, Send, Trash2, Plus } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
@@ -13,6 +14,7 @@ import { ImageUpload } from "@/components/dashboard/image-upload";
 import { OrganizationPreview } from "@/components/dashboard/editor/preview";
 import type { EditorState, SocialLinkDraft } from "@/components/dashboard/editor/types";
 import { SOCIAL_PLATFORM_LABELS } from "@/lib/constants";
+import { organizationGalleryPath } from "@/lib/navigation";
 import { apiRequest, errorMessage, fieldErrors } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { OrganizationType, PublicationStatus, SocialPlatform } from "@prisma/client";
@@ -598,10 +600,19 @@ export function OrganizationEditor({
                 onChange={(media) => set("header", media)}
               />
               <p className="text-sm text-muted-foreground sm:col-span-2">
-                Weitere Bilder verwaltest du unter{" "}
-                <a href="/dashboard/galerie" className="font-medium text-primary-700 underline">
-                  Galerie
-                </a>
+                Weitere Bilder verwaltest du in der{" "}
+                {/*
+                  Immer die Galerie der bearbeiteten Organisation, nie die des
+                  angemeldeten Kontos: Admin und Team bearbeiten hier fremde
+                  Organisationen, und ein fester Verweis auf „meine Galerie"
+                  führte sie in die eigene, nicht vorhandene.
+                */}
+                <Link
+                  href={organizationGalleryPath(organizationId)}
+                  className="font-medium text-primary-700 underline"
+                >
+                  Galerie dieser Organisation
+                </Link>
                 .
               </p>
             </div>

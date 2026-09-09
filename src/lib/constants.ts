@@ -199,6 +199,15 @@ export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
 export const TICKET_STATUSES_AWAITING_TEAM: TicketStatus[] = ["OPEN"];
 
 /**
+ * Zustände, in denen die Organisation am Zug ist.
+ *
+ * Das Gegenstück zur Liste oben und die Grundlage des Zählers für
+ * Organisationskonten: Für sie ist nicht interessant, worauf das Team noch
+ * antworten muss, sondern was auf ihre eigene Rückmeldung wartet.
+ */
+export const TICKET_STATUSES_AWAITING_CUSTOMER: TicketStatus[] = ["WAITING_FOR_CUSTOMER"];
+
+/**
  * Zustände, in denen die Antwortautomatik nicht eingreift.
  *
  * Ein abgeschlossenes Ticket soll durch eine nachträgliche Notiz oder eine

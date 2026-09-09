@@ -1,8 +1,14 @@
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
+import { sendMail } from "@/lib/mail";
 import { notify, notifyOrganization, notifyStaff } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { isStaff, requireUser } from "@/lib/rbac";
 import { getVisibleTicket } from "@/lib/queries/tickets";
+import {
+  staffMailTarget,
+  staffTicketMail,
+  ticketReplyNotifyMail,
+} from "@/lib/ticket-mail-delivery";
 import { nextTicketStatus, ticketReplyNotificationTitle } from "@/lib/ticket-status";
 import { ticketMessageSchema } from "@/lib/validation/schemas";
 
@@ -65,7 +71,21 @@ export async function POST(request: Request, { params }: Params) {
       return erstellt;
     });
 
+    // Interne Notizen erreichen die Organisation weder als Meldung noch als
+    // E-Mail. Und beides folgt der Nachricht, nie dem Zustand: Der Zustand
+    // ist bloss die Folge der Antwort, eine eigene Meldung darüber wäre
+    // dasselbe Ereignis ein zweites Mal.
     if (!isInternal) {
+      // Alles, was Vorlage und Meldung brauchen, an einer Stelle.
+      const kontext = {
+        ticketId: id,
+        ticketNumber: ticket.number,
+        ticketSubject: ticket.subject,
+        organizationName: ticket.organization?.name ?? null,
+        senderName: user.name ?? user.email ?? "Fas-Nav.ch",
+        messageBody: body.body,
+      };
+
       if (staff) {
         // Der Betreff steht im Titel, damit in der Liste der
         // Benachrichtigungen ohne Öffnen erkennbar ist, worum es geht. Sehr
@@ -76,35 +96,60 @@ export async function POST(request: Request, { params }: Params) {
           subject: ticket.subject,
         });
 
+        const vorlage = await ticketReplyNotifyMail(kontext);
+
         if (ticket.organizationId) {
-          await notifyOrganization(ticket.organizationId, {
-            type: "TICKET_REPLY",
-            title: titel,
-            body: ticket.subject,
-            link: `/dashboard/tickets/${id}`,
-            email: true,
-          });
-        } else if (ticket.authorId) {
+          await notifyOrganization(
+            ticket.organizationId,
+            {
+              type: "TICKET_REPLY",
+              title: titel,
+              body: ticket.subject,
+              link: `/dashboard/tickets/${id}`,
+              mail: vorlage,
+            },
+            // Wer selbst geschrieben hat, wird darüber nicht benachrichtigt.
+            // Greift, wenn ein Admin- oder Teamkonto zugleich Mitglied der
+            // Organisation ist.
+            { skipUserId: user.id },
+          );
+        } else if (ticket.authorId && ticket.authorId !== user.id) {
           await notify({
             userId: ticket.authorId,
             type: "TICKET_REPLY",
             title: titel,
             body: ticket.subject,
             link: `/dashboard/tickets/${id}`,
-            email: true,
+            mail: vorlage,
           });
         }
       } else {
-        await notifyStaff({
-          type: "TICKET_REPLY",
-          title: ticketReplyNotificationTitle({
-            number: ticket.number,
-            subject: ticket.subject,
-            forStaff: true,
-          }),
-          body: ticket.subject,
-          link: `/dashboard/tickets/${id}`,
-        });
+        // Die Meldung im Dashboard erreicht wie bisher das ganze Team – dort
+        // kostet sie nichts und geht nicht verloren.
+        await notifyStaff(
+          {
+            type: "TICKET_REPLY",
+            title: ticketReplyNotificationTitle({
+              number: ticket.number,
+              subject: ticket.subject,
+              forStaff: true,
+            }),
+            body: ticket.subject,
+            link: `/dashboard/tickets/${id}`,
+          },
+          { skipUserId: user.id },
+        );
+
+        // Die E-Mail dagegen geht an genau eine Adresse: an die zuständige
+        // Person, sonst an die hinterlegte Sammeladresse.
+        try {
+          const ziel = await staffMailTarget(ticket);
+          if (ziel) await sendMail(await staffTicketMail(kontext, ziel));
+        } catch (error) {
+          // Die Antwort ist längst gespeichert. Ein Fehler beim Benachrichtigen
+          // darf sie nicht nachträglich zum Fehlschlag machen.
+          console.error("[tickets] Teammeldung per E-Mail fehlgeschlagen:", error);
+        }
       }
     }
 

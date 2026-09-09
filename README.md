@@ -221,7 +221,7 @@ Vollständige Liste mit Kommentaren in `.env.example`.
 | `UPLOAD_DIR` | nein | Zielverzeichnis für Uploads |
 | `NEXT_PUBLIC_UPLOAD_BASE_URL` | nein | Öffentlicher Pfad der Uploads |
 | `MAX_UPLOAD_SIZE_MB` | nein | Maximale Dateigrösse, Standard 8 |
-| `SMTP_*`, `MAIL_FROM` | nein | E-Mail-Versand; ohne Angabe wird nur geloggt |
+| ~~`SMTP_*`, `MAIL_FROM`~~ | – | Entfallen. Der Mailversand wird im Dashboard unter Einstellungen → E-Mail / Mailversand eingerichtet; die Werte liegen in der Datenbank, das Passwort verschlüsselt. |
 | `CONTACT_NOTIFY_EMAIL` | nein | Empfänger für Kontaktanfragen |
 | `SEED_*` | nein | Zugangsdaten der Seed-Accounts |
 

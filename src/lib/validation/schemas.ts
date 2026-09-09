@@ -647,6 +647,55 @@ export const siteSettingsSchema = z.object({
 // Öffentliche Filter
 // ---------------------------------------------------------------------------
 
+/**
+ * Eigene Kontodaten.
+ *
+ * Die E-Mail-Adresse ist zugleich die Anmeldeadresse; es gibt bewusst keine
+ * zweite „Benachrichtigungsadresse" daneben, die dasselbe bedeuten würde.
+ * Geprüft wird mit demselben Validator wie überall sonst: getrimmt,
+ * kleingeschrieben, Format, Länge – und da nur eine Adresse durchkommt,
+ * bleibt für HTML oder Skript kein Platz.
+ */
+export const accountProfileSchema = z.object({
+  // Spitze Klammern haben in einem Namen nichts zu suchen. Ausgegeben wird er
+  // ohnehin maskiert – in React wie in der HTML-Fassung der E-Mail –, aber es
+  // gibt keinen Grund, solche Zeichen überhaupt zu speichern.
+  name: z
+    .string()
+    .trim()
+    .min(2, "Bitte einen Namen angeben.")
+    .max(120)
+    .refine((wert) => !/[<>]/.test(wert), "Der Name darf keine spitzen Klammern enthalten."),
+  email,
+  ticketEmails: z.boolean(),
+});
+
+/**
+ * Mailkonfiguration der Plattform.
+ *
+ * Das Passwort ist optional: Die Oberfläche kennt es nicht und schickt es
+ * deshalb nur mit, wenn es geändert werden soll. `clearPassword` ist der
+ * ausdrückliche Weg, ein hinterlegtes Passwort zu entfernen.
+ */
+export const mailSettingsSchema = z.object({
+  enabled: z.boolean(),
+  host: z.string().trim().max(200),
+  port: z.coerce.number().int().min(1).max(65535),
+  security: z.enum(["none", "starttls", "tls"]),
+  user: z.string().trim().max(200),
+  password: z.string().max(400).optional(),
+  clearPassword: z.boolean().optional(),
+  fromName: z.string().trim().max(120),
+  fromEmail: z.union([z.literal(""), email]),
+  replyTo: z.union([z.literal(""), email]),
+  ticketRecipient: z.union([z.literal(""), email]),
+  ticketSubject: z.string().trim().min(1, "Bitte einen Betreff angeben.").max(300),
+  ticketBody: z.string().trim().min(1, "Bitte einen Text angeben.").max(5000),
+});
+
+/** Zieladresse einer Testmail. */
+export const testMailSchema = z.object({ to: email });
+
 export const agendaFilterSchema = z.object({
   q: z.string().trim().max(120).optional(),
   canton: z.string().trim().max(60).optional(),
