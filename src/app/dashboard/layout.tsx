@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { DashboardShell } from "@/components/dashboard/sidebar";
 import { MaintenanceScreen } from "@/components/maintenance/maintenance-screen";
 import { getDashboardContext } from "@/lib/dashboard-context";
-import { PUBLICATION_STATUS_LABELS, ROLE_LABELS } from "@/lib/constants";
+import {
+  PUBLICATION_STATUS_LABELS,
+  ROLE_LABELS,
+  TICKET_STATUSES_AWAITING_TEAM,
+} from "@/lib/constants";
 import { maintenanceScreenFor } from "@/lib/maintenance";
 import { dashboardNavigation } from "@/lib/navigation";
 import { prisma } from "@/lib/prisma";
@@ -46,7 +50,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             name: context.user.name,
             email: context.user.email,
           }),
-          { status: { in: ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER"] } },
+          // Nur Tickets, bei denen das Team am Zug ist. „Warten auf Kunde“,
+          // gelöst und geschlossen zählen nicht mit – sonst zeigte der Zähler
+          // Arbeit an, die gerade woanders liegt.
+          { status: { in: TICKET_STATUSES_AWAITING_TEAM } },
         ],
       },
     }),

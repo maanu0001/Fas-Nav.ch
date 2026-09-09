@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Bell } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
 import { MarkAllReadButton } from "@/components/dashboard/mark-all-read";
+import { NotificationLink } from "@/components/dashboard/notification-link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getDashboardContext } from "@/lib/dashboard-context";
 import { relativeTime } from "@/lib/dates";
@@ -55,9 +55,23 @@ export default async function NotificationsPage() {
                     <span className="mt-1.5 h-2 w-2 shrink-0" aria-hidden />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary-900">{notification.title}</p>
+                    {/*
+                      Lange Titel – etwa ein Ticketbetreff über mehrere Zeilen –
+                      werden auf zwei Zeilen begrenzt, damit die Liste
+                      überschaubar bleibt. Gekürzt wird nur die Darstellung:
+                      Der vollständige Text steht im Titelattribut und, wohin
+                      der Verweis führt, im Ticket selbst.
+                    */}
+                    <p
+                      className="line-clamp-2 text-sm font-semibold text-primary-900"
+                      title={notification.title}
+                    >
+                      {notification.title}
+                    </p>
                     {notification.body ? (
-                      <p className="mt-0.5 text-sm text-slate-600">{notification.body}</p>
+                      <p className="line-clamp-2 mt-0.5 text-sm text-slate-600" title={notification.body}>
+                        {notification.body}
+                      </p>
                     ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {relativeTime(notification.createdAt)}
@@ -71,17 +85,22 @@ export default async function NotificationsPage() {
             // serverseitig als gelesen markiert und danach weiterleitet.
             return (
               <li key={notification.id}>
-                <Link
-                  href={`/dashboard/benachrichtigungen/${notification.id}`}
-                  className="block"
-                  aria-label={
+                <NotificationLink
+                  id={notification.id}
+                  href={
+                    notification.link && notification.link.startsWith("/")
+                      ? notification.link
+                      : "/dashboard/benachrichtigungen"
+                  }
+                  unread={!notification.readAt}
+                  label={
                     notification.readAt
                       ? notification.title
                       : `${notification.title} (ungelesen)`
                   }
                 >
                   {content}
-                </Link>
+                </NotificationLink>
               </li>
             );
           })}

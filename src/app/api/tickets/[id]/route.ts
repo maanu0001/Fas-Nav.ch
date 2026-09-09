@@ -1,6 +1,5 @@
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
-import { notifyOrganization } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { ticketUpdateSchema } from "@/lib/validation/schemas";
@@ -49,14 +48,12 @@ export async function PATCH(request: Request, { params }: Params) {
       after: { status: ticket.status },
     });
 
-    if (body.status && before.organizationId) {
-      await notifyOrganization(before.organizationId, {
-        type: "TICKET_STATUS",
-        title: `Ticket #${before.number} aktualisiert`,
-        body: `Der Status wurde auf „${ticket.status}“ gesetzt.`,
-        link: `/dashboard/tickets/${id}`,
-      });
-    }
+    // Bewusst keine Benachrichtigung an die Organisation: Der Zustand folgt
+    // seit der Antwortautomatik dem Gesprächsverlauf, eine Meldung darüber
+    // käme also fast immer zusätzlich zur Meldung über die Antwort selbst –
+    // zweimal dasselbe Ereignis. Die Antwort ist die Nachricht, der Zustand
+    // nur ihre Folge. Im Ticket ist er weiterhin sichtbar, und das
+    // Änderungsprotokoll hält ihn ohnehin fest.
 
     return jsonOk(ticket);
   } catch (error) {

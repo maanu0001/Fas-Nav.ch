@@ -172,13 +172,39 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   OTHER: "Andere",
 };
 
+/**
+ * Sichtbare Bezeichnungen der Ticketzustände.
+ *
+ * Die Aufzählungswerte in der Datenbank bleiben unverändert – umbenannt wird
+ * nur, was Menschen lesen. OPEN heisst hier bewusst „Wartet auf Fas-Nav.ch
+ * Team“: Ein neu erfasstes Ticket und ein Ticket, auf das die Organisation
+ * zuletzt geantwortet hat, warten beide auf uns. Genau diese Tickets zählt
+ * auch der Zähler in der Seitenleiste.
+ */
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  OPEN: "Offen",
+  OPEN: "Wartet auf Fas-Nav.ch Team",
   IN_PROGRESS: "In Bearbeitung",
-  WAITING_FOR_CUSTOMER: "Wartet auf Rückmeldung",
+  WAITING_FOR_CUSTOMER: "Warten auf Kunde",
   RESOLVED: "Gelöst",
   CLOSED: "Geschlossen",
 };
+
+/**
+ * Zustände, in denen das Team am Zug ist.
+ *
+ * Massgeblich für den Zähler in der Seitenleiste. „Warten auf Kunde“,
+ * „Gelöst“ und „Geschlossen“ zählen bewusst nicht mit – dort liegt der Ball
+ * nicht bei uns.
+ */
+export const TICKET_STATUSES_AWAITING_TEAM: TicketStatus[] = ["OPEN"];
+
+/**
+ * Zustände, in denen die Antwortautomatik nicht eingreift.
+ *
+ * Ein abgeschlossenes Ticket soll durch eine nachträgliche Notiz oder eine
+ * abschliessende Bemerkung des Teams nicht unbemerkt wieder aufgehen.
+ */
+export const TICKET_STATUSES_FINAL: TicketStatus[] = ["RESOLVED", "CLOSED"];
 
 export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
   LOW: "Tief",

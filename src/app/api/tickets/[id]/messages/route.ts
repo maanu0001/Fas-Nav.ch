@@ -3,6 +3,7 @@ import { notify, notifyOrganization, notifyStaff } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { isStaff, requireUser } from "@/lib/rbac";
 import { getVisibleTicket } from "@/lib/queries/tickets";
+import { nextTicketStatus, ticketReplyNotificationTitle } from "@/lib/ticket-status";
 import { ticketMessageSchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
@@ -33,36 +34,52 @@ export async function POST(request: Request, { params }: Params) {
     // Interne Notizen sind ausschliesslich Admin und Team vorbehalten.
     const isInternal = staff ? body.isInternal : false;
 
-    const message = await prisma.ticketMessage.create({
-      data: {
-        ticketId: id,
-        authorId: user.id,
-        authorName: user.name ?? null,
-        body: body.body,
-        isInternal,
-      },
-      select: { id: true, body: true, isInternal: true, createdAt: true },
+    // Der Zustand richtet sich danach, wer zuletzt sichtbar geschrieben hat –
+    // die Regel steht zentral in lib/ticket-status.ts.
+    const status = nextTicketStatus({
+      current: ticket.status,
+      fromStaff: staff,
+      isInternal,
     });
 
-    await prisma.ticket.update({
-      where: { id },
-      data: {
-        lastReplyAt: new Date(),
-        // Antwortet das Team, wartet das Ticket auf die Organisation – und umgekehrt.
-        ...(isInternal
-          ? {}
-          : staff
-            ? { status: ticket.status === "OPEN" ? "IN_PROGRESS" : ticket.status }
-            : { status: "OPEN" }),
-      },
+    // Nachricht und Zustand in einem Zug: Bricht das Schreiben ab, bleibt auch
+    // der Zustand unverändert. Ein Ticket, das auf eine nie gespeicherte
+    // Antwort wartet, wäre schlimmer als gar keine Automatik.
+    const message = await prisma.$transaction(async (tx) => {
+      const erstellt = await tx.ticketMessage.create({
+        data: {
+          ticketId: id,
+          authorId: user.id,
+          authorName: user.name ?? null,
+          body: body.body,
+          isInternal,
+        },
+        select: { id: true, body: true, isInternal: true, createdAt: true },
+      });
+
+      await tx.ticket.update({
+        where: { id },
+        data: { lastReplyAt: new Date(), status },
+      });
+
+      return erstellt;
     });
 
     if (!isInternal) {
       if (staff) {
+        // Der Betreff steht im Titel, damit in der Liste der
+        // Benachrichtigungen ohne Öffnen erkennbar ist, worum es geht. Sehr
+        // lange Betreffzeilen werden gekürzt; der vollständige Text steht
+        // weiterhin im Ticket selbst.
+        const titel = ticketReplyNotificationTitle({
+          number: ticket.number,
+          subject: ticket.subject,
+        });
+
         if (ticket.organizationId) {
           await notifyOrganization(ticket.organizationId, {
             type: "TICKET_REPLY",
-            title: `Antwort auf Ticket #${ticket.number}`,
+            title: titel,
             body: ticket.subject,
             link: `/dashboard/tickets/${id}`,
             email: true,
@@ -71,7 +88,7 @@ export async function POST(request: Request, { params }: Params) {
           await notify({
             userId: ticket.authorId,
             type: "TICKET_REPLY",
-            title: `Antwort auf Ticket #${ticket.number}`,
+            title: titel,
             body: ticket.subject,
             link: `/dashboard/tickets/${id}`,
             email: true,
@@ -80,7 +97,11 @@ export async function POST(request: Request, { params }: Params) {
       } else {
         await notifyStaff({
           type: "TICKET_REPLY",
-          title: `Neue Antwort in Ticket #${ticket.number}`,
+          title: ticketReplyNotificationTitle({
+            number: ticket.number,
+            subject: ticket.subject,
+            forStaff: true,
+          }),
           body: ticket.subject,
           link: `/dashboard/tickets/${id}`,
         });

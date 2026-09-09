@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CantonCrest } from "@/components/public/canton-crest";
 import { cantonOverview } from "@/lib/queries/public";
 import { buildMetadata } from "@/lib/seo";
 import { REGIONS } from "@/lib/constants";
@@ -49,9 +50,7 @@ export default async function CantonsPage() {
                   href={`/kanton/${canton.slug}`}
                   className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-card"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary font-display text-sm font-bold text-primary-700 transition-colors group-hover:bg-primary group-hover:text-white">
-                    {canton.code}
-                  </span>
+                  <CantonCrest code={canton.code} name={canton.name} className="h-11 w-11" />
                   <div className="min-w-0">
                     <p className="truncate font-display font-semibold text-primary-900">
                       {canton.name}

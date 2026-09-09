@@ -163,6 +163,27 @@ export function membershipRoleAllows(
   return ORG_ROLE_CAPABILITIES[role].includes(capability);
 }
 
+/** Alle Fähigkeiten, die eine Plattformrolle in jeder Organisation mitbringt. */
+const STAFF_CAPABILITIES: OrgCapability[] = ["view", "edit", "manage", "manageMembers"];
+
+/**
+ * Welche Fähigkeiten ein Benutzer in einer bestimmten Organisation hat.
+ *
+ * Die eine Stelle, an der Plattformrolle und Membership zusammengeführt
+ * werden. Admin und Team arbeiten in jeder Organisation mit vollem Umfang –
+ * Galerie eingeschlossen – und brauchen dafür keine Membership. Alle anderen
+ * Konten leiten ihre Rechte ausschliesslich aus ihrer Membership ab; ohne
+ * Membership bleibt die Liste leer, unabhängig von der globalen Rolle.
+ */
+export function organizationCapabilities(input: {
+  role: Role;
+  membershipRole: MembershipRole | null;
+}): OrgCapability[] {
+  if (isStaff(input.role)) return [...STAFF_CAPABILITIES];
+  if (!input.membershipRole) return [];
+  return [...ORG_ROLE_CAPABILITIES[input.membershipRole]];
+}
+
 export type OrgAccess = {
   user: SessionUser;
   organizationId: string;
@@ -209,7 +230,10 @@ export async function resolveOrganizationAccess(
     if (!organization) {
       return { ok: false, status: 404, message: "Organisation nicht gefunden." };
     }
-    const capabilities: OrgCapability[] = ["view", "edit", "manage", "manageMembers"];
+    const capabilities = organizationCapabilities({
+      role: user.role,
+      membershipRole: null,
+    });
     return {
       ok: true,
       access: {
@@ -237,7 +261,10 @@ export async function resolveOrganizationAccess(
     };
   }
 
-  const capabilities = ORG_ROLE_CAPABILITIES[membership.role];
+  const capabilities = organizationCapabilities({
+    role: user.role,
+    membershipRole: membership.role,
+  });
 
   if (!capabilities.includes(capability)) {
     return {

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/button";
+import { CantonCrest } from "@/components/public/canton-crest";
 import { Card } from "@/components/ui/card";
 import { EventCard, type EventCardData } from "@/components/public/event-card";
 import {
@@ -243,9 +244,7 @@ export function CantonGridSection({
                 {canton.organizationCount} Organisationen · {canton.eventCount} Termine
               </p>
             </div>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary font-display text-xs font-bold text-primary-700 transition-colors group-hover:bg-primary group-hover:text-white">
-              {canton.code}
-            </span>
+            <CantonCrest code={canton.code} name={canton.name} className="h-8 w-8" />
           </Link>
         ))}
       </div>
