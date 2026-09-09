@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import {
   CANTON_CODES,
   CANTON_CREST_DIR,
+  CANTON_CREST_EXTENSION,
   CANTON_NAMES,
   CANTONS_WITH_CREST,
   cantonCrestAlt,
@@ -43,7 +44,7 @@ describe("CANTON_CODES", () => {
 
 describe("cantonCrestFilename", () => {
   it("leitet den Dateinamen eindeutig aus dem Code ab", () => {
-    assert.equal(cantonCrestFilename("LU"), "lu.svg");
+    assert.equal(cantonCrestFilename("LU"), "lu.webp");
     const namen = CANTON_CODES.map((code) => cantonCrestFilename(code));
     assert.equal(new Set(namen).size, 26);
   });
@@ -104,7 +105,9 @@ describe("Wappendateien", () => {
 
   it("hat für jede Datei im Verzeichnis einen Eintrag", () => {
     if (!existsSync(verzeichnis)) return;
-    const dateien = readdirSync(verzeichnis).filter((n) => n.endsWith(".svg"));
+    const dateien = readdirSync(verzeichnis).filter((n) =>
+      n.endsWith(`.${CANTON_CREST_EXTENSION}`),
+    );
     const erwartet = new Set(CANTONS_WITH_CREST.map((code) => cantonCrestFilename(code)));
     for (const datei of dateien) {
       assert.ok(

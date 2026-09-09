@@ -58,24 +58,27 @@ export const CANTON_CREST_DIR = "/wappen";
  * anfragt. Andernfalls entstünde für jeden Kanton ohne Datei ein 404 und ein
  * kurz sichtbares kaputtes Bild – der Rückfall auf das Kürzel käme zu spät.
  *
- * Wer Wappen ergänzt, legt die Dateien nach `public/wappen/` und trägt die
- * Codes hier ein. Der Test `cantons.test.ts` vergleicht beide Seiten und
- * meldet jede Abweichung in beide Richtungen.
+ * Zurzeit sind alle 26 vorhanden. Wer etwas ändert, legt die Datei nach
+ * `public/wappen/` und trägt den Code hier ein; der Test `cantons.test.ts`
+ * vergleicht Liste und Verzeichnis in beide Richtungen.
  */
-export const CANTONS_WITH_CREST: readonly CantonCode[] = [];
+export const CANTONS_WITH_CREST: readonly CantonCode[] = [...CANTON_CODES];
 
 export function isCantonCode(code: string): code is CantonCode {
   return (CANTON_CODES as readonly string[]).includes(code);
 }
 
+/** Dateiendung der Wappen. */
+export const CANTON_CREST_EXTENSION = "webp";
+
 /**
  * Dateiname des Wappens eines Kantons.
  *
  * Der Name folgt strikt dem Kantonscode in Kleinbuchstaben, damit die
- * Zuordnung ohne Tabelle nachvollziehbar bleibt: `lu.svg` gehört zu Luzern.
+ * Zuordnung ohne Tabelle nachvollziehbar bleibt: `lu.webp` gehört zu Luzern.
  */
 export function cantonCrestFilename(code: CantonCode): string {
-  return `${code.toLowerCase()}.svg`;
+  return `${code.toLowerCase()}.${CANTON_CREST_EXTENSION}`;
 }
 
 /**

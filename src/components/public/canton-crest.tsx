@@ -16,10 +16,14 @@ import { cn } from "@/lib/utils";
  * erscheint dadurch nie, und die Seite bleibt vollständig nutzbar, solange
  * die Wappendateien noch fehlen.
  *
- * Das Wappen behält sein Seitenverhältnis (`object-contain`) und sitzt auf
- * einer neutralen Fläche aus den bestehenden Tokens, damit es in beiden
- * Themen ruhig steht: Kantonswappen sind farbig und brauchen einen eigenen
- * Grund, sonst verschwinden helle Anteile im Dunkelmodus.
+ * Das Wappen steht ohne eigene Fläche: Die Dateien sind freigestellt und
+ * bringen ihre Schildform samt Umriss mit. Ein Rahmen darum würde sie nur
+ * verkleinern und wie aufgeklebt wirken lassen. Für den Dunkelmodus braucht
+ * es ihn auch nicht – die hellen Anteile der Wappen sind gefüllt, nicht
+ * durchsichtig, und heben sich vom dunklen Grund ab.
+ *
+ * Das Kürzel dagegen behält seine Fläche: Reiner Text ohne Grund sähe an
+ * dieser Stelle wie ein Fehler aus.
  *
  * Bewusst ein einfaches img-Element statt next/image: Die Dateien sind kleine
  * lokale Vektorgrafiken, für die sich weder Grössenvarianten noch eine
@@ -38,26 +42,26 @@ export function CantonCrest({
   const pfad = cantonCrestPath(code);
   const kuerzel = code.trim().toUpperCase();
 
-  const rahmen = cn(
+  const kuerzelPlatte = cn(
     "flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary",
+    "font-display text-sm font-bold text-primary-700",
     className,
   );
 
   if (!pfad || fehlgeschlagen) {
-    return (
-      <span className={cn(rahmen, "font-display text-sm font-bold text-primary-700")}>
-        {kuerzel}
-      </span>
-    );
+    return <span className={kuerzelPlatte}>{kuerzel}</span>;
   }
 
   return (
-    <span className={cn(rahmen, "bg-white p-1 dark:bg-neutral-100")}>
+    <span className={cn("flex shrink-0 items-center justify-center", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={pfad}
         alt={cantonCrestAlt(code, name)}
-        className="h-full w-full object-contain"
+        // Volle Höhe, Breite nach Seitenverhältnis: Wappen sind hochkant,
+        // in einem quadratischen Rahmen blieben sie sonst deutlich kleiner
+        // als der Platz, den sie bekommen.
+        className="h-full w-auto max-w-full object-contain"
         loading="lazy"
         decoding="async"
         onError={() => setFehlgeschlagen(true)}

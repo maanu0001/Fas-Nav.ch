@@ -1,23 +1,45 @@
 # Kantonswappen
 
-Hier gehören 26 Dateien hinein, benannt nach dem Kantonscode in
-Kleinbuchstaben:
+26 Dateien, benannt nach dem Kantonscode in Kleinbuchstaben:
 
 ```
-ag.svg  ai.svg  ar.svg  be.svg  bl.svg  bs.svg  fr.svg  ge.svg  gl.svg
-gr.svg  ju.svg  lu.svg  ne.svg  nw.svg  ow.svg  sg.svg  sh.svg  so.svg
-sz.svg  tg.svg  ti.svg  ur.svg  vd.svg  vs.svg  zg.svg  zh.svg
+ag.webp  ai.webp  ar.webp  be.webp  bl.webp  bs.webp  fr.webp  ge.webp
+gl.webp  gr.webp  ju.webp  lu.webp  ne.webp  nw.webp  ow.webp  sg.webp
+sh.webp  so.webp  sz.webp  tg.webp  ti.webp  ur.webp  vd.webp  vs.webp
+zg.webp  zh.webp
 ```
 
 Die Zuordnung Code zu Datei steht in `src/lib/cantons.ts` und ergibt sich
 allein aus dem Namen – es gibt keine zusätzliche Tabelle zu pflegen.
 
-## Wappen ergänzen
+## Herkunft
+
+Die Dateien wurden von der Betreiberin bereitgestellt und unverändert
+übernommen; umbenannt wurde nur der Dateiname. Nichts davon ist
+nachgezeichnet, erzeugt oder aus einer anderen Quelle ergänzt worden.
+
+Die Ursprungsnamen lassen auf die üblichen Vektorfassungen der Wappen
+schliessen (`Wappen_<Kanton>_matt.svg`, `CHE_<Kanton>_COA.svg`,
+`Coat_of_arms_of_…`), hier als verlustfreies WebP. Wer die Lizenzlage
+festhalten will, ergänzt sie hier je Datei.
+
+Kantonswappen sind Hoheitszeichen; ihre Verwendung richtet sich nach dem
+Wappenschutzgesetz (WSchG) und den kantonalen Regelungen. Eine rein
+beschreibende Verwendung – das Wappen als Kennzeichnung des Kantons in einer
+Übersicht – ist üblich, die Prüfung obliegt aber der Betreiberin.
+
+## Format
+
+Verlustfreies WebP mit Transparenz, rund 120 × 146 Pixel (Zürich grösser).
+Die Wappen bringen ihre Schildform samt Umriss mit und stehen deshalb ohne
+eigene Hintergrundfläche – siehe `CantonCrest`.
+
+## Wappen ändern oder ergänzen
 
 Zwei Schritte, immer gemeinsam:
 
-1. Datei hier ablegen, benannt nach dem Kantonscode (`lu.svg`).
-2. Den Code in `CANTONS_WITH_CREST` in `src/lib/cantons.ts` eintragen.
+1. Datei hier ablegen, benannt nach dem Kantonscode (`lu.webp`).
+2. Den Code in `CANTONS_WITH_CREST` in `src/lib/cantons.ts` führen.
 
 Der zweite Schritt ist kein Formalismus: Ohne ihn wüsste die Anzeige erst
 nach einer fehlgeschlagenen Anfrage, dass die Datei fehlt – für einen Moment
@@ -27,26 +49,7 @@ Liste verhindert die Anfrage von vornherein.
 `npm test` vergleicht Liste und Verzeichnis in beide Richtungen und nennt
 jeden Eintrag ohne Datei und jede Datei ohne Eintrag.
 
-## Solange die Dateien fehlen
+## Fehlt eine Datei
 
-Die Anwendung funktioniert vollständig: `CantonCrest` zeigt dann das
-Kantonskürzel wie zuvor – ohne fehlschlagende Anfragen.
-
-## Herkunft
-
-Die Dateien sind bewusst **nicht** im Repository enthalten und wurden auch
-nicht nachgezeichnet. Kantonswappen sind Hoheitszeichen; ihre Verwendung
-richtet sich nach dem Wappenschutzgesetz (WSchG) und den kantonalen
-Regelungen. Eine rein beschreibende Verwendung – ein Wappen als Kennzeichnung
-des Kantons in einer Übersicht – ist üblich, die Prüfung obliegt aber der
-Betreiberin.
-
-Geeignete Quellen für die Vektordateien:
-
-- Wikimedia Commons, Kategorie „Coats of arms of cantons of Switzerland“.
-  Die Darstellungen dort stehen unter freien Lizenzen; die jeweilige Lizenz
-  und der Urheber sind pro Datei angegeben und sollten hier vermerkt werden.
-- Die Staatskanzleien der Kantone geben amtliche Fassungen heraus.
-
-Nach dem Ablegen der Dateien bitte je Datei Quelle und Lizenz in dieser Datei
-festhalten.
+Dann zeigt `CantonCrest` für diesen Kanton das Kantonskürzel wie früher –
+ohne fehlschlagende Anfrage und ohne kaputtes Bild.
