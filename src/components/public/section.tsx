@@ -32,7 +32,17 @@ export function SectionHeading({
     >
       <div className={cn("max-w-2xl", align === "center" && "mx-auto")}>
         {eyebrow ? (
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent-700">
+          // Der kurze Strich vor der Bereichsmarke wiederholt sich auf der
+          // ganzen Seite. Er kostet nichts, gibt den Abschnitten aber eine
+          // gemeinsame Handschrift – und bringt das Rot der Marke in kleiner
+          // Dosis dorthin, wo sonst nur Text stünde.
+          <p
+            className={cn(
+              "mb-2 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent-700",
+              align === "center" && "justify-center",
+            )}
+          >
+            <span className="h-px w-6 shrink-0 bg-accent-600/70" aria-hidden />
             {eyebrow}
           </p>
         ) : null}
