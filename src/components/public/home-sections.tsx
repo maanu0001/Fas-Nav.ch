@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,7 +14,6 @@ import {
 
 import { ButtonLink } from "@/components/ui/button";
 import { CantonCrest } from "@/components/public/canton-crest";
-import { LOGO_SRC } from "@/components/ui/logo";
 import { Card } from "@/components/ui/card";
 import { EventCard, type EventCardData } from "@/components/public/event-card";
 import {
@@ -44,82 +42,20 @@ function ctaVariant(variant: SectionButton["variant"], inverse: boolean) {
   return variant === "primary" ? "primary" : variant === "secondary" ? "secondary" : "ghost";
 }
 
-/**
- * Symbol zur Handlungsaufforderung.
- *
- * Abgeleitet aus dem Ziel, nicht aus der Beschriftung: Die Beschriftungen
- * kommen aus den Einstellungen und können sich ändern, die Adressen sind
- * fest. Ohne Treffer bleibt der Knopf ohne Symbol – besser als ein falsches.
- */
-function ctaIcon(href: string): React.ElementType | null {
-  if (href.startsWith("/agenda")) return CalendarDays;
-  if (href.startsWith("/guggen")) return Music2;
-  if (href.startsWith("/fasnachten")) return Search;
-  if (href.startsWith("/organisation")) return PartyPopper;
-  return null;
-}
-
 function Buttons({ buttons, inverse = false }: { buttons?: SectionButton[]; inverse?: boolean }) {
   if (!buttons?.length) return null;
   return (
     <div className="mt-8 flex flex-wrap gap-3">
-      {buttons.map((button) => {
-        const Icon = ctaIcon(button.href);
-        return (
-          <ButtonLink
-            key={`${button.href}-${button.label}`}
-            href={button.href}
-            size="lg"
-            variant={ctaVariant(button.variant, inverse)}
-            // Eine Andeutung von Bewegung, kein Effekt: Der Knopf hebt sich um
-            // einen Punkt. Bei abbestellter Bewegung entfällt der Weg dorthin,
-            // der Zustand bleibt.
-            className="hover:-translate-y-0.5"
-          >
-            {Icon ? <Icon aria-hidden /> : null}
-            {button.label}
-          </ButtonLink>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Das Logo als grosses Schlüsselbild der Heldenfläche.
- *
- * Rein dekorativ – der Markenname steht als Text in der Kopfzeile und in der
- * Überschrift, hier trägt das Bild keine zusätzliche Bedeutung. Deshalb ohne
- * Alternativtext und für Hilfsmittel ausgeblendet.
- *
- * Es steht in einem Lichthof statt auf einer Kachel: Das Logo ist für hellen
- * Grund gezeichnet, seine Buchstaben sind dunkles Navy. Eine harte weisse
- * Fläche würde es tragen, aber wie eingeklebt aussehen; der weiche Kreis
- * trägt es ebenso und läuft nach aussen in die Heldenfläche aus.
- *
- * Feste Grössenangaben und `sizes` halten den Platz von Anfang an frei, damit
- * beim Laden nichts springt.
- */
-function HeroBrandVisual() {
-  return (
-    <div className="relative mx-auto aspect-square w-full max-w-[440px]" aria-hidden>
-      {/* Farbschein, weit gestreut und schwach – gibt Tiefe. */}
-      <div className="hero-glow absolute -inset-[12%] rounded-full opacity-70 blur-2xl" />
-      {/* Lichthof, auf dem die dunklen Buchstaben des Logos lesbar werden. */}
-      <div className="hero-halo absolute inset-0 rounded-full" />
-      <Image
-        src={LOGO_SRC}
-        alt=""
-        width={840}
-        height={840}
-        sizes="(min-width: 1024px) 420px, (min-width: 640px) 320px, 240px"
-        className="relative h-full w-full object-contain p-[9%] drop-shadow-[0_18px_40px_hsl(var(--brand-surface-strong)/0.55)]"
-        // Bewusst ohne priority: Das Bild ist Schmuck, nicht der Inhalt, mit
-        // dem die Seite bewertet wird – das ist die Überschrift. Zudem lädt
-        // der Browser ein ausgeblendetes Bild beim faulen Laden gar nicht
-        // erst, und unterhalb der grossen Breite ist es ausgeblendet. Auf dem
-        // Telefon entsteht dadurch keine Anfrage.
-      />
+      {buttons.map((button) => (
+        <ButtonLink
+          key={`${button.href}-${button.label}`}
+          href={button.href}
+          size="lg"
+          variant={ctaVariant(button.variant, inverse)}
+        >
+          {button.label}
+        </ButtonLink>
+      ))}
     </div>
   );
 }
@@ -131,89 +67,49 @@ export function HeroSection({
   section: HomepageSection;
   counts: { carnivals: number; guggen: number; events: number; cantons: number };
 }) {
-  const stats = [
-    { label: "Fasnachten", value: counts.carnivals },
-    { label: "Guggenmusiken", value: counts.guggen },
-    { label: "Kommende Termine", value: counts.events },
-    { label: "Kantone", value: counts.cantons },
-  ];
-
   return (
     <section className="relative overflow-hidden bg-hero text-white">
       <div className="absolute inset-0 bg-grid opacity-40" aria-hidden />
       <div className="absolute inset-0 bg-confetti opacity-70" aria-hidden />
 
-      <div className="container relative py-16 sm:py-24 lg:pb-24 lg:pt-28">
-        {/*
-          Zwei Spalten ab der grossen Breite: links der Inhalt, rechts das
-          Schlüsselbild. Darunter laufen die Kennzahlen über beide Spalten und
-          schliessen die Fläche ab – vorher endete sie in einer leeren Hälfte.
-        */}
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-14">
-          <div>
-            {section.eyebrow ? (
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/90 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-gold-300" aria-hidden />
-                {section.eyebrow}
-              </p>
-            ) : null}
+      <div className="container relative py-20 sm:py-28">
+        <div className="max-w-3xl">
+          {section.eyebrow ? (
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/90 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              {section.eyebrow}
+            </p>
+          ) : null}
 
-            {/*
-              Die Zeilenlänge ist begrenzt, damit der Umbruch nicht von der
-              Fensterbreite abhängt: „Die Schweizer Fasnacht" bleibt zusammen,
-              „auf einen Blick." steht darunter.
-            */}
-            <h1 className="max-w-[18ch] font-display text-[2.5rem] font-extrabold leading-[1.06] tracking-[-0.02em] text-white sm:text-5xl lg:text-[3rem] xl:text-[3.4rem]">
-              {section.title ?? "Die Schweizer Fasnacht auf einen Blick."}
-            </h1>
+          <h1 className="font-display text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-6xl">
+            {section.title ?? "Die Schweizer Fasnacht auf einen Blick."}
+          </h1>
 
-            {section.subtitle ? (
-              <p className="mt-6 max-w-[46ch] text-lg leading-relaxed text-white/80">
-                {section.subtitle}
-              </p>
-            ) : null}
+          {section.subtitle ? (
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">
+              {section.subtitle}
+            </p>
+          ) : null}
 
-            <Buttons buttons={section.data.buttons} inverse />
-          </div>
-
-          {/*
-            Auf schmalen Fenstern steht das Schlüsselbild nicht über dem
-            Inhalt, sondern entfällt: Es trägt keine Information, und der
-            Hero soll auf dem Telefon kurz bleiben.
-          */}
-          <div className="hidden lg:block">
-            <HeroBrandVisual />
-          </div>
+          <Buttons buttons={section.data.buttons} inverse />
         </div>
 
-        <dl className="mt-12 grid grid-cols-2 gap-y-8 border-t border-white/15 pt-8 sm:grid-cols-4">
-          {stats.map((stat, i) => (
-            <div
-              key={stat.label}
-              className={cn(
-                // Dünne Trennlinien statt vier Kacheln: Die Zahlen bleiben
-                // Teil der Fläche, statt darauf zu liegen.
-                "sm:px-6 sm:first:pl-0",
-                // Zwei Spalten: getrennt wird nur innerhalb der Zeile, also
-                // vor der jeweils zweiten Kennzahl. Vier Spalten: vor jeder
-                // ausser der ersten.
-                i % 2 === 1 && "border-l border-white/10 pl-5",
-                i > 0 && "sm:border-l sm:border-white/10 sm:pl-6",
-              )}
-            >
-              <dd className="font-display text-3xl font-bold tabular-nums text-white sm:text-4xl">
-                {stat.value}
-              </dd>
-              <dt className="mt-1.5 text-xs font-medium uppercase tracking-[0.12em] text-white/55">
+        <dl className="mt-16 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/15 pt-8 sm:grid-cols-4">
+          {[
+            { label: "Fasnachten", value: counts.carnivals },
+            { label: "Guggenmusiken", value: counts.guggen },
+            { label: "Kommende Termine", value: counts.events },
+            { label: "Kantone", value: counts.cantons },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <dt className="text-xs font-medium uppercase tracking-wider text-white/60">
                 {stat.label}
               </dt>
+              <dd className="mt-1 font-display text-3xl font-bold text-white">{stat.value}</dd>
             </div>
           ))}
         </dl>
       </div>
-
-      {/* Weicher Auslauf in den Seitengrund statt harter Kante. */}
-      <div className="hero-fade-bottom pointer-events-none absolute inset-x-0 bottom-0 h-16" aria-hidden />
     </section>
   );
 }
