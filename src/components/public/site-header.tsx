@@ -4,69 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, LayoutDashboard, Map, Menu, X } from "lucide-react";
-
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { GlobalSearch } from "@/components/public/global-search";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/agenda", label: "Agenda" },
-  { href: "/fasnachten", label: "Fasnachten" },
-  { href: "/guggen", label: "Guggen" },
-  { href: "/karte", label: "Karte" },
-  { href: "/preise", label: "Für Organisationen" },
-];
-
-export function SiteHeader({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const pathname = usePathname();
-  const [open, setOpen] = React.useState(false);
-
-  React.useEffect(() => { setOpen(false); }, [pathname]);
-
-  return (
-    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <div className="container flex h-16 items-center gap-3">
-        <Logo />
-
-        <nav className="ml-3 hidden items-center gap-1 xl:flex" aria-label="Hauptnavigation">
-          {NAV.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("rounded-lg px-3 py-2 text-sm font-medium transition-colors", active ? "bg-secondary text-primary-900" : "text-slate-600 hover:bg-secondary hover:text-primary-900")}>{item.label}</Link>;
-          })}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2">
-          <GlobalSearch className="hidden w-56 lg:block 2xl:w-72" />
-          <ButtonLink href="/meine-fasnacht" variant="ghost" size="md" className="hidden lg:inline-flex" aria-label="Meine Fasnacht">
-            <Heart />
-            <span className="hidden 2xl:inline">Meine Fasnacht</span>
-          </ButtonLink>
-          <ThemeToggle className="hidden sm:inline-flex" />
-          {isAuthenticated ? (
-            <ButtonLink href="/dashboard" variant="primary" size="md" className="hidden sm:inline-flex"><LayoutDashboard />Dashboard</ButtonLink>
-          ) : (
-            <ButtonLink href="/login" variant="outline" size="md" className="hidden sm:inline-flex">Anmelden</ButtonLink>
-          )}
-          <Button variant="ghost" size="icon" className="xl:hidden" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? "Menü schliessen" : "Menü öffnen"}>{open ? <X /> : <Menu />}</Button>
-        </div>
-      </div>
-
-      {open ? (
-        <div id="mobile-nav" className="border-t border-border bg-background xl:hidden">
-          <div className="container space-y-3 py-4">
-            <GlobalSearch />
-            <nav className="grid gap-1" aria-label="Hauptnavigation mobil">
-              {NAV.map((item) => <Link key={item.href} href={item.href} className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary">{item.label}</Link>)}
-              <Link href="/meine-fasnacht" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"><Heart className="h-4 w-4" aria-hidden />Meine Fasnacht</Link>
-              <Link href="/kantone" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"><Map className="h-4 w-4" aria-hidden />Alle Kantone</Link>
-            </nav>
-            <ButtonLink href={isAuthenticated ? "/dashboard" : "/login"} variant="primary" block size="lg">{isAuthenticated ? "Zum Dashboard" : "Anmelden"}</ButtonLink>
-            <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><span className="text-sm text-muted-foreground">Farbschema</span><ThemeToggle /></div>
-          </div>
-        </div>
-      ) : null}
-    </header>
-  );
-}
+const NAV=[{href:"/agenda",label:"Agenda"},{href:"/fasnachten",label:"Fasnachten"},{href:"/guggen",label:"Guggen"},{href:"/karte",label:"Karte"},{href:"/preise",label:"Für Organisationen"}];
+export function SiteHeader({isAuthenticated}:{isAuthenticated:boolean}){const pathname=usePathname();const[open,setOpen]=React.useState(false);React.useEffect(()=>setOpen(false),[pathname]);return <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75"><div className="container flex h-16 items-center gap-3"><Logo/><nav className="ml-3 hidden items-center gap-1 xl:flex" aria-label="Hauptnavigation">{NAV.map(item=>{const active=pathname===item.href||pathname.startsWith(`${item.href}/`);return <Link key={item.href} href={item.href} aria-current={active?"page":undefined} className={cn("rounded-lg px-3 py-2 text-sm font-medium transition-colors",active?"bg-secondary text-primary-900":"text-slate-600 hover:bg-secondary hover:text-primary-900")}>{item.label}</Link>})}</nav><div className="ml-auto flex items-center gap-2"><GlobalSearch className="hidden w-56 lg:block 2xl:w-72"/><ButtonLink href="/meine-fasnacht" variant="ghost" size="md" className="hidden lg:inline-flex" aria-label="Meine Fasnacht"><Heart/><span className="hidden 2xl:inline">Meine Fasnacht</span></ButtonLink>{isAuthenticated?<ButtonLink href="/dashboard" variant="primary" size="md" className="hidden sm:inline-flex"><LayoutDashboard/>Dashboard</ButtonLink>:<ButtonLink href="/login" variant="outline" size="md" className="hidden sm:inline-flex">Anmelden</ButtonLink>}<Button variant="ghost" size="icon" className="xl:hidden" onClick={()=>setOpen(v=>!v)} aria-expanded={open} aria-controls="mobile-nav" aria-label={open?"Menü schliessen":"Menü öffnen"}>{open?<X/>:<Menu/>}</Button></div></div>{open?<div id="mobile-nav" className="border-t border-border bg-background xl:hidden"><div className="container space-y-3 py-4"><GlobalSearch/><nav className="grid gap-1" aria-label="Hauptnavigation mobil">{NAV.map(item=><Link key={item.href} href={item.href} className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary">{item.label}</Link>)}<Link href="/meine-fasnacht" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"><Heart className="h-4 w-4"/>Meine Fasnacht</Link><Link href="/kantone" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"><Map className="h-4 w-4"/>Alle Kantone</Link></nav><ButtonLink href={isAuthenticated?"/dashboard":"/login"} variant="primary" block size="lg">{isAuthenticated?"Zum Dashboard":"Anmelden"}</ButtonLink></div></div>:null}</header>}
