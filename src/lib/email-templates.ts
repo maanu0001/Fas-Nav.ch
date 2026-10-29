@@ -1,0 +1,30 @@
+import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/mail";
+import { STAFF_ROLES } from "@/lib/rbac";
+import { EMAIL_TEMPLATE_DEFINITIONS, EMAIL_TEMPLATE_IDS, type EmailTemplateId, type EmailTemplateView } from "@/lib/email-template-config";
+
+const GROUP="mail_templates";
+const key=(id:EmailTemplateId,field:"enabled"|"subject"|"body")=>`mail_template.${id}.${field}`;
+const stringValue=(value:unknown,fallback:string)=>typeof value==="string"?value:fallback;
+
+export async function getEmailTemplates():Promise<EmailTemplateView[]> {
+ const keys=EMAIL_TEMPLATE_IDS.flatMap(id=>[key(id,"enabled"),key(id,"subject"),key(id,"body")]);
+ const rows=await prisma.siteSetting.findMany({where:{key:{in:keys}},select:{key:true,value:true}});
+ const values=new Map(rows.map(r=>[r.key,r.value]));
+ return EMAIL_TEMPLATE_IDS.map(id=>{const d=EMAIL_TEMPLATE_DEFINITIONS[id]; const enabled=values.has(key(id,"enabled"))?values.get(key(id,"enabled"))===true:d.enabled; return {...d,enabled,subject:stringValue(values.get(key(id,"subject")),d.subject),body:stringValue(values.get(key(id,"body")),d.body)};});
+}
+export async function getEmailTemplate(id:EmailTemplateId){return (await getEmailTemplates()).find(t=>t.id===id)!;}
+export async function saveEmailTemplates(input:Array<{id:EmailTemplateId;enabled:boolean;subject:string;body:string}>){
+ const entries=input.flatMap(t=>[{key:key(t.id,"enabled"),value:t.enabled},{key:key(t.id,"subject"),value:t.subject},{key:key(t.id,"body"),value:t.body}]);
+ await prisma.$transaction(entries.map(e=>prisma.siteSetting.upsert({where:{key:e.key},create:{key:e.key,value:e.value,group:GROUP},update:{value:e.value,group:GROUP}})));
+}
+export function renderEmailTemplate(template:{subject:string;body:string},values:Record<string,string>){
+ const fill=(text:string)=>text.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g,(_m,name:string)=>values[name]??`{{${name}}}`);
+ return {subject:fill(template.subject),text:fill(template.body)};
+}
+export async function sendTemplate(id:EmailTemplateId,to:string,values:Record<string,string>){const t=await getEmailTemplate(id);if(!t.enabled)return {sent:false,reason:"disabled" as const};return sendMail({to,...renderEmailTemplate(t,values)});}
+export async function sendTemplateToStaff(id:EmailTemplateId,values:Record<string,string>){
+ const t=await getEmailTemplate(id); if(!t.enabled)return;
+ const users=await prisma.user.findMany({where:{role:{in:STAFF_ROLES},isActive:true},select:{name:true,email:true}});
+ await Promise.all(users.filter(u=>u.email).map(u=>sendMail({to:u.email,...renderEmailTemplate(t,{...values,recipientName:u.name||"Fas-Nav.ch Team"})})));
+}
