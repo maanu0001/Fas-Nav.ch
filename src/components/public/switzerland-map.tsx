@@ -9,93 +9,27 @@ type Position = [number, number];
 type Geometry = { type: "Polygon" | "MultiPolygon"; coordinates: number[][][] | number[][][][] };
 type GeoFeature = { properties: { canton: string }; geometry: Geometry };
 type GeoData = { features: GeoFeature[] };
-
-// BFS-generalisierte Kantonsgrenzen (WGS84). Die Karte wird aus echten Geodaten
-// gezeichnet; keine handgebaute Schweiz-Silhouette und keine CSS-Prozentpositionen mehr.
 const GEOJSON_URL = "https://raw.githubusercontent.com/samkhavandi/Swiss_Geography_Look_Ups/main/geometries/canton.geojson";
 const BOUNDS = { minLon: 5.90, maxLon: 10.55, minLat: 45.78, maxLat: 47.86 };
 const VIEW = { width: 1000, height: 610, padX: 34, padY: 32 };
+const LABELS: Record<string, Position> = {GE:[6.14,46.20],VD:[6.55,46.62],VS:[7.58,46.20],NE:[6.78,46.99],JU:[7.15,47.37],FR:[7.10,46.80],BE:[7.55,46.86],SO:[7.53,47.21],BS:[7.58,47.59],BL:[7.73,47.47],AG:[8.18,47.40],LU:[8.18,47.03],OW:[8.23,46.84],NW:[8.43,46.93],UR:[8.63,46.78],ZG:[8.52,47.16],ZH:[8.72,47.43],SH:[8.62,47.72],SZ:[8.75,47.04],GL:[9.07,46.99],SG:[9.30,47.30],AR:[9.39,47.37],AI:[9.43,47.31],TG:[9.13,47.59],GR:[9.60,46.66],TI:[8.80,46.20]};
+function project([lon,lat]:Position):Position{const usableW=VIEW.width-VIEW.padX*2;const usableH=VIEW.height-VIEW.padY*2;return[VIEW.padX+((lon-BOUNDS.minLon)/(BOUNDS.maxLon-BOUNDS.minLon))*usableW,VIEW.padY+((BOUNDS.maxLat-lat)/(BOUNDS.maxLat-BOUNDS.minLat))*usableH]}
+function ringPath(ring:number[][]){return ring.map((point,i)=>{const[x,y]=project(point as Position);return`${i?"L":"M"}${x.toFixed(1)} ${y.toFixed(1)}`}).join(" ")+" Z"}
+function geometryPath(geometry:Geometry){if(geometry.type==="Polygon")return(geometry.coordinates as number[][][]).map(ringPath).join(" ");return(geometry.coordinates as number[][][][]).flatMap(polygon=>polygon.map(ringPath)).join(" ")}
 
-// Label-Anker basieren auf geografischen Koordinaten. Bei den kleinen Halbkantonen
-// sind sie bewusst leicht versetzt, damit alle 26 Kürzel lesbar bleiben.
-const LABELS: Record<string, Position> = {
-  GE:[6.14,46.20], VD:[6.55,46.62], VS:[7.58,46.20], NE:[6.78,46.99], JU:[7.15,47.37], FR:[7.10,46.80],
-  BE:[7.55,46.86], SO:[7.53,47.21], BS:[7.58,47.59], BL:[7.73,47.47], AG:[8.18,47.40], LU:[8.18,47.03],
-  OW:[8.23,46.84], NW:[8.43,46.93], UR:[8.63,46.78], ZG:[8.52,47.16], ZH:[8.72,47.43], SH:[8.62,47.72],
-  SZ:[8.75,47.04], GL:[9.07,46.99], SG:[9.30,47.30], AR:[9.39,47.37], AI:[9.43,47.31], TG:[9.13,47.59],
-  GR:[9.60,46.66], TI:[8.80,46.20],
-};
-
-function project([lon, lat]: Position): Position {
-  const usableW = VIEW.width - VIEW.padX * 2;
-  const usableH = VIEW.height - VIEW.padY * 2;
-  const x = VIEW.padX + ((lon - BOUNDS.minLon) / (BOUNDS.maxLon - BOUNDS.minLon)) * usableW;
-  const y = VIEW.padY + ((BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat)) * usableH;
-  return [x, y];
-}
-
-function ringPath(ring: number[][]) {
-  return ring.map((point, i) => { const [x,y]=project(point as Position); return `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`; }).join(" ") + " Z";
-}
-function geometryPath(geometry: Geometry) {
-  if (geometry.type === "Polygon") return (geometry.coordinates as number[][][]).map(ringPath).join(" ");
-  return (geometry.coordinates as number[][][][]).flatMap((polygon) => polygon.map(ringPath)).join(" ");
-}
-
-export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
-  const [active, setActive] = React.useState<string | null>(null);
-  const [geo, setGeo] = React.useState<GeoData | null>(null);
-  const [geoError, setGeoError] = React.useState(false);
-  const selected = cantons.find((canton) => canton.code === active) ?? null;
-  const totalOrganizations = cantons.reduce((sum, canton) => sum + canton.organizationCount, 0);
-  const totalEvents = cantons.reduce((sum, canton) => sum + canton.eventCount, 0);
-  const byCode = React.useMemo(() => new Map(cantons.map((c) => [c.code, c])), [cantons]);
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    fetch(GEOJSON_URL, { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("Karte konnte nicht geladen werden"); return response.json(); })
-      .then((data: GeoData) => { setGeo(data); setGeoError(false); })
-      .catch((error) => { if (error?.name !== "AbortError") setGeoError(true); });
-    return () => controller.abort();
-  }, []);
-
-  return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
-      <div className="relative min-h-[520px] overflow-hidden rounded-[28px] border border-white/10 bg-[#09162a] shadow-lift sm:min-h-[570px]">
-        <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-accent-500/15 blur-3xl" />
-        <div className="relative z-20 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-7">
-          <div><div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75 backdrop-blur"><Sparkles className="h-3.5 w-3.5 text-gold-400" aria-hidden /> Schweiz entdecken</div><p className="mt-3 max-w-sm text-sm leading-relaxed text-white/55">Wähle deinen Kanton und sieh direkt, wo auf Fas-Nav schon Fasnacht läuft.</p></div>
-          <div className="flex gap-2 text-xs text-white/65"><span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5"><strong className="text-white">{totalOrganizations}</strong> Organisationen</span><span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5"><strong className="text-white">{totalEvents}</strong> Termine</span></div>
-        </div>
-
-        <div className="absolute inset-x-[2%] bottom-[5%] top-[24%] sm:inset-x-[4%] sm:bottom-[5%] sm:top-[22%]">
-          {!geo && !geoError ? <div className="flex h-full items-center justify-center text-sm text-white/45">Schweizkarte wird geladen …</div> : null}
-          {geoError ? <div className="flex h-full items-center justify-center px-8 text-center text-sm text-white/55">Die geografischen Kartendaten konnten gerade nicht geladen werden. Bitte Seite neu laden.</div> : null}
-          {geo ? <svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} preserveAspectRatio="xMidYMid meet" className="h-full w-full" role="img" aria-label="Interaktive Karte der 26 Schweizer Kantone">
-            <defs><filter id="canton-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8" /></filter></defs>
-            {geo.features.map((feature) => {
-              const code=feature.properties.canton; const canton=byCode.get(code); if(!canton) return null;
-              const isActive=active===code; const d=geometryPath(feature.geometry);
-              return <g key={code} onMouseEnter={()=>setActive(code)} onClick={()=>setActive(code)} className="cursor-pointer">
-                {isActive ? <path d={d} fill="#0279ad" opacity=".42" filter="url(#canton-glow)" /> : null}
-                <path d={d} fill={isActive?"#0279ad":"#123b58"} stroke={isActive?"#72d2f4":"#3b83a5"} strokeWidth={isActive?2.4:1.15} vectorEffect="non-scaling-stroke" className="transition-colors duration-200" />
-              </g>;
-            })}
-            {cantons.map((canton)=>{const p=LABELS[canton.code];if(!p)return null;const[x,y]=project(p);const total=canton.organizationCount+canton.eventCount;const isActive=active===canton.code;return <g key={`label-${canton.code}`} transform={`translate(${x} ${y})`} onMouseEnter={()=>setActive(canton.code)} onClick={()=>setActive(canton.code)} className="cursor-pointer">
-              <rect x="-25" y="-14" width="50" height="28" rx="14" fill={isActive?"#0279ad":"#0b1d31"} stroke={isActive?"#7dd3fc":"rgba(255,255,255,.22)"} strokeWidth="1" />
-              <text textAnchor="middle" dominantBaseline="central" fill="white" fontSize="13" fontWeight="700">{canton.code}<tspan dx="4" fontSize="9" opacity=".58">{total}</tspan></text>
-            </g>})}
-          </svg> : null}
-        </div>
-        <div className="pointer-events-none absolute bottom-5 left-5 z-20 hidden items-center gap-2 text-[11px] text-white/40 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary-400" /> Echte Kantonsgrenzen · hover oder tippen zum Entdecken</div>
-      </div>
-
-      <aside className="relative overflow-hidden rounded-[28px] border border-border bg-card p-6 shadow-subtle sm:p-7">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary-100/70 blur-3xl" />
-        {selected ? <div className="relative"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-700">{selected.code}</p><span className="rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary-700">Kanton gewählt</span></div><h2 className="mt-2 font-display text-3xl font-bold text-primary-950">{selected.name}</h2><p className="mt-2 text-sm text-muted-foreground">Entdecke die Fasnacht in {selected.name} auf einen Blick.</p><div className="mt-7 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-primary-100 bg-primary-50/70 p-4"><Users className="h-4 w-4 text-primary-600"/><p className="mt-3 font-display text-2xl font-bold">{selected.organizationCount}</p><p className="text-xs text-muted-foreground">Organisationen</p></div><div className="rounded-2xl border border-accent-100 bg-accent-50/60 p-4"><CalendarDays className="h-4 w-4 text-accent-600"/><p className="mt-3 font-display text-2xl font-bold">{selected.eventCount}</p><p className="text-xs text-muted-foreground">Termine</p></div></div><Link href={`/kanton/${selected.slug}`} className="mt-7 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"><MapPin className="h-4 w-4"/>{selected.name} entdecken</Link><Link href={`/agenda?canton=${selected.slug}`} className="mt-2.5 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card text-sm font-semibold text-primary-800">Agenda im Kanton</Link></div> : <div className="relative flex h-full min-h-64 flex-col justify-center lg:min-h-[450px]"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600"><MapPin className="h-5 w-5"/></div><p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-accent-700">Deine Fasnacht beginnt hier</p><h2 className="mt-2 font-display text-2xl font-bold">Wähle einen Kanton</h2><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Fahre über die Karte oder tippe einen Kanton an. Du siehst sofort Organisationen, Veranstaltungen und den direkten Einstieg in die regionale Fasnacht.</p><div className="mt-7 flex gap-5 border-t border-border pt-5 text-sm"><div><strong className="block font-display text-xl text-primary-950">26</strong><span className="text-xs text-muted-foreground">Kantone</span></div><div><strong className="block font-display text-xl text-primary-950">{totalOrganizations+totalEvents}</strong><span className="text-xs text-muted-foreground">Inhalte</span></div></div></div>}
-      </aside>
-    </div>
-  );
+export function SwitzerlandMap({cantons}:{cantons:Canton[]}){
+ const[hovered,setHovered]=React.useState<string|null>(null);const[locked,setLocked]=React.useState<string|null>(null);const[geo,setGeo]=React.useState<GeoData|null>(null);const[geoError,setGeoError]=React.useState(false);const active=locked??hovered;const selected=cantons.find(c=>c.code===active)??null;const totalOrganizations=cantons.reduce((s,c)=>s+c.organizationCount,0);const totalEvents=cantons.reduce((s,c)=>s+c.eventCount,0);const byCode=React.useMemo(()=>new Map(cantons.map(c=>[c.code,c])),[cantons]);
+ React.useEffect(()=>{const controller=new AbortController();fetch(GEOJSON_URL,{signal:controller.signal}).then(r=>{if(!r.ok)throw new Error("Karte konnte nicht geladen werden");return r.json()}).then((data:GeoData)=>{setGeo(data);setGeoError(false)}).catch(error=>{if(error?.name!=="AbortError")setGeoError(true)});return()=>controller.abort()},[]);
+ const hover=(code:string)=>{if(!locked)setHovered(code)};const leave=()=>{if(!locked)setHovered(null)};const choose=(code:string)=>{setLocked(code);setHovered(null)};
+ return <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
+  <div className="relative min-h-[520px] overflow-hidden rounded-[28px] border border-white/10 bg-[#09162a] shadow-lift sm:min-h-[570px]">
+   <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary-500/20 blur-3xl"/><div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-accent-500/15 blur-3xl"/>
+   <div className="relative z-20 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-7"><div><div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75 backdrop-blur"><Sparkles className="h-3.5 w-3.5 text-gold-400" aria-hidden/> Schweiz entdecken</div><p className="mt-3 max-w-sm text-sm leading-relaxed text-white/55">Wähle deinen Kanton und sieh direkt, wo auf Fas-Nav schon Fasnacht läuft.</p></div><div className="flex gap-2 text-xs text-white/65"><span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5"><strong className="text-white">{totalOrganizations}</strong> Organisationen</span><span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5"><strong className="text-white">{totalEvents}</strong> Termine</span></div></div>
+   <div className="absolute inset-x-[2%] bottom-[5%] top-[24%] sm:inset-x-[4%] sm:bottom-[5%] sm:top-[22%]">
+    {!geo&&!geoError?<div className="flex h-full items-center justify-center text-sm text-white/45">Schweizkarte wird geladen …</div>:null}{geoError?<div className="flex h-full items-center justify-center px-8 text-center text-sm text-white/55">Die geografischen Kartendaten konnten gerade nicht geladen werden. Bitte Seite neu laden.</div>:null}
+    {geo?<svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} preserveAspectRatio="xMidYMid meet" className="h-full w-full" role="img" aria-label="Interaktive Karte der 26 Schweizer Kantone" onMouseLeave={leave}><defs><filter id="canton-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8"/></filter></defs>{geo.features.map(feature=>{const code=feature.properties.canton;const canton=byCode.get(code);if(!canton)return null;const isActive=active===code;const d=geometryPath(feature.geometry);return <g key={code} onMouseEnter={()=>hover(code)} onClick={()=>choose(code)} className="cursor-pointer">{isActive?<path d={d} fill="#0279ad" opacity=".42" filter="url(#canton-glow)"/>:null}<path d={d} fill={isActive?"#0279ad":"#123b58"} stroke={isActive?"#72d2f4":"#3b83a5"} strokeWidth={isActive?2.4:1.15} vectorEffect="non-scaling-stroke" className="transition-colors duration-200"/></g>})}{cantons.map(c=>{const p=LABELS[c.code];if(!p)return null;const[x,y]=project(p);const total=c.organizationCount+c.eventCount;const isActive=active===c.code;return <g key={`label-${c.code}`} transform={`translate(${x} ${y})`} onMouseEnter={()=>hover(c.code)} onClick={()=>choose(c.code)} className="cursor-pointer"><rect x="-25" y="-14" width="50" height="28" rx="14" fill={isActive?"#0279ad":"#0b1d31"} stroke={isActive?"#7dd3fc":"rgba(255,255,255,.22)"} strokeWidth="1"/><text textAnchor="middle" dominantBaseline="central" fill="white" fontSize="13" fontWeight="700">{c.code}<tspan dx="4" fontSize="9" opacity=".58">{total}</tspan></text></g>})}</svg>:null}
+   </div><div className="pointer-events-none absolute bottom-5 left-5 z-20 hidden items-center gap-2 text-[11px] text-white/40 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary-400"/> {locked?"Kanton gewählt · anderen Kanton anklicken zum Wechseln":"Echte Kantonsgrenzen · hover oder tippen zum Entdecken"}</div>
+  </div>
+  <aside className="relative overflow-hidden rounded-[28px] border border-border bg-card p-6 shadow-subtle sm:p-7"><div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary-100/70 blur-3xl"/>{selected?<div className="relative"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-700">{selected.code}</p><span className="rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary-700">{locked?"Kanton gewählt":"Vorschau"}</span></div><h2 className="mt-2 font-display text-3xl font-bold text-primary-950">{selected.name}</h2><p className="mt-2 text-sm text-muted-foreground">Entdecke die Fasnacht in {selected.name} auf einen Blick.</p><div className="mt-7 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-primary-100 bg-primary-50/70 p-4"><Users className="h-4 w-4 text-primary-600"/><p className="mt-3 font-display text-2xl font-bold">{selected.organizationCount}</p><p className="text-xs text-muted-foreground">Organisationen</p></div><div className="rounded-2xl border border-accent-100 bg-accent-50/60 p-4"><CalendarDays className="h-4 w-4 text-accent-600"/><p className="mt-3 font-display text-2xl font-bold">{selected.eventCount}</p><p className="text-xs text-muted-foreground">Termine</p></div></div><Link href={`/kanton/${selected.slug}`} className="mt-7 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"><MapPin className="h-4 w-4"/>{selected.name} entdecken</Link><Link href={`/agenda?canton=${selected.slug}`} className="mt-2.5 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card text-sm font-semibold text-primary-800">Agenda im Kanton</Link></div>:<div className="relative flex h-full min-h-64 flex-col justify-center lg:min-h-[450px]"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600"><MapPin className="h-5 w-5"/></div><p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-accent-700">Deine Fasnacht beginnt hier</p><h2 className="mt-2 font-display text-2xl font-bold">Wähle einen Kanton</h2><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Fahre über die Karte oder tippe einen Kanton an. Du siehst sofort Organisationen, Veranstaltungen und den direkten Einstieg in die regionale Fasnacht.</p><div className="mt-7 flex gap-5 border-t border-border pt-5 text-sm"><div><strong className="block font-display text-xl text-primary-950">26</strong><span className="text-xs text-muted-foreground">Kantone</span></div><div><strong className="block font-display text-xl text-primary-950">{totalOrganizations+totalEvents}</strong><span className="text-xs text-muted-foreground">Inhalte</span></div></div></div>}</aside>
+ </div>;
 }
