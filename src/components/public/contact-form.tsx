@@ -19,7 +19,7 @@ export function ContactForm({
   const [pending, setPending] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [sent, setSent] = React.useState<number | null>(null);
+  const [sent, setSent] = React.useState(false);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,7 +30,7 @@ export function ContactForm({
     const data = new FormData(event.currentTarget);
 
     try {
-      const result = await apiRequest<{ ticketNumber: number }>("/api/contact", {
+      await apiRequest("/api/contact", {
         method: "POST",
         body: {
           name: data.get("name"),
@@ -40,7 +40,7 @@ export function ContactForm({
           website: data.get("website"),
         },
       });
-      setSent(result.ticketNumber);
+      setSent(true);
       event.currentTarget.reset();
     } catch (error) {
       setErrors(fieldErrors(error));
@@ -50,11 +50,10 @@ export function ContactForm({
     }
   }
 
-  if (sent !== null) {
+  if (sent) {
     return (
       <Alert variant="success" title="Nachricht erhalten – vielen Dank!">
-        Deine Anfrage wurde unter der Nummer <strong>#{sent}</strong> erfasst. Wir melden uns so
-        rasch wie möglich bei dir.
+        Deine Kontaktanfrage ist bei uns eingegangen. Wir melden uns so rasch wie möglich per E-Mail bei dir.
       </Alert>
     );
   }

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * Status, Priorität und Zuweisung ändern.
+ * Status, Priorität und Zuweisung eines Support-Tickets ändern.
  * Nur Admin und Team dürfen den Bearbeitungszustand steuern.
  */
 export async function PATCH(request: Request, { params }: Params) {
@@ -18,11 +18,15 @@ export async function PATCH(request: Request, { params }: Params) {
     const user = await requirePermission("viewAllTickets");
     const body = await parseBody(request, ticketUpdateSchema);
 
-    const before = await prisma.ticket.findUnique({
-      where: { id },
+    const before = await prisma.ticket.findFirst({
+      where: { id, category: { not: "CONTACT" } },
       select: { id: true, number: true, subject: true, status: true, organizationId: true },
     });
     if (!before) return jsonError("Ticket nicht gefunden.", 404);
+
+    if (body.category === "CONTACT") {
+      return jsonError("Ein Support-Ticket kann nicht in eine Kontaktanfrage umgewandelt werden.", 422);
+    }
 
     const closing =
       (body.status === "CLOSED" || body.status === "RESOLVED") &&
@@ -47,13 +51,6 @@ export async function PATCH(request: Request, { params }: Params) {
       before: { status: before.status },
       after: { status: ticket.status },
     });
-
-    // Bewusst keine Benachrichtigung an die Organisation: Der Zustand folgt
-    // seit der Antwortautomatik dem Gesprächsverlauf, eine Meldung darüber
-    // käme also fast immer zusätzlich zur Meldung über die Antwort selbst –
-    // zweimal dasselbe Ereignis. Die Antwort ist die Nachricht, der Zustand
-    // nur ihre Folge. Im Ticket ist er weiterhin sichtbar, und das
-    // Änderungsprotokoll hält ihn ohnehin fest.
 
     return jsonOk(ticket);
   } catch (error) {

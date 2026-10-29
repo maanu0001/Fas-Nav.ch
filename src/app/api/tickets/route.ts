@@ -7,7 +7,7 @@ import { ticketCreateSchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
-/** Erstellt ein Support-Ticket für die eigene Organisation. */
+/** Erstellt ein Support-Ticket für einen eingeloggten Benutzer. */
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
@@ -18,6 +18,15 @@ export async function POST(request: Request) {
     }
 
     const body = await parseBody(request, ticketCreateSchema);
+
+    // Kontaktanfragen der öffentlichen Website sind ausdrücklich keine
+    // Support-Tickets. CONTACT bleibt vorerst als Legacy-Wert im Enum, damit
+    // bestehende Anfragen migrationssicher weiter angezeigt werden können.
+    if (body.category === "CONTACT") {
+      return jsonError("Kontaktanfragen können nicht als Support-Ticket erstellt werden.", 422, {
+        category: "Bitte wähle eine Support-Kategorie aus.",
+      });
+    }
 
     // Ein Ticket darf nur einer Organisation zugeordnet werden,
     // auf die der Benutzer tatsächlich Zugriff hat.

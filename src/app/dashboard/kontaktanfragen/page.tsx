@@ -2,23 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Table, TableWrapper, Td, Th, Thead, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/states";
 import { DashboardFilters } from "@/components/dashboard/filter-form";
-import { TicketBadge } from "@/components/dashboard/status-badge";
-import { OPEN_CONTACT_TICKET_STATUSES, TICKET_STATUS_LABELS } from "@/lib/constants";
 import { requirePermissionPage } from "@/lib/dashboard-context";
 import { formatDateTime, relativeTime } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { contactTicketWhere } from "@/lib/queries/contact-requests";
 import { cn } from "@/lib/utils";
-import type { TicketStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Kontaktanfragen" };
 
 type SearchParams = Promise<Record<string, string | undefined>>;
+
+const CONTACT_STATUS = {
+  OPEN: { label: "Neu", variant: "warning" as const },
+  IN_PROGRESS: { label: "In Bearbeitung", variant: "info" as const },
+  WAITING_FOR_CUSTOMER: { label: "In Bearbeitung", variant: "info" as const },
+  RESOLVED: { label: "Erledigt", variant: "success" as const },
+  CLOSED: { label: "Erledigt", variant: "success" as const },
+};
 
 /** Einsendungen des allgemeinen Kontaktformulars der Website. */
 export default async function ContactFormPage({ searchParams }: { searchParams: SearchParams }) {
@@ -56,10 +62,11 @@ export default async function ContactFormPage({ searchParams }: { searchParams: 
           {
             name: "status",
             label: "Status",
-            options: Object.entries(TICKET_STATUS_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            })),
+            options: [
+              { value: "OPEN", label: "Neu" },
+              { value: "IN_PROGRESS", label: "In Bearbeitung" },
+              { value: "RESOLVED", label: "Erledigt" },
+            ],
           },
         ]}
       />
@@ -72,20 +79,16 @@ export default async function ContactFormPage({ searchParams }: { searchParams: 
                 <Th>Eingang</Th>
                 <Th>Absender</Th>
                 <Th>Betreff und Nachricht</Th>
-                <Th>Status</Th>
+                <Th>Bearbeitungsstand</Th>
               </Tr>
             </Thead>
             <tbody>
               {anfragen.map((anfrage) => {
-                // Noch unerledigte Anfragen werden hervorgehoben – zusätzlich
-                // zum Abzeichen, damit die Zeile nicht allein über die Farbe
-                // erkennbar ist.
-                const offen = (OPEN_CONTACT_TICKET_STATUSES as readonly string[]).includes(
-                  anfrage.status,
-                );
+                const offen = anfrage.status === "OPEN" || anfrage.status === "IN_PROGRESS" || anfrage.status === "WAITING_FOR_CUSTOMER";
                 const name = anfrage.guestName ?? anfrage.author?.name ?? "Unbekannt";
                 const email = anfrage.guestEmail ?? anfrage.author?.email ?? null;
                 const vorschau = anfrage.messages[0]?.body ?? "";
+                const status = CONTACT_STATUS[anfrage.status];
 
                 return (
                   <Tr key={anfrage.id} className={cn(offen && "bg-primary-50/60")}>
@@ -96,19 +99,13 @@ export default async function ContactFormPage({ searchParams }: { searchParams: 
                     <Td className="align-top">
                       <span className="block font-medium">{name}</span>
                       {email ? (
-                        <a
-                          href={`mailto:${email}`}
-                          className="text-xs text-primary-800 hover:underline"
-                        >
+                        <a href={`mailto:${email}`} className="text-xs text-primary-800 hover:underline">
                           {email}
                         </a>
                       ) : null}
                     </Td>
                     <Td className="align-top">
-                      <Link
-                        href={`/dashboard/kontaktanfragen/${anfrage.id}`}
-                        className="font-medium text-primary-800 hover:underline"
-                      >
+                      <Link href={`/dashboard/kontaktanfragen/${anfrage.id}`} className="font-medium text-primary-800 hover:underline">
                         {anfrage.subject}
                       </Link>
                       {vorschau ? (
@@ -118,12 +115,7 @@ export default async function ContactFormPage({ searchParams }: { searchParams: 
                       ) : null}
                     </Td>
                     <Td className="align-top">
-                      <TicketBadge status={anfrage.status as TicketStatus} />
-                      {offen ? (
-                        <span className="mt-1 block text-xs font-medium text-primary-800">
-                          Unerledigt
-                        </span>
-                      ) : null}
+                      <Badge variant={status.variant}>{status.label}</Badge>
                     </Td>
                   </Tr>
                 );
