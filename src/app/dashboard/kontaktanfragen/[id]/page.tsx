@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Mail } from "lucide-react";
 
+import { ContactRequestActions } from "@/components/dashboard/contact-request-actions";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -21,7 +22,6 @@ type Params = { params: Promise<{ id: string }> };
  * Sie wird bewusst nicht als Support-Thread dargestellt: Der Absender hat
  * keinen Fas-Nav-Account und kann deshalb keinen Ticketverlauf im Dashboard
  * einsehen oder dort antworten. Die Antwort erfolgt direkt per E-Mail.
- * Bestehende CONTACT-Datensätze bleiben migrationssicher erhalten.
  */
 export default async function ContactRequestDetailPage({ params }: Params) {
   const { id } = await params;
@@ -53,12 +53,15 @@ export default async function ContactRequestDetailPage({ params }: Params) {
           { label: `Anfrage #${anfrage.number}` },
         ]}
         actions={
-          email ? (
-            <ButtonLink href={`mailto:${email}?subject=${encodeURIComponent(`Re: ${anfrage.subject}`)}`}>
-              <Mail />
-              Per E-Mail antworten
-            </ButtonLink>
-          ) : undefined
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {email ? (
+              <ButtonLink href={`mailto:${email}?subject=${encodeURIComponent(`Re: ${anfrage.subject}`)}`}>
+                <Mail />
+                Per E-Mail antworten
+              </ButtonLink>
+            ) : null}
+            <ContactRequestActions id={anfrage.id} status={anfrage.status} />
+          </div>
         }
       />
 
@@ -93,13 +96,11 @@ export default async function ContactRequestDetailPage({ params }: Params) {
       </Card>
 
       <Card className="p-5">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-base font-semibold">Nachricht</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Externe Kontaktanfrage – Antworten werden per E-Mail geführt, nicht im Ticket-System.
-            </p>
-          </div>
+        <div className="mb-4">
+          <h2 className="font-display text-base font-semibold">Nachricht</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Externe Kontaktanfrage – Antworten werden per E-Mail geführt, nicht im Ticket-System.
+          </p>
         </div>
         <div className="whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-4 text-sm leading-6">
           {ersteNachricht}
