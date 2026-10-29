@@ -1,0 +1,149 @@
+"use client";
+
+import * as React from "react";
+
+/**
+ * Eigenständiges Fas-Nav-Keyvisual für den Homepage-Hero.
+ * Reagiert nur auf präzise Zeigergeräte; Touch und reduced-motion bleiben ruhig.
+ */
+export function FasnachtHeroArtwork() {
+  const rootRef = React.useRef<HTMLDivElement>(null);
+
+  const onPointerMove = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    const node = rootRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+    const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    node.style.setProperty("--hero-x", x.toFixed(3));
+    node.style.setProperty("--hero-y", y.toFixed(3));
+  }, []);
+
+  const reset = React.useCallback(() => {
+    const node = rootRef.current;
+    if (!node) return;
+    node.style.setProperty("--hero-x", "0");
+    node.style.setProperty("--hero-y", "0");
+  }, []);
+
+  return (
+    <div
+      ref={rootRef}
+      className="fasnacht-hero-art relative h-full min-h-[430px] w-full select-none"
+      onPointerMove={onPointerMove}
+      onPointerLeave={reset}
+    >
+      <div className="hero-orbit hero-orbit-back absolute inset-[7%_3%_4%_8%]">
+        <div className="absolute left-[6%] top-[20%] h-3 w-3 rotate-12 rounded-[2px] bg-gold-400 shadow-[0_0_24px_rgba(254,170,25,.45)]" />
+        <div className="absolute right-[5%] top-[13%] h-4 w-2 rotate-[32deg] rounded-full bg-accent-400" />
+        <div className="absolute bottom-[18%] left-[3%] h-2.5 w-5 -rotate-[24deg] rounded-full bg-primary-300" />
+        <div className="absolute bottom-[7%] right-[16%] h-3 w-3 rotate-45 border-2 border-gold-300/90" />
+        <div className="absolute right-[2%] top-[51%] h-2 w-2 rounded-full bg-white/80" />
+      </div>
+
+      <div className="hero-orbit hero-orbit-mid absolute inset-[4%_4%_2%_5%]">
+        <svg viewBox="0 0 500 430" className="h-full w-full overflow-visible" fill="none">
+          <path
+            d="M50 128C107 58 159 65 197 104C233 141 224 181 193 201C162 221 126 209 129 177C132 147 173 138 204 160C248 191 246 254 208 286C166 321 106 305 76 272"
+            stroke="rgba(63,190,232,.82)"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+          <path
+            d="M370 56C435 88 447 139 414 169C384 196 342 180 343 146C344 117 378 105 405 125"
+            stroke="rgba(254,170,25,.9)"
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+          <path
+            d="M394 288C433 307 452 342 434 376"
+            stroke="rgba(224,67,76,.88)"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+
+      <div className="hero-orbit hero-orbit-front absolute inset-[1%_5%_2%_8%] flex items-center justify-center">
+        <div className="relative h-[330px] w-[350px]">
+          <div className="absolute inset-[9%_3%_2%_5%] rotate-[-5deg] rounded-[48%_52%_45%_55%/55%_44%_56%_45%] border border-white/10 bg-white/[0.035] shadow-[0_35px_90px_rgba(0,0,0,.28)] backdrop-blur-[2px]" />
+          <svg
+            viewBox="0 0 360 340"
+            className="absolute inset-0 h-full w-full drop-shadow-[0_24px_36px_rgba(0,0,0,.3)]"
+            fill="none"
+          >
+            <path
+              d="M181 28C117 31 66 77 57 145C48 215 93 283 181 314C269 283 314 215 305 145C296 77 245 31 181 28Z"
+              fill="rgba(255,255,255,.035)"
+              stroke="rgba(255,255,255,.18)"
+              strokeWidth="2"
+            />
+            <path
+              d="M181 29C126 32 82 64 64 112C104 92 144 84 181 88V29Z"
+              fill="rgba(2,121,173,.9)"
+            />
+            <path
+              d="M181 29C236 32 280 64 298 112C258 92 218 84 181 88V29Z"
+              fill="rgba(194,23,31,.92)"
+            />
+            <path
+              d="M64 112C54 139 54 171 63 198C96 179 129 171 160 174L181 88C144 84 104 92 64 112Z"
+              fill="rgba(254,170,25,.9)"
+            />
+            <path
+              d="M298 112C308 139 308 171 299 198C266 179 233 171 202 174L181 88C218 84 258 92 298 112Z"
+              fill="rgba(2,121,173,.78)"
+            />
+            <path
+              d="M63 198C80 249 120 288 181 314V218C141 214 102 207 63 198Z"
+              fill="rgba(194,23,31,.8)"
+            />
+            <path
+              d="M299 198C282 249 242 288 181 314V218C221 214 260 207 299 198Z"
+              fill="rgba(254,170,25,.72)"
+            />
+            <path
+              d="M91 151C115 127 145 126 166 146C144 165 115 167 91 151Z"
+              fill="#09162a"
+              stroke="rgba(255,255,255,.55)"
+              strokeWidth="3"
+            />
+            <path
+              d="M271 151C247 127 217 126 196 146C218 165 247 167 271 151Z"
+              fill="#09162a"
+              stroke="rgba(255,255,255,.55)"
+              strokeWidth="3"
+            />
+            <path
+              d="M181 158L163 211L181 222L199 211L181 158Z"
+              fill="rgba(255,255,255,.12)"
+              stroke="rgba(255,255,255,.32)"
+              strokeWidth="2"
+            />
+            <path
+              d="M135 244C165 261 197 261 227 244"
+              stroke="rgba(255,255,255,.68)"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            <path d="M181 29V88M181 218V314" stroke="rgba(255,255,255,.24)" strokeWidth="2" />
+          </svg>
+
+          <div className="hero-spark absolute -right-4 top-[17%] h-8 w-8 rotate-12">
+            <span className="absolute left-1/2 top-0 h-full w-px bg-white/80" />
+            <span className="absolute left-0 top-1/2 h-px w-full bg-white/80" />
+          </div>
+          <div className="hero-spark hero-spark-delay absolute -left-2 bottom-[22%] h-5 w-5 rotate-45">
+            <span className="absolute left-1/2 top-0 h-full w-px bg-gold-300" />
+            <span className="absolute left-0 top-1/2 h-px w-full bg-gold-300" />
+          </div>
+        </div>
+      </div>
+
+      <div className="hero-float absolute bottom-[4%] right-[4%] rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65 backdrop-blur-md">
+        Fasnacht · Schweiz
+      </div>
+    </div>
+  );
+}
