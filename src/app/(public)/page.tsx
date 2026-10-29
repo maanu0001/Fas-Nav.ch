@@ -50,7 +50,7 @@ export default async function HomePage() {
     cantonOverview(),
   ]);
 
-  const priceLabel = settingString(settings, "cta_price_label", "ab CHF 25.– / Jahr");
+  const priceLabel = settingString(settings, "cta_price_label", "ab CHF 49.– / Jahr");
 
   // Sektionsdaten werden nur für tatsächlich sichtbare Sektionen geladen.
   const carnivalSection = sections.find((s) => s.type === "FEATURED_CARNIVALS");
