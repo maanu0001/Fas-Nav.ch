@@ -5,13 +5,7 @@ import { openContactRequestCounts } from "@/lib/queries/contact-requests";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Rahmen für die beiden Übersichten.
- *
- * Die Prüfung steht hier und zusätzlich in jeder Seite sowie im Endpunkt.
- * Ein Layout allein wäre kein verlässlicher Schutz: Es umschliesst zwar alle
- * Unterseiten, aber ein Endpunkt liegt ausserhalb davon.
- */
+/** Rahmen für externe Zuschriften ohne Fas-Nav-Konto. */
 export default async function ContactRequestsLayout({
   children,
 }: {
@@ -24,7 +18,7 @@ export default async function ContactRequestsLayout({
     <>
       <PageHeader
         title="Kontaktanfragen"
-        description="Zuschriften über die Website – getrennt nach allgemeinem Kontaktformular und Übernahme eines Profils."
+        description="Externe Zuschriften ohne Benutzerkonto. Diese Anfragen sind vom Support-Ticket-System getrennt und werden per E-Mail beantwortet."
       />
 
       <LinkTabs
@@ -32,16 +26,12 @@ export default async function ContactRequestsLayout({
         items={[
           {
             href: "/dashboard/kontaktanfragen",
-            label: counts.contact
-              ? `Kontaktformular (${counts.contact})`
-              : "Kontaktformular",
+            label: counts.contact ? `Kontaktformular (${counts.contact})` : "Kontaktformular",
             exact: true,
           },
           {
             href: "/dashboard/kontaktanfragen/profil",
-            label: counts.claims
-              ? `Profil beanspruchen (${counts.claims})`
-              : "Profil beanspruchen",
+            label: counts.claims ? `Profil beanspruchen (${counts.claims})` : "Profil beanspruchen",
           },
         ]}
       />
