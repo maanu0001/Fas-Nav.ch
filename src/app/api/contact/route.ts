@@ -8,7 +8,14 @@ import { contactSchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
-/** Kontaktanfragen landen als Ticket im Support-System. */
+/**
+ * Öffentliche Kontaktanfrage ohne Benutzerkonto.
+ *
+ * CONTACT wird vorerst als eigener Legacy-Datensatztyp in der bestehenden
+ * Tabelle gespeichert, damit bestehende Anfragen ohne riskante Datenmigration
+ * erhalten bleiben. Der Datensatz wird aber nirgends mehr als Support-Ticket
+ * behandelt oder einem Gast als Ticketnummer präsentiert.
+ */
 export const POST = route(async (request) => {
   const limit = checkRateLimit(clientKey(request, "contact"), 5, 15 * 60_000);
   if (!limit.ok) {
@@ -22,10 +29,10 @@ export const POST = route(async (request) => {
 
   // Honeypot: Bots füllen dieses Feld aus – wir antworten unauffällig mit Erfolg.
   if (body.website) {
-    return jsonOk({ ticketNumber: 0 });
+    return jsonOk({ received: true });
   }
 
-  const ticket = await prisma.ticket.create({
+  const contact = await prisma.ticket.create({
     data: {
       subject: body.subject,
       category: "CONTACT",
@@ -45,19 +52,19 @@ export const POST = route(async (request) => {
 
   await notifyStaff({
     type: "SYSTEM",
-    title: `Neue Kontaktanfrage #${ticket.number}`,
+    title: "Neue Kontaktanfrage",
     body: `${body.name} (${body.email}): ${body.subject}`,
-    link: `/dashboard/tickets/${ticket.id}`,
+    link: `/dashboard/kontaktanfragen/${contact.id}`,
   });
 
   const notifyEmail = process.env.CONTACT_NOTIFY_EMAIL;
   if (notifyEmail) {
     await sendMail({
       to: notifyEmail,
-      subject: `[Fas-Nav] Kontaktanfrage #${ticket.number}: ${body.subject}`,
+      subject: `[Fas-Nav] Kontaktanfrage: ${body.subject}`,
       text: `Von: ${body.name} <${body.email}>\n\n${body.message}`,
     });
   }
 
-  return jsonOk({ ticketNumber: ticket.number }, 201);
+  return jsonOk({ received: true }, 201);
 });
