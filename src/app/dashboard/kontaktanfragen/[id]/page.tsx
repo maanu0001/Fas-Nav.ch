@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Mail } from "lucide-react";
 
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { TicketBadge } from "@/components/dashboard/status-badge";
-import { TicketThread } from "@/components/dashboard/ticket-thread";
 import { requirePermissionPage } from "@/lib/dashboard-context";
 import { formatDateTime } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
@@ -16,26 +16,24 @@ export const metadata: Metadata = { title: "Kontaktanfrage" };
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * Eine einzelne Kontaktanfrage.
+ * Eine externe Kontaktanfrage der Website.
  *
- * Der Verlauf und die Statusänderung stammen aus dem Ticket-System – dieselbe
- * Komponente wie unter Tickets, dieselben Endpunkte. Neu ist nur der Kopf mit
- * den Angaben des Formulars, die im Ticket sonst über mehrere Felder verteilt
- * sind, und die Einordnung in diesen Bereich.
+ * Sie wird bewusst nicht als Support-Thread dargestellt: Der Absender hat
+ * keinen Fas-Nav-Account und kann deshalb keinen Ticketverlauf im Dashboard
+ * einsehen oder dort antworten. Die Antwort erfolgt direkt per E-Mail.
+ * Bestehende CONTACT-Datensätze bleiben migrationssicher erhalten.
  */
 export default async function ContactRequestDetailPage({ params }: Params) {
   const { id } = await params;
   await requirePermissionPage("handleContactRequests");
 
-  // Die Kategorie steht in der Bedingung: Ein gewöhnliches Ticket lässt sich
-  // über diese Adresse nicht öffnen.
   const anfrage = await prisma.ticket.findFirst({
     where: { id, category: "CONTACT" },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      author: { select: { name: true, email: true } },
       messages: {
         orderBy: { createdAt: "asc" },
-        include: { author: { select: { id: true, name: true, role: true } } },
+        select: { id: true, body: true, createdAt: true },
       },
     },
   });
@@ -44,6 +42,7 @@ export default async function ContactRequestDetailPage({ params }: Params) {
 
   const name = anfrage.guestName ?? anfrage.author?.name ?? "Unbekannt";
   const email = anfrage.guestEmail ?? anfrage.author?.email ?? null;
+  const ersteNachricht = anfrage.messages[0]?.body ?? "Keine Nachricht vorhanden.";
 
   return (
     <>
@@ -51,9 +50,16 @@ export default async function ContactRequestDetailPage({ params }: Params) {
         title={anfrage.subject}
         breadcrumbs={[
           { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen" },
-          { label: `#${anfrage.number}` },
+          { label: `Anfrage #${anfrage.number}` },
         ]}
-        actions={<TicketBadge status={anfrage.status} />}
+        actions={
+          email ? (
+            <ButtonLink href={`mailto:${email}?subject=${encodeURIComponent(`Re: ${anfrage.subject}`)}`}>
+              <Mail />
+              Per E-Mail antworten
+            </ButtonLink>
+          ) : undefined
+        }
       />
 
       <Card className="mb-6 p-5">
@@ -86,14 +92,19 @@ export default async function ContactRequestDetailPage({ params }: Params) {
         </dl>
       </Card>
 
-      <TicketThread
-        ticketId={anfrage.id}
-        messages={anfrage.messages}
-        status={anfrage.status}
-        priority={anfrage.priority}
-        isStaff
-        closed={anfrage.status === "CLOSED"}
-      />
+      <Card className="p-5">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-base font-semibold">Nachricht</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Externe Kontaktanfrage – Antworten werden per E-Mail geführt, nicht im Ticket-System.
+            </p>
+          </div>
+        </div>
+        <div className="whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-4 text-sm leading-6">
+          {ersteNachricht}
+        </div>
+      </Card>
     </>
   );
 }
