@@ -1,1 +1,1245 @@
-// PLACEHOLDER
+// Fas-Nav.ch – Datenmodell
+// Die zentrale Schweizer Fasnachts- und Guggen-Plattform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  /// Vollzugriff auf die Plattform inklusive Startseite, Import und Einstellungen.
+  ADMIN
+  /// Redaktion und Betreuung – ohne Startseite, Import, Tarife und Einstellungen.
+  TEAM
+  /// Kontotyp Fasnacht. Zugriff ergibt sich ausschliesslich aus Membership.
+  FASNACHT
+  /// Kontotyp Gugge. Zugriff ergibt sich ausschliesslich aus Membership.
+  GUGGE
+}
+
+enum OrganizationType {
+  CARNIVAL
+  GUGGE
+}
+
+/// Veröffentlichungszustand öffentlicher Inhalte
+enum PublicationStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  UNPUBLISHED
+  SUSPENDED
+}
+
+/// Verifizierung durch Admin/Team
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  OFFICIAL
+}
+
+/// Übernahmestatus – erlaubt von Fas-Nav vorangelegte Profile
+enum ClaimStatus {
+  UNCLAIMED
+  CLAIM_REQUESTED
+  CLAIMED
+}
+
+/// Organisationsinterne Rolle. Sie gilt ausschliesslich für die jeweilige
+/// Organisation und ist unabhängig von der globalen Rolle des Benutzers.
+enum MembershipRole {
+  /// Vollständige Verwaltung der eigenen Organisation inklusive Zugriffen.
+  OWNER
+  /// Inhalte, Veranstaltungen und Medien verwalten – keine Zugriffsverwaltung.
+  MANAGER
+  /// Inhalte bearbeiten – keine Zugriffs- und keine Veröffentlichungsverwaltung.
+  EDITOR
+}
+
+enum EventType {
+  FASNACHT
+  UMZUG
+  GUGGENKONZERT
+  MONSTERKONZERT
+  MASKENBALL
+  BEIZENFASNACHT
+  KINDERFASNACHT
+  SCHNITZELBANK
+  WAGENBAU
+  VORFASNACHT
+  HAUPTFASNACHT
+  ABSCHLUSSVERANSTALTUNG
+  SONSTIGE
+}
+
+enum PlanTier {
+  FREE
+  BASIC
+  PREMIUM
+  CUSTOM
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  ONE_TIME
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAYMENT_PENDING
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  INVOICE
+  BANK_TRANSFER
+  TWINT
+  CREDIT_CARD
+  STRIPE
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  TECHNICAL
+  PAGE_EDIT
+  SUBSCRIPTION
+  INVOICE
+  EVENT
+  GENERAL
+  CONTACT
+  OTHER
+}
+
+enum MediaType {
+  LOGO
+  HEADER
+  GALLERY
+  SPONSOR
+  EVENT
+  HOMEPAGE
+  DOCUMENT
+}
+
+enum SocialPlatform {
+  WEBSITE
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  X
+  LINKEDIN
+  SPOTIFY
+  WHATSAPP
+  OTHER
+}
+
+enum NotificationType {
+  TICKET_REPLY
+  TICKET_STATUS
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_EXPIRED
+  PAYMENT_DUE
+  PAYMENT_RECEIVED
+  EVENT_PUBLISHED
+  ORGANIZATION_VERIFIED
+  ORGANIZATION_PUBLISHED
+  ACCOUNT_CREATED
+  SYSTEM
+}
+
+enum PageViewTarget {
+  ORGANIZATION
+  EVENT
+  HOMEPAGE
+  CANTON
+  SEARCH
+}
+
+/// Klick-Tracking auf ausgehende Links
+enum InteractionType {
+  VIEW
+  WEBSITE_CLICK
+  SOCIAL_CLICK
+  TICKET_CLICK
+  CONTACT_CLICK
+}
+
+enum PlacementType {
+  FEATURED_CARNIVAL
+  FEATURED_GUGGE
+  FEATURED_EVENT
+  HOMEPAGE_SLOT
+  CANTON_HIGHLIGHT
+  AGENDA_HIGHLIGHT
+}
+
+enum PlacementStatus {
+  REQUESTED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum HomepageSectionType {
+  HERO
+  STATS
+  FEATURED_CARNIVALS
+  FEATURED_GUGGEN
+  UPCOMING_EVENTS
+  CANTON_GRID
+  INFO
+  ORGANISATION_CTA
+  CTA
+  FAQ
+}
+
+/// Einschätzung, ob eine Organisation aktuell aktiv ist (aus der Recherche).
+enum ActivityStatus {
+  ACTIVE
+  LIKELY_ACTIVE
+  UNCERTAIN
+  INACTIVE
+  UNKNOWN
+}
+
+/// Herkunft eines einzelnen Feldwerts. Steuert, ob ein erneuter
+/// Rechercheimport den Wert überschreiben darf.
+enum FieldOriginType {
+  /// Zuletzt durch einen Import gesetzt – darf erneut importiert werden.
+  IMPORTED
+  /// Durch Admin oder Team bearbeitet – wird vor Importen geschützt.
+  ADMIN_EDITED
+  /// Durch die Organisation selbst bearbeitet – wird vor Importen geschützt.
+  ORGANIZATION_EDITED
+}
+
+enum ImportJobStatus {
+  /// Simulation ohne Schreibzugriff auf die produktiven Daten.
+  DRY_RUN
+  RUNNING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  ROLLED_BACK
+}
+
+/// Was mit einem einzelnen Datensatz der Importdatei geschehen ist bzw. würde.
+enum ImportRecordAction {
+  CREATE
+  UPDATE
+  SKIP
+  DUPLICATE
+  REVIEW
+  INVALID
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Benutzer & Zugriff
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  name           String
+  passwordHash   String?
+  /// Kein Standardwert: Die Rolle wird beim Anlegen bewusst gesetzt.
+  role           Role
+  isActive       Boolean   @default(true)
+  phone          String?
+  /// E-Mail bei neuen Ticketantworten erhalten. Standard an, weil eine
+  /// unbeantwortete Rückfrage sonst unbemerkt liegen bleibt.
+  ticketEmails   Boolean   @default(true)
+  locale         String    @default("de-CH")
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  createdBy      User?     @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers   User[]    @relation("UserCreatedBy")
+
+  memberships         Membership[]
+  ticketsCreated      Ticket[]             @relation("TicketAuthor")
+  ticketsAssigned     Ticket[]             @relation("TicketAssignee")
+  ticketMessages      TicketMessage[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+  uploadedMedia       Media[]              @relation("MediaUploader")
+  favorites           Favorite[]
+  importJobs          ImportJob[]
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Verbindet Benutzerkonten mit Organisationen (n:m).
+///
+/// Ein Benutzerkonto ist ausschliesslich ein Login. Der Zugriff auf eine
+/// konkrete Fasnacht oder Gugge ergibt sich einzig aus einem Eintrag in
+/// dieser Tabelle – niemals aus der globalen Rolle FASNACHT oder GUGGE.
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole @default(EDITOR)
+  title          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Geografie
+// ---------------------------------------------------------------------------
+
+model Canton {
+  id            String   @id @default(cuid())
+  code          String   @unique // z.B. SO, LU, BS
+  name          String   @unique // Solothurn
+  slug          String   @unique // solothurn
+  region        String // Nordwestschweiz, Zentralschweiz, ...
+  description   String?  @db.Text
+  metaTitle     String?
+  metaDesc      String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  municipalities Municipality[]
+  organizations  Organization[]
+  events         Event[]
+  locations      Location[]
+
+  @@map("cantons")
+}
+
+model Municipality {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String
+  zip       String?
+  cantonId  String
+  canton    Canton   @relation(fields: [cantonId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  organizations Organization[]
+  locations     Location[]
+  events        Event[]
+
+  @@unique([slug, cantonId])
+  @@index([cantonId])
+  @@map("municipalities")
+}
+
+/// Konkreter Veranstaltungsort
+model Location {
+  id             String        @id @default(cuid())
+  name           String
+  street         String?
+  zip            String?
+  city           String
+  cantonId       String
+  canton         Canton        @relation(fields: [cantonId], references: [id], onDelete: Restrict)
+  municipalityId String?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+  latitude       Float?
+  longitude      Float?
+  notes          String?       @db.Text
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  events Event[]
+
+  @@index([cantonId])
+  @@index([organizationId])
+  @@map("locations")
+}
+
+// ---------------------------------------------------------------------------
+// Organisationen (Fasnachten & Guggen)
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id       String           @id @default(cuid())
+  type     OrganizationType
+  name     String
+  slug     String           @unique
+  shortName String?
+
+  // Inhalt
+  tagline       String?
+  shortDescription String? @db.Text
+  description      String? @db.Text
+  history          String? @db.Text
+  importantInfo    String? @db.Text
+
+  logoId   String?  @unique
+  logo     Media?   @relation("OrganizationLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  headerId String?  @unique
+  header   Media?   @relation("OrganizationHeader", fields: [headerId], references: [id], onDelete: SetNull)
+
+  // Standort
+  cantonId       String
+  canton         Canton        @relation(fields: [cantonId], references: [id], onDelete: Restrict)
+  municipalityId String?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+  city           String
+  street         String?
+  zip            String?
+  latitude       Float?
+  longitude      Float?
+
+  // Kontakt
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  website      String?
+  bookingEmail String?
+
+  // Fasnacht-spezifisch
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Gugge-spezifisch
+  foundedYear  Int?
+  memberCount  Int?
+  repertoire   String? @db.Text
+  musicStyle   String?
+  /// Einsatzgebiet der Gugge
+  performanceArea String?
+  /// Stammfasnacht
+  homeCarnival    String?
+  /// Besetzung
+  instrumentation String? @db.Text
+  /// Bekannte Auftritte
+  knownAppearances String[]
+  /// Kontakthinweis für Buchungen
+  bookingInfo     String? @db.Text
+
+  // Allgemeine Zusatzangaben aus der Recherche
+  /// Weitere gebräuchliche Namen – auch für die Dublettenerkennung genutzt.
+  alternativeNames String[]
+  motto            String?
+  catchmentArea    String?
+  associationType  String?
+  specialFeatures  String[]
+
+  // Fasnacht-spezifische Merkmale
+  typicalPeriod       String?
+  recurrence          String?
+  organizerName       String?
+  programHighlights   String[]
+  hasParade            Boolean?
+  hasChildrensCarnival Boolean?
+  hasMaskedBall        Boolean?
+  hasMonsterConcert    Boolean?
+  hasSchnitzelbank     Boolean?
+  hasBeizenfasnacht    Boolean?
+
+  /// Zeitpunkt der letzten Erinnerung an fehlende Agenda-Einträge.
+  /// Steuert die Sperrfrist; wird geleert, sobald wieder ein kommender Termin
+  /// erfasst ist, damit später erneut erinnert werden kann.
+  agendaReminderSentAt DateTime?
+
+  // Anreise. Alle Angaben freiwillig; ohne Inhalt entfällt der Abschnitt auf
+  // der öffentlichen Seite vollständig.
+  /// Zufahrt, Parkmöglichkeiten, Sperrungen, Park and Ride
+  arrivalByCar             String? @db.Text
+  /// Bahn, Bus, Tram, nächste Haltestelle, Sonderfahrplan, Nachtverbindungen
+  arrivalByPublicTransport String? @db.Text
+  /// Alles, was sich weder Auto noch ÖV zuordnen lässt – Velo, Car, Taxi,
+  /// Shuttle, barrierefreie Anreise, örtliche Besonderheiten
+  arrivalNotes             String? @db.Text
+  /// Karte mit dem Treffpunkt oder dem Parkplatz
+  arrivalMapUrl            String?
+  /// Fahrplanauskunft, z. B. die Verbindung zum Bahnhof
+  arrivalTransportUrl      String?
+
+  // Herkunft und Qualität der Daten (nur intern sichtbar)
+  /// Stabile Kennung aus der Recherchedatei, z.B. CH-BS-CARNIVAL-BASEL-001.
+  /// Ermöglicht wiederholte Importe ohne Duplikate.
+  externalImportId  String?  @unique
+  importSource      String?
+  importedAt        DateTime?
+  lastImportJobId   String?
+  lastImportJob     ImportJob? @relation("OrganizationLastImport", fields: [lastImportJobId], references: [id], onDelete: SetNull)
+  confidenceScore   Int?
+  needsManualReview Boolean  @default(false)
+  reviewReasons     String[]
+  activityStatus    ActivityStatus?
+  lastActivityEvidence String? @db.Text
+  lastVerifiedAt    DateTime?
+  dataNotes         String?  @db.Text
+
+  // Bildquellen aus der Recherche. Assets werden bewusst nicht automatisch
+  // heruntergeladen; Admin entscheidet über die Übernahme.
+  logoSourceUrl   String?
+  logoAssetUrl    String?
+  logoStatus      String?
+  headerSourceUrl String?
+  headerAssetUrl  String?
+  headerStatus    String?
+
+  // Zustände
+  status             PublicationStatus  @default(DRAFT)
+  verification       VerificationStatus @default(UNVERIFIED)
+  claimStatus        ClaimStatus        @default(UNCLAIMED)
+  isFeatured         Boolean            @default(false)
+  featuredUntil      DateTime?
+  publishedAt        DateTime?
+
+  // SEO
+  metaTitle String?
+  metaDesc  String?
+  ogImageId String?  @unique
+  ogImage   Media?  @relation("OrganizationOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  // Onboarding
+  onboardingStep      Int      @default(0)
+  onboardingCompleted Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships   Membership[]
+  events        Event[]
+  media         Media[]        @relation("OrganizationMedia")
+  socialLinks   SocialLink[]
+  sponsors      Sponsor[]
+  locations     Location[]
+  subscription  Subscription?
+  payments      Payment[]
+  tickets       Ticket[]
+  pageViews     PageView[]
+  placements    Placement[]
+  faqs          Faq[]
+  programItems  ProgramItem[]
+  downloads     Download[]
+  claimRequests ClaimRequest[]
+  favorites     Favorite[]
+  notifications Notification[]
+  sources       OrganizationSource[]
+  fieldOrigins  FieldOrigin[]
+  importRecords ImportRecord[]
+
+  @@index([type, status])
+  @@index([cantonId])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([externalImportId])
+  @@index([needsManualReview])
+  @@index([activityStatus])
+  @@map("organizations")
+}
+
+model SocialLink {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  platform       SocialPlatform
+  url            String
+  label          String?
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  @@unique([organizationId, platform])
+  @@index([organizationId])
+  @@map("social_links")
+}
+
+model Sponsor {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  url            String?
+  tier           String?
+  logoId         String?
+  logo           Media?       @relation("SponsorLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("sponsors")
+}
+
+/// Programmpunkt einer Fasnacht (ohne eigenständigen Agenda-Eintrag)
+model ProgramItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?      @db.Text
+  day            DateTime?
+  timeLabel      String?
+  place          String?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("program_items")
+}
+
+model Faq {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  question       String
+  answer         String       @db.Text
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("faqs")
+}
+
+model Download {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  mediaId        String?
+  media          Media?       @relation("DownloadMedia", fields: [mediaId], references: [id], onDelete: SetNull)
+  externalUrl    String?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("downloads")
+}
+
+/// „Diese Seite gehört zu unserer Organisation“ – Übernahme unclaimed Profile
+model ClaimRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contactName    String
+  contactEmail   String
+  contactPhone   String?
+  message        String       @db.Text
+  status         String       @default("PENDING") // PENDING | APPROVED | REJECTED
+  handledAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("claim_requests")
+}
+
+// ---------------------------------------------------------------------------
+// Veranstaltungen
+// ---------------------------------------------------------------------------
+
+model Event {
+  id             String       @id @default(cuid())
+  title          String
+  slug           String       @unique
+  type           EventType    @default(SONSTIGE)
+  description    String?      @db.Text
+  shortDescription String?    @db.Text
+
+  startDate DateTime
+  endDate   DateTime?
+  allDay    Boolean  @default(false)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  locationId     String?
+  location       Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  venueName      String?
+  street         String?
+  city           String
+  zip            String?
+  cantonId       String
+  canton         Canton        @relation(fields: [cantonId], references: [id], onDelete: Restrict)
+  municipalityId String?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+  latitude       Float?
+  longitude      Float?
+
+  organizerName String?
+  externalUrl   String?
+  ticketUrl     String?
+  price         Decimal? @db.Decimal(10, 2)
+  priceInfo     String?
+
+  imageId String?
+  image   Media?  @relation("EventImage", fields: [imageId], references: [id], onDelete: SetNull)
+
+  status      PublicationStatus @default(DRAFT)
+  isFeatured  Boolean           @default(false)
+  featuredUntil DateTime?
+  publishedAt DateTime?
+
+  metaTitle String?
+  metaDesc  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pageViews  PageView[]
+  placements Placement[]
+  favorites  Favorite[]
+
+  @@index([startDate])
+  @@index([status, startDate])
+  @@index([organizationId])
+  @@index([cantonId, startDate])
+  @@index([type])
+  @@map("events")
+}
+
+// ---------------------------------------------------------------------------
+// Abonnements & Zahlungen
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id              String          @id @default(cuid())
+  key             String          @unique // free, basic, premium
+  tier            PlanTier
+  name            String
+  description     String?         @db.Text
+  priceChf        Decimal         @db.Decimal(10, 2)
+  /// Währungscode für die Anzeige. Die Beträge liegen weiterhin in priceChf.
+  currency        String          @default("CHF")
+  billingInterval BillingInterval @default(YEARLY)
+  /// Beschriftung des Knopfes auf der Preisseite. Leer = Standardtext.
+  ctaText         String?
+  /// Ziel des Knopfes. Leer = Eintragsformular mit diesem Tarif.
+  ctaUrl          String?
+  isActive        Boolean         @default(true)
+  isPublic        Boolean         @default(true)
+  isRecommended   Boolean         @default(false)
+  trialDays       Int             @default(0)
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  features      PlanFeature[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+/// Katalog buchbarer Funktionen – keine hartcodierten Businessregeln
+model Feature {
+  id          String   @id @default(cuid())
+  key         String   @unique // gallery, statistics, sponsors, ...
+  name        String
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  plans PlanFeature[]
+
+  @@map("features")
+}
+
+model PlanFeature {
+  id        String  @id @default(cuid())
+  planId    String
+  plan      Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  enabled   Boolean @default(true)
+  /// Numerisches Limit, null = unbegrenzt
+  limit     Int?
+  note      String?
+  /// Freitext für die Vergleichstabelle, z. B. "Unlimitiert" oder "Basis".
+  /// Reine Anzeige – über den Zugriff entscheiden weiterhin enabled und limit.
+  value     String?
+
+  @@unique([planId, featureId])
+  @@map("plan_features")
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  status     SubscriptionStatus @default(TRIAL)
+  priceChf   Decimal            @db.Decimal(10, 2)
+  startDate  DateTime           @default(now())
+  endDate    DateTime?
+  cancelledAt DateTime?
+  autoRenew  Boolean            @default(true)
+
+  lastPaymentAt DateTime?
+  nextDueAt     DateTime?
+
+  externalCustomerId     String?
+  externalSubscriptionId String?
+
+  expiringNotifiedAt DateTime?
+  expiredNotifiedAt  DateTime?
+  notes              String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments Payment[]
+
+  @@index([status])
+  @@index([endDate])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  invoiceNumber String        @unique
+  amountChf     Decimal       @db.Decimal(10, 2)
+  status        PaymentStatus @default(PENDING)
+  method        PaymentMethod @default(INVOICE)
+  issuedAt      DateTime      @default(now())
+  dueAt         DateTime?
+  paidAt        DateTime?
+  periodStart   DateTime?
+  periodEnd     DateTime?
+  reference     String?
+  externalId    String?
+  notes         String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// Buchbare Werbeplatzierungen
+model Placement {
+  id             String          @id @default(cuid())
+  type           PlacementType
+  organizationId String?
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventId        String?
+  event          Event?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cantonSlug     String?
+  status         PlacementStatus @default(REQUESTED)
+  startDate      DateTime
+  endDate        DateTime
+  priceChf       Decimal?        @db.Decimal(10, 2)
+  sortOrder      Int             @default(0)
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([type, status])
+  @@index([organizationId])
+  @@map("placements")
+}
+
+// ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+
+model Ticket {
+  id       String @id @default(cuid())
+  number   Int    @unique @default(autoincrement())
+  subject  String
+
+  category TicketCategory @default(GENERAL)
+  priority TicketPriority @default(NORMAL)
+  status   TicketStatus   @default(OPEN)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  authorId String?
+  author   User?   @relation("TicketAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  /// Für Kontaktformular-Anfragen ohne Account
+  guestName  String?
+  guestEmail String?
+
+  assigneeId String?
+  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  closedAt      DateTime?
+  lastReplyAt   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([status])
+  @@index([organizationId])
+  @@index([authorId])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName String?
+  body     String @db.Text
+  /// Interne Notiz – für Organisationen nicht sichtbar
+  isInternal Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Medien
+// ---------------------------------------------------------------------------
+
+model Media {
+  id           String    @id @default(cuid())
+  type         MediaType @default(GALLERY)
+  /// Storage-Adapter: local | s3 | r2
+  provider     String    @default("local")
+  key          String
+  url          String
+  thumbnailUrl String?
+  filename     String
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  alt          String?
+  caption      String?
+  sortOrder    Int       @default(0)
+
+  organizationId String?
+  organization   Organization? @relation("OrganizationMedia", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  uploadedById String?
+  uploadedBy   User?   @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logoOf     Organization? @relation("OrganizationLogo")
+  headerOf   Organization? @relation("OrganizationHeader")
+  ogImageOf  Organization? @relation("OrganizationOgImage")
+  eventImages Event[]      @relation("EventImage")
+  sponsorLogos Sponsor[]   @relation("SponsorLogo")
+  downloads   Download[]   @relation("DownloadMedia")
+  homepageSections HomepageSection[] @relation("HomepageSectionImage")
+
+  @@index([organizationId])
+  @@index([type])
+  @@map("media")
+}
+
+// ---------------------------------------------------------------------------
+// Homepage-CMS & Einstellungen
+// ---------------------------------------------------------------------------
+
+model HomepageSection {
+  id        String              @id @default(cuid())
+  key       String              @unique
+  type      HomepageSectionType
+  title     String?
+  subtitle  String?
+  body      String?             @db.Text
+  eyebrow   String?
+  imageId   String?
+  image     Media?              @relation("HomepageSectionImage", fields: [imageId], references: [id], onDelete: SetNull)
+  /// Strukturierte Zusatzdaten (Buttons, Items) – kein freies HTML
+  data      Json?
+  isVisible Boolean             @default(true)
+  sortOrder Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@map("homepage_sections")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  group     String   @default("general")
+  label     String?
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Aktivität, Analytics & Benachrichtigungen
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id       String  @id @default(cuid())
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userLabel String?
+  action   String // organization.update, user.deactivate, ...
+  entity   String // Organization, User, Event, ...
+  entityId String?
+  entityLabel String?
+  before   Json?
+  after    Json?
+  ip       String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model PageView {
+  id       String          @id @default(cuid())
+  target   PageViewTarget
+  interaction InteractionType @default(VIEW)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventId  String?
+  event    Event?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  path     String
+  /// Gehashter Besucher-Identifier – keine Klartext-IP (CH-DSG)
+  visitorHash String?
+  referrer String?
+  meta     String?
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([eventId, createdAt])
+  @@index([target, createdAt])
+  @@map("page_views")
+}
+
+model SearchQuery {
+  id        String   @id @default(cuid())
+  term      String
+  results   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([term])
+  @@index([createdAt])
+  @@map("search_queries")
+}
+
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type    NotificationType
+  title   String
+  body    String?          @db.Text
+  link    String?
+  readAt  DateTime?
+  emailSentAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// Vorbereitet für Besucher-Accounts (Post-MVP)
+model Favorite {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventId String?
+  event   Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, organizationId])
+  @@unique([userId, eventId])
+  @@map("favorites")
+}
+
+// ---------------------------------------------------------------------------
+// Datenimport (Recherchedateien)
+// ---------------------------------------------------------------------------
+
+/// Belegquelle einer recherchierten Angabe. Dient der Nachvollziehbarkeit im
+/// Adminbereich und wird öffentlich nicht ausgegeben.
+model OrganizationSource {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String
+  type           String?
+  title          String?
+  accessedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, url])
+  @@index([organizationId])
+  @@map("organization_sources")
+}
+
+/// Herkunft eines einzelnen Feldwerts einer Organisation.
+///
+/// Nur Felder, die tatsächlich schon einmal gesetzt wurden, erhalten einen
+/// Eintrag. Fehlt der Eintrag, gilt das Feld als importierbar.
+model FieldOrigin {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Feldname im Organisationsmodell, z.B. "description".
+  field          String
+  origin         FieldOriginType
+  /// Wer die Änderung zuletzt vorgenommen hat (nur zur Anzeige).
+  changedById    String?
+  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime        @default(now())
+
+  @@unique([organizationId, field])
+  @@index([organizationId])
+  @@map("field_origins")
+}
+
+/// Ein Import- oder Simulationslauf einer Recherchedatei.
+model ImportJob {
+  id          String          @id @default(cuid())
+  /// Menschenlesbare Nummer, z.B. IMP-2026-09-04-001.
+  reference   String          @unique
+  filename    String
+  fileSize    Int
+  /// Prüfsumme der Datei – erkennt erneute Uploads derselben Datei.
+  fileHash    String?
+  status      ImportJobStatus @default(RUNNING)
+  /// true, wenn es sich um eine reine Simulation handelt.
+  dryRun      Boolean         @default(false)
+
+  importedById String?
+  importedBy   User?          @relation(fields: [importedById], references: [id], onDelete: SetNull)
+  importedByLabel String?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  totalRecords     Int @default(0)
+  createdRecords   Int @default(0)
+  updatedRecords   Int @default(0)
+  skippedRecords   Int @default(0)
+  failedRecords    Int @default(0)
+  duplicateRecords Int @default(0)
+  reviewRecords    Int @default(0)
+  invalidRecords   Int @default(0)
+  eventRecords     Int @default(0)
+
+  /// Gewählte Optionen und Kennzahlen der Datei (metadata-Block).
+  options  Json?
+  metadata Json?
+  /// Zusammenfassung eines Rückgängigmachens.
+  rollbackAt      DateTime?
+  rollbackById    String?
+  rollbackSummary Json?
+  errorMessage    String?  @db.Text
+
+  records              ImportRecord[]
+  organizationsLastSet Organization[] @relation("OrganizationLastImport")
+
+  @@index([status])
+  @@index([startedAt])
+  @@map("import_jobs")
+}
+
+/// Ergebnis für einen einzelnen Datensatz der Importdatei.
+model ImportRecord {
+  id       String             @id @default(cuid())
+  jobId    String
+  job      ImportJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  action   ImportRecordAction
+
+  /// Kennung aus der Recherchedatei.
+  importId String
+  name     String
+  type     OrganizationType?
+  canton   String?
+  locality String?
+  confidenceScore Int?
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  /// true, wenn die Organisation durch genau diesen Lauf neu entstanden ist.
+  /// Grundlage für ein sicheres Rückgängigmachen.
+  createdByThisJob Boolean @default(false)
+
+  /// Verworfene Felder, geschützte Felder, Konflikte und Fehlermeldungen.
+  details Json?
+  message String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, importId])
+  @@index([jobId, action])
+  @@index([organizationId])
+  @@map("import_records")
+}
