@@ -14,6 +14,7 @@ import {
 
 import { ButtonLink } from "@/components/ui/button";
 import { CantonCrest } from "@/components/public/canton-crest";
+import { FasnachtHeroArtwork } from "@/components/public/fasnacht-hero-artwork";
 import { Card } from "@/components/ui/card";
 import { EventCard, type EventCardData } from "@/components/public/event-card";
 import {
@@ -68,48 +69,65 @@ export function HeroSection({
   counts: { carnivals: number; guggen: number; events: number; cantons: number };
 }) {
   return (
-    <section className="relative overflow-hidden bg-hero text-white">
-      <div className="absolute inset-0 bg-grid opacity-40" aria-hidden />
-      <div className="absolute inset-0 bg-confetti opacity-70" aria-hidden />
+    <section className="relative isolate overflow-hidden bg-hero text-white">
+      <div className="absolute inset-0 bg-grid opacity-25" aria-hidden />
+      <div
+        className="pointer-events-none absolute -left-24 top-12 h-80 w-80 rounded-full bg-primary-500/20 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute right-[8%] top-[8%] h-72 w-72 rounded-full bg-accent-500/15 blur-3xl"
+        aria-hidden
+      />
 
-      <div className="container relative py-20 sm:py-28">
-        <div className="max-w-3xl">
-          {section.eyebrow ? (
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/90 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              {section.eyebrow}
-            </p>
-          ) : null}
+      <div className="container relative py-16 sm:py-24 lg:py-28">
+        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.03fr)_minmax(360px,.97fr)] lg:gap-8">
+          <div className="relative z-10 max-w-3xl">
+            {section.eyebrow ? (
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/90 shadow-sm backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-gold-400" aria-hidden />
+                {section.eyebrow}
+              </p>
+            ) : null}
 
-          <h1 className="font-display text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-6xl">
-            {section.title ?? "Die Schweizer Fasnacht auf einen Blick."}
-          </h1>
+            <h1 className="font-display text-4xl font-extrabold leading-[1.04] text-white sm:text-5xl lg:text-[3.75rem] xl:text-[4.25rem]">
+              {section.title ?? "Die Schweizer Fasnacht auf einen Blick."}
+            </h1>
 
-          {section.subtitle ? (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">
-              {section.subtitle}
-            </p>
-          ) : null}
+            {section.subtitle ? (
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/80">
+                {section.subtitle}
+              </p>
+            ) : null}
 
-          <Buttons buttons={section.data.buttons} inverse />
+            <Buttons buttons={section.data.buttons} inverse />
+          </div>
+
+          <div className="relative hidden min-h-[430px] lg:block" aria-hidden>
+            <FasnachtHeroArtwork />
+          </div>
         </div>
 
-        <dl className="mt-16 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/15 pt-8 sm:grid-cols-4">
+        <dl className="relative z-10 mt-14 grid max-w-4xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/15 pt-7 sm:grid-cols-4 lg:mt-10">
           {[
             { label: "Fasnachten", value: counts.carnivals },
             { label: "Guggenmusiken", value: counts.guggen },
             { label: "Kommende Termine", value: counts.events },
             { label: "Kantone", value: counts.cantons },
           ].map((stat) => (
-            <div key={stat.label}>
-              <dt className="text-xs font-medium uppercase tracking-wider text-white/60">
+            <div key={stat.label} className="group/stat">
+              <dt className="text-xs font-medium uppercase tracking-wider text-white/55 transition-colors group-hover/stat:text-white/75">
                 {stat.label}
               </dt>
-              <dd className="mt-1 font-display text-3xl font-bold text-white">{stat.value}</dd>
+              <dd className="mt-1 font-display text-3xl font-bold text-white transition-transform duration-300 group-hover/stat:-translate-y-0.5">
+                {stat.value}
+              </dd>
             </div>
           ))}
         </dl>
       </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary-400/60 to-transparent" aria-hidden />
     </section>
   );
 }
