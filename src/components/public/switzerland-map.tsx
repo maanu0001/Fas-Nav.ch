@@ -7,19 +7,39 @@ import { CalendarDays, MapPin, Sparkles, Users } from "lucide-react";
 type Canton = { code: string; name: string; slug: string; organizationCount: number; eventCount: number };
 
 /*
- * Kantonszentren in einer gemeinsamen, geografisch plausiblen Schweiz-Zeichenfläche.
- * Die Silhouette und Marker verwenden exakt dieselbe viewBox (0 0 1000 620).
+ * Schweizkarte in einer einheitlichen 1000×620-Zeichenfläche.
+ * Die Kontur orientiert sich an der realen Landesgrenze; die Kantonsmarker
+ * liegen an geografisch passenden Zentren und nicht an einem dekorativen Raster.
  */
 const POS: Record<string, [number, number]> = {
-  GE: [100, 475], VD: [210, 405], VS: [405, 500], NE: [280, 315], JU: [295, 220],
-  FR: [350, 385], BE: [465, 375], SO: [470, 285], BS: [485, 215], BL: [500, 245],
-  AG: [565, 280], LU: [575, 355], OW: [590, 405], NW: [620, 375], UR: [650, 430],
-  ZG: [650, 330], ZH: [705, 270], SH: [720, 190], SZ: [715, 365], GL: [770, 380],
-  SG: [830, 305], AR: [875, 285], AI: [875, 320], TG: [815, 225], GR: [825, 445], TI: [700, 535],
+  GE: [83, 438], VD: [215, 361], VS: [391, 468], NE: [278, 278], JU: [355, 166],
+  FR: [326, 336], BE: [430, 342], SO: [449, 255], BS: [459, 124], BL: [487, 158],
+  AG: [563, 210], LU: [608, 323], OW: [595, 369], NW: [626, 350], UR: [673, 405],
+  ZG: [650, 276], ZH: [665, 213], SH: [681, 88], SZ: [690, 334], GL: [770, 326],
+  SG: [836, 226], AR: [818, 252], AI: [850, 282], TG: [762, 151], GR: [839, 401], TI: [760, 515],
 };
 
-/* Vereinfachte, aber geografisch erkennbare Schweizer Landesgrenze. */
-const SWISS_PATH = "M92 430 L125 392 L145 350 L205 338 L224 286 L274 274 L305 225 L363 240 L398 205 L452 220 L488 180 L535 205 L584 168 L628 198 L690 190 L724 222 L784 220 L812 252 L868 266 L854 310 L890 342 L858 372 L870 420 L820 430 L790 470 L738 462 L706 516 L658 488 L612 530 L565 498 L515 522 L466 490 L420 506 L380 472 L326 484 L292 445 L238 456 L210 420 L150 438 L122 412 Z";
+/*
+ * Vereinfachte Landesgrenze nach der realen Geografie der Schweiz:
+ * Genfer Zipfel, Jurabogen/Basel, Schaffhausen, Bodensee/Rheintal,
+ * Graubünden, Tessin und Wallis sind bewusst als charakteristische Formen erhalten.
+ */
+const SWISS_PATH = [
+  "M70 438", "L91 420", "L111 392", "L132 370", "L148 338", "L178 331",
+  "L198 304", "L225 299", "L239 269", "L267 256", "L286 223", "L319 211",
+  "L341 180", "L371 166", "L405 143", "L440 137", "L454 112", "L477 104",
+  "L500 126", "L525 119", "L547 142", "L570 129", "L593 103", "L616 121",
+  "L638 112", "L660 91", "L681 104", "L704 97", "L728 108", "L750 105",
+  "L768 126", "L795 126", "L817 144", "L842 151", "L858 177", "L887 186",
+  "L902 211", "L930 221", "L919 247", "L941 264", "L925 286", "L945 310",
+  "L925 329", "L934 354", "L913 370", "L921 394", "L898 402", "L887 431",
+  "L856 436", "L840 459", "L809 452", "L789 476", "L765 467", "L752 501",
+  "L730 532", "L706 515", "L687 539", "L666 516", "L643 491", "L620 475",
+  "L596 493", "L570 477", "L546 490", "L519 468", "L494 482", "L467 461",
+  "L442 470", "L417 452", "L389 463", "L365 444", "L337 451", "L315 431",
+  "L287 439", "L269 416", "L241 423", "L221 401", "L197 407", "L180 389",
+  "L158 399", "L142 382", "L126 397", "L108 407", "L94 426", "Z",
+].join(" ");
 
 export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
   const [active, setActive] = React.useState<string | null>(null);
@@ -49,15 +69,15 @@ export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
         <div className="absolute inset-x-[2%] bottom-[3%] top-[18%] sm:inset-x-[4%] sm:bottom-[4%] sm:top-[17%]">
           <svg viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" aria-hidden>
             <defs>
-              <linearGradient id="fasnav-map-fill" x1="150" y1="170" x2="850" y2="510" gradientUnits="userSpaceOnUse">
+              <linearGradient id="fasnav-map-fill" x1="100" y1="100" x2="900" y2="520" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#124363" /><stop offset="0.55" stopColor="#0d304b" /><stop offset="1" stopColor="#10243d" />
               </linearGradient>
               <filter id="fasnav-map-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="10" /></filter>
             </defs>
             <path d={SWISS_PATH} fill="#0279ad" opacity=".2" filter="url(#fasnav-map-glow)" transform="translate(0 8)" />
-            <path d={SWISS_PATH} fill="url(#fasnav-map-fill)" stroke="rgba(91,192,235,.62)" strokeWidth="3" />
-            <path d="M145 350 C250 335 335 350 420 315 C520 273 620 292 710 260 C770 238 820 245 866 266" fill="none" stroke="rgba(255,255,255,.055)" strokeWidth="2" strokeDasharray="7 12" />
-            <path d="M210 420 C315 392 390 430 490 385 C585 342 680 370 820 318" fill="none" stroke="rgba(254,170,25,.09)" strokeWidth="2" strokeDasharray="4 14" />
+            <path d={SWISS_PATH} fill="url(#fasnav-map-fill)" stroke="rgba(91,192,235,.72)" strokeWidth="3" strokeLinejoin="round" />
+            <path d="M130 370 C245 330 350 350 455 310 C575 265 700 280 860 220" fill="none" stroke="rgba(255,255,255,.045)" strokeWidth="2" strokeDasharray="7 12" />
+            <path d="M180 405 C300 390 405 430 520 385 C625 345 730 365 900 315" fill="none" stroke="rgba(254,170,25,.075)" strokeWidth="2" strokeDasharray="4 14" />
           </svg>
 
           <div className="pointer-events-none absolute left-[13%] top-[31%] h-2 w-2 rotate-45 bg-gold-400/80" />
