@@ -6,8 +6,36 @@ import { CalendarDays, MapPin, Users } from "lucide-react";
 
 type Canton = { code: string; name: string; slug: string; organizationCount: number; eventCount: number };
 
+// Relative canton-centre positions on the stylised Switzerland silhouette.
+// These follow the actual geographic arrangement of all 26 cantons rather
+// than distributing labels for visual convenience.
 const POS: Record<string, [number, number]> = {
-  GE:[6,72], VD:[18,60], VS:[35,78], NE:[27,42], JU:[24,24], FR:[30,52], BE:[43,51], SO:[45,32], BS:[45,16], BL:[48,22], AG:[55,30], LU:[55,47], OW:[57,56], NW:[61,51], UR:[64,62], ZG:[63,40], ZH:[68,29], SH:[69,13], SZ:[70,48], GL:[75,52], SG:[81,38], AR:[85,31], AI:[87,35], TG:[80,21], GR:[82,66], TI:[68,83]
+  GE: [8, 69],
+  VD: [20, 58],
+  VS: [39, 76],
+  NE: [27, 42],
+  JU: [28, 25],
+  FR: [33, 52],
+  BE: [45, 54],
+  SO: [45, 35],
+  BS: [47, 20],
+  BL: [49, 25],
+  AG: [56, 34],
+  LU: [57, 48],
+  OW: [59, 57],
+  NW: [62, 51],
+  UR: [64, 62],
+  ZG: [64, 42],
+  ZH: [69, 32],
+  SH: [70, 18],
+  SZ: [70, 49],
+  GL: [76, 52],
+  SG: [82, 39],
+  AR: [86, 34],
+  AI: [87, 39],
+  TG: [80, 25],
+  GR: [82, 65],
+  TI: [70, 81],
 };
 
 export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
