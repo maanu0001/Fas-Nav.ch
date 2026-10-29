@@ -8,10 +8,7 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-/**
- * Status, Priorität und Zuweisung eines Support-Tickets ändern.
- * Nur Admin und Team dürfen den Bearbeitungszustand steuern.
- */
+/** Status, Priorität und Zuweisung eines Support-Tickets ändern. */
 export async function PATCH(request: Request, { params }: Params) {
   try {
     const { id } = await params;
@@ -28,31 +25,50 @@ export async function PATCH(request: Request, { params }: Params) {
       return jsonError("Ein Support-Ticket kann nicht in eine Kontaktanfrage umgewandelt werden.", 422);
     }
 
-    const closing =
-      (body.status === "CLOSED" || body.status === "RESOLVED") &&
-      before.status !== body.status;
-
+    const closing = (body.status === "CLOSED" || body.status === "RESOLVED") && before.status !== body.status;
     const ticket = await prisma.ticket.update({
       where: { id },
-      data: {
-        ...body,
-        ...(closing ? { closedAt: new Date() } : {}),
-      },
+      data: { ...body, ...(closing ? { closedAt: new Date() } : {}) },
       select: { id: true, number: true, status: true, priority: true, assigneeId: true },
     });
 
-    await logAudit({
-      userId: user.id,
-      userLabel: user.email,
-      action: "ticket.update",
-      entity: "Ticket",
-      entityId: id,
-      entityLabel: `#${before.number}`,
-      before: { status: before.status },
-      after: { status: ticket.status },
+    await logAudit({ userId: user.id, userLabel: user.email, action: "ticket.update", entity: "Ticket", entityId: id, entityLabel: `#${before.number}`, before: { status: before.status }, after: { status: ticket.status } });
+    return jsonOk(ticket);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/** Löscht ein Support-Ticket samt abhängigen Nachrichten endgültig. Nur ADMIN. */
+export async function DELETE(_request: Request, { params }: Params) {
+  try {
+    const { id } = await params;
+    const user = await requirePermission("deleteTickets");
+
+    const ticket = await prisma.ticket.findFirst({
+      where: { id, category: { not: "CONTACT" } },
+      select: { id: true, number: true, subject: true, status: true },
+    });
+    if (!ticket) return jsonError("Ticket nicht gefunden.", 404);
+
+    // TicketMessage besitzt onDelete: Cascade; die Transaktion stellt sicher,
+    // dass Audit-Eintrag und Löschung als eine administrative Aktion erfolgen.
+    await prisma.$transaction(async (tx) => {
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          userLabel: user.email,
+          action: "ticket.delete",
+          entity: "Ticket",
+          entityId: ticket.id,
+          entityLabel: `#${ticket.number} ${ticket.subject}`,
+          before: { number: ticket.number, subject: ticket.subject, status: ticket.status },
+        },
+      });
+      await tx.ticket.delete({ where: { id: ticket.id } });
     });
 
-    return jsonOk(ticket);
+    return jsonOk({ deleted: true, id: ticket.id });
   } catch (error) {
     return handleApiError(error);
   }
