@@ -6,17 +6,20 @@ import { CalendarDays, MapPin, Sparkles, Users } from "lucide-react";
 
 type Canton = { code: string; name: string; slug: string; organizationCount: number; eventCount: number };
 
-// Geografische Kantonszentren innerhalb derselben Zeichenfläche wie die
-// Schweiz-Silhouette. Marker und Karte bleiben dadurch responsiv deckungsgleich.
+/*
+ * Kantonszentren in einer gemeinsamen, geografisch plausiblen Schweiz-Zeichenfläche.
+ * Die Silhouette und Marker verwenden exakt dieselbe viewBox (0 0 1000 620).
+ */
 const POS: Record<string, [number, number]> = {
-  GE: [7, 68], VD: [19, 57], VS: [39, 76], NE: [27, 42], JU: [28, 25],
-  FR: [33, 53], BE: [45, 54], SO: [46, 36], BS: [47, 20], BL: [49, 26],
-  AG: [56, 34], LU: [57, 49], OW: [59, 58], NW: [62, 52], UR: [64, 63],
-  ZG: [64, 43], ZH: [69, 33], SH: [70, 18], SZ: [70, 50], GL: [76, 52],
-  SG: [82, 40], AR: [86, 35], AI: [87, 40], TG: [80, 25], GR: [82, 65], TI: [70, 81],
+  GE: [100, 475], VD: [210, 405], VS: [405, 500], NE: [280, 315], JU: [295, 220],
+  FR: [350, 385], BE: [465, 375], SO: [470, 285], BS: [485, 215], BL: [500, 245],
+  AG: [565, 280], LU: [575, 355], OW: [590, 405], NW: [620, 375], UR: [650, 430],
+  ZG: [650, 330], ZH: [705, 270], SH: [720, 190], SZ: [715, 365], GL: [770, 380],
+  SG: [830, 305], AR: [875, 285], AI: [875, 320], TG: [815, 225], GR: [825, 445], TI: [700, 535],
 };
 
-const SWISS_PATH = "M83 355L123 302 190 290 215 224 289 207 323 152 394 168 438 121 506 154 574 118 637 153 707 148 741 190 814 213 797 270 838 310 789 345 800 399 732 410 695 462 620 444 573 487 507 452 448 478 390 442 330 458 284 415 214 429 181 382 119 394Z";
+/* Vereinfachte, aber geografisch erkennbare Schweizer Landesgrenze. */
+const SWISS_PATH = "M92 430 L125 392 L145 350 L205 338 L224 286 L274 274 L305 225 L363 240 L398 205 L452 220 L488 180 L535 205 L584 168 L628 198 L690 190 L724 222 L784 220 L812 252 L868 266 L854 310 L890 342 L858 372 L870 420 L820 430 L790 470 L738 462 L706 516 L658 488 L612 530 L565 498 L515 522 L466 490 L420 506 L380 472 L326 484 L292 445 L238 456 L210 420 L150 438 L122 412 Z";
 
 export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
   const [active, setActive] = React.useState<string | null>(null);
@@ -29,7 +32,6 @@ export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
       <div className="relative min-h-[520px] overflow-hidden rounded-[28px] border border-white/10 bg-[#09162a] shadow-lift sm:min-h-[570px]">
         <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-primary-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-accent-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.09]" />
 
         <div className="relative z-20 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-7">
           <div>
@@ -44,23 +46,23 @@ export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
           </div>
         </div>
 
-        <div className="absolute inset-x-[3%] bottom-[3%] top-[18%] sm:inset-x-[5%] sm:bottom-[4%] sm:top-[17%]">
-          <svg viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" aria-hidden>
+        <div className="absolute inset-x-[2%] bottom-[3%] top-[18%] sm:inset-x-[4%] sm:bottom-[4%] sm:top-[17%]">
+          <svg viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" aria-hidden>
             <defs>
-              <linearGradient id="fasnav-map-fill" x1="120" y1="100" x2="790" y2="470" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#103b59" /><stop offset="0.52" stopColor="#0c2e49" /><stop offset="1" stopColor="#10243d" />
+              <linearGradient id="fasnav-map-fill" x1="150" y1="170" x2="850" y2="510" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#124363" /><stop offset="0.55" stopColor="#0d304b" /><stop offset="1" stopColor="#10243d" />
               </linearGradient>
               <filter id="fasnav-map-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="10" /></filter>
             </defs>
-            <path d={SWISS_PATH} fill="#0279ad" opacity=".18" filter="url(#fasnav-map-glow)" transform="translate(0 8)" />
-            <path d={SWISS_PATH} fill="url(#fasnav-map-fill)" stroke="rgba(91,192,235,.48)" strokeWidth="3" />
-            <path d="M132 352C250 318 320 344 403 298C489 250 560 265 641 229C704 201 757 215 810 239" stroke="rgba(255,255,255,.055)" strokeWidth="2" strokeDasharray="7 12" />
-            <path d="M201 389C300 367 374 397 462 355C551 312 641 334 746 293" stroke="rgba(254,170,25,.09)" strokeWidth="2" strokeDasharray="4 14" />
+            <path d={SWISS_PATH} fill="#0279ad" opacity=".2" filter="url(#fasnav-map-glow)" transform="translate(0 8)" />
+            <path d={SWISS_PATH} fill="url(#fasnav-map-fill)" stroke="rgba(91,192,235,.62)" strokeWidth="3" />
+            <path d="M145 350 C250 335 335 350 420 315 C520 273 620 292 710 260 C770 238 820 245 866 266" fill="none" stroke="rgba(255,255,255,.055)" strokeWidth="2" strokeDasharray="7 12" />
+            <path d="M210 420 C315 392 390 430 490 385 C585 342 680 370 820 318" fill="none" stroke="rgba(254,170,25,.09)" strokeWidth="2" strokeDasharray="4 14" />
           </svg>
 
-          <div className="pointer-events-none absolute left-[11%] top-[30%] h-2 w-2 rotate-45 bg-gold-400/80" />
-          <div className="pointer-events-none absolute right-[8%] top-[27%] h-2.5 w-1.5 rotate-[28deg] rounded-full bg-accent-400/80" />
-          <div className="pointer-events-none absolute bottom-[16%] left-[24%] h-1.5 w-3 -rotate-12 rounded-full bg-primary-300/80" />
+          <div className="pointer-events-none absolute left-[13%] top-[31%] h-2 w-2 rotate-45 bg-gold-400/80" />
+          <div className="pointer-events-none absolute right-[8%] top-[28%] h-2.5 w-1.5 rotate-[28deg] rounded-full bg-accent-400/80" />
+          <div className="pointer-events-none absolute bottom-[15%] left-[25%] h-1.5 w-3 -rotate-12 rounded-full bg-primary-300/80" />
 
           {cantons.map((canton) => {
             const position = POS[canton.code];
@@ -68,7 +70,15 @@ export function SwitzerlandMap({ cantons }: { cantons: Canton[] }) {
             const total = canton.organizationCount + canton.eventCount;
             const isActive = active === canton.code;
             return (
-              <button key={canton.code} type="button" onClick={() => setActive(canton.code)} onMouseEnter={() => setActive(canton.code)} style={{ left: `${position[0]}%`, top: `${position[1]}%` }} className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md transition-all duration-200 sm:px-2.5 sm:py-1.5 sm:text-xs ${isActive ? "z-30 scale-110 border-primary-300 bg-primary-500 text-white ring-4 ring-primary-400/20" : "border-white/15 bg-[#0d2037]/90 text-white/90 hover:z-20 hover:scale-110 hover:border-primary-300/70 hover:bg-primary-700"}`} aria-label={`${canton.name}: ${canton.organizationCount} Organisationen, ${canton.eventCount} Termine`}>
+              <button
+                key={canton.code}
+                type="button"
+                onClick={() => setActive(canton.code)}
+                onMouseEnter={() => setActive(canton.code)}
+                style={{ left: `${position[0] / 10}%`, top: `${position[1] / 6.2}%` }}
+                className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md transition-all duration-200 sm:px-2.5 sm:py-1.5 sm:text-xs ${isActive ? "z-30 scale-110 border-primary-300 bg-primary-500 text-white ring-4 ring-primary-400/20" : "border-white/15 bg-[#0d2037]/90 text-white/90 hover:z-20 hover:scale-110 hover:border-primary-300/70 hover:bg-primary-700"}`}
+                aria-label={`${canton.name}: ${canton.organizationCount} Organisationen, ${canton.eventCount} Termine`}
+              >
                 {canton.code}<span className={`ml-1 text-[8px] font-medium sm:text-[9px] ${isActive ? "text-white/80" : "text-white/45"}`}>{total}</span>
               </button>
             );
