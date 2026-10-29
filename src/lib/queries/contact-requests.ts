@@ -9,22 +9,16 @@ import { prisma } from "@/lib/prisma";
 import { normalizeSearchTerm } from "@/lib/search";
 
 /**
- * Zentrale Abfragen für den Bereich Kontaktanfragen.
+ * Zentrale Abfragen für externe Kontaktanfragen.
  *
- * Beide Arten liegen bereits in der Datenbank, nur bisher ohne Oberfläche:
- *
- * - Das Kontaktformular der Website legt seit jeher ein Ticket mit der
- *   Kategorie CONTACT an. Es gibt also kein eigenes Modell und es braucht
- *   auch keines; der Status ist der Ticketstatus.
- * - „Profil beanspruchen“ schreibt einen ClaimRequest. Diese Datensätze
- *   wurden bisher nirgends angezeigt und ihr Status nie fortgeschrieben.
- *
- * Alles hier ist ausschliesslich für ADMIN und TEAM gedacht. Die Prüfung
- * dafür steht in den Seiten und Endpunkten, nicht in dieser Datei – hier
- * werden nur Abfragen gebaut.
+ * Kontaktformular-Einsendungen und Profil-Übernahmeanfragen gehören fachlich
+ * in diesen Bereich und ausdrücklich nicht in das Support-Ticket-System.
+ * Bestehende Kontaktformular-Datensätze werden vorerst migrationssicher über
+ * die historische Kategorie CONTACT gelesen. ticketScope schliesst diese
+ * Datensätze gleichzeitig konsequent aus allen Support-Ticket-Abfragen aus.
  */
 
-/** Kontaktanfragen sind Tickets aus dem Formular der Website. */
+/** Historische Speicherkennzeichnung für Einsendungen des Kontaktformulars. */
 export const CONTACT_TICKET_WHERE: Prisma.TicketWhereInput = { category: "CONTACT" };
 
 /** Suche über Name, E-Mail, Betreff und Nachrichtentext. */
@@ -90,12 +84,7 @@ export const CLAIM_REQUEST_LIST_SELECT = {
   organization: { select: { id: true, name: true, slug: true, type: true, city: true } },
 } satisfies Prisma.ClaimRequestSelect;
 
-/**
- * Zähler für die Seitenleiste.
- *
- * Beide Werte stammen aus denselben Bedingungen wie die Listen, damit die
- * Zahl im Menü und die Zahl der hervorgehobenen Zeilen nicht auseinanderlaufen.
- */
+/** Zähler für die Seitenleiste des separaten Kontaktanfragen-Bereichs. */
 export async function openContactRequestCounts(): Promise<{
   contact: number;
   claims: number;
@@ -111,7 +100,7 @@ export async function openContactRequestCounts(): Promise<{
   return { contact, claims, total: contact + claims };
 }
 
-/** Gilt die Anfrage als noch unerledigt? Steuert die Hervorhebung in der Liste. */
+/** Gilt die Übernahmeanfrage als noch unerledigt? */
 export function isOpenClaimRequest(status: string): boolean {
   return OPEN_CLAIM_REQUEST_STATUSES.includes(status as ClaimRequestStatus);
 }
