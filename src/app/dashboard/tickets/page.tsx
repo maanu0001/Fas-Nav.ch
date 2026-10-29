@@ -25,7 +25,9 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
   const context = await getDashboardContext();
   const params = await searchParams;
 
-  // Sichtbarkeit: Organisationen sehen ausschliesslich ihre eigenen Tickets.
+  // Sichtbarkeit: Kontaktformular-Einsendungen sind keine Support-Tickets und
+  // werden bereits durch ticketScope ausgeschlossen. Organisationen sehen
+  // darüber hinaus ausschliesslich ihre eigenen Tickets.
   const scope = await ticketScope({
     id: context.user.id,
     role: context.user.role as Role,
@@ -57,12 +59,15 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
       priority: true,
       category: true,
       lastReplyAt: true,
-      guestName: true,
       organization: { select: { name: true } },
       author: { select: { name: true } },
       _count: { select: { messages: true } },
     },
   });
+
+  const supportCategories = Object.entries(TICKET_CATEGORY_LABELS).filter(
+    ([value]) => value !== "CONTACT",
+  );
 
   return (
     <>
@@ -70,8 +75,8 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
         title="Tickets"
         description={
           context.staff
-            ? "Alle Supportanfragen der Plattform."
-            : "Deine Anfragen an das Fas-Nav-Team."
+            ? "Support-Tickets von angemeldeten Fas-Nav-Konten. Externe Zuschriften findest du separat unter Kontaktanfragen."
+            : "Deine Support-Anfragen an das Fas-Nav-Team."
         }
         actions={
           <ButtonLink href="/dashboard/tickets/neu">
@@ -95,10 +100,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
           {
             name: "kategorie",
             label: "Kategorie",
-            options: Object.entries(TICKET_CATEGORY_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            })),
+            options: supportCategories.map(([value, label]) => ({ value, label })),
           },
         ]}
       />
@@ -137,7 +139,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
                   </Td>
                   {context.staff ? (
                     <Td className="text-muted-foreground">
-                      {ticket.organization?.name ?? ticket.guestName ?? "–"}
+                      {ticket.organization?.name ?? ticket.author?.name ?? "–"}
                     </Td>
                   ) : null}
                   <Td className="text-muted-foreground">
@@ -163,7 +165,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
           title="Keine Tickets vorhanden"
           description={
             context.staff
-              ? "Aktuell liegen keine Supportanfragen vor."
+              ? "Aktuell liegen keine Support-Tickets von angemeldeten Konten vor."
               : "Du hast noch keine Anfrage gestellt. Bei Fragen sind wir gerne für dich da."
           }
           action={
