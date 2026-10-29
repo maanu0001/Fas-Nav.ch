@@ -14,11 +14,14 @@ const date=(d:Date|null)=>d?new Intl.DateTimeFormat("de-CH",{day:"2-digit",month
 
 export async function POST(request:Request,{params}:Params){
  try{
-  const actor=await requirePermission("managePayments");const{id}=await params;const body=await parseBody(request,schema);const data=await loadInvoice(id);if(!data)return jsonError("Rechnung nicht gefunden.",404);
-  const membership=await prisma.membership.findFirst({where:{organizationId:data.invoice.organization?undefined:undefined}}).catch(()=>null);
-  void membership;
-  const recipient=await prisma.user.findFirst({where:{id:body.userId,isActive:true,memberships:{some:{organization:{payments:{some:{id}}}}}},select:{id:true,name:true,email:true}});
+  const actor=await requirePermission("managePayments");
+  const{id}=await params;
+  const body=await parseBody(request,schema);
+  const payment=await prisma.payment.findUnique({where:{id},select:{organizationId:true}});
+  if(!payment)return jsonError("Rechnung nicht gefunden.",404);
+  const recipient=await prisma.user.findFirst({where:{id:body.userId,isActive:true,memberships:{some:{organizationId:payment.organizationId}}},select:{id:true,name:true,email:true}});
   if(!recipient)return jsonError("Die gewählte Person ist für diese Organisation nicht berechtigt.",422);
+  const data=await loadInvoice(id);if(!data)return jsonError("Rechnung nicht gefunden.",404);
   let pdf:Buffer;try{pdf=await generateInvoicePdf(data.invoice,data.settings)}catch(error){return jsonError(error instanceof Error?error.message:"Rechnung konnte nicht erstellt werden.",422)}
   const subject=body.subject??`Rechnung ${data.invoice.invoiceNumber} von Fas-Nav.ch`;
   const due=date(data.invoice.dueAt);
