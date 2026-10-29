@@ -39,35 +39,30 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-/** Löscht ein Support-Ticket samt abhängigen Nachrichten endgültig. Nur ADMIN. */
+/** Löscht ein Support-Ticket endgültig. Ausschliesslich ADMIN. */
 export async function DELETE(_request: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await requirePermission("deleteTickets");
-
     const ticket = await prisma.ticket.findFirst({
       where: { id, category: { not: "CONTACT" } },
       select: { id: true, number: true, subject: true, status: true },
     });
     if (!ticket) return jsonError("Ticket nicht gefunden.", 404);
 
-    // TicketMessage besitzt onDelete: Cascade; die Transaktion stellt sicher,
-    // dass Audit-Eintrag und Löschung als eine administrative Aktion erfolgen.
-    await prisma.$transaction(async (tx) => {
-      await tx.auditLog.create({
-        data: {
-          userId: user.id,
-          userLabel: user.email,
-          action: "ticket.delete",
-          entity: "Ticket",
-          entityId: ticket.id,
-          entityLabel: `#${ticket.number} ${ticket.subject}`,
-          before: { number: ticket.number, subject: ticket.subject, status: ticket.status },
-        },
-      });
-      await tx.ticket.delete({ where: { id: ticket.id } });
+    // Der Audit-Eintrag wird vor der Löschung geschrieben, damit die
+    // administrative Aktion auch nach dem endgültigen Entfernen nachvollziehbar bleibt.
+    await logAudit({
+      userId: user.id,
+      userLabel: user.email,
+      action: "ticket.delete",
+      entity: "Ticket",
+      entityId: ticket.id,
+      entityLabel: `#${ticket.number} ${ticket.subject}`,
+      before: { number: ticket.number, subject: ticket.subject, status: ticket.status },
     });
 
+    await prisma.ticket.delete({ where: { id: ticket.id } });
     return jsonOk({ deleted: true, id: ticket.id });
   } catch (error) {
     return handleApiError(error);
