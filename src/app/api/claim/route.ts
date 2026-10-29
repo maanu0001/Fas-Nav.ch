@@ -1,55 +1,9 @@
-import { jsonError, jsonOk, parseBody, route } from "@/lib/api";
+import { jsonError,jsonOk,parseBody,route } from "@/lib/api";
+import { sendTemplate,sendTemplateToStaff } from "@/lib/email-templates";
 import { notifyStaff } from "@/lib/notifications";
-import { checkRateLimit, clientKey } from "@/lib/rate-limit";
+import { checkRateLimit,clientKey } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
+import { absoluteUrl } from "@/lib/utils";
 import { claimRequestSchema } from "@/lib/validation/schemas";
-
-export const dynamic = "force-dynamic";
-
-/** Übernahmeanfrage für ein noch nicht beanspruchtes Profil. */
-export const POST = route(async (request) => {
-  const limit = checkRateLimit(clientKey(request, "claim"), 5, 60 * 60_000);
-  if (!limit.ok) {
-    return jsonError("Zu viele Anfragen. Bitte versuche es später erneut.", 429);
-  }
-
-  const body = await parseBody(request, claimRequestSchema);
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: body.organizationId },
-    select: { id: true, name: true, slug: true, claimStatus: true },
-  });
-
-  if (!organization) {
-    return jsonError("Diese Organisation existiert nicht.", 404);
-  }
-
-  if (organization.claimStatus === "CLAIMED") {
-    return jsonError("Dieses Profil wird bereits von der Organisation verwaltet.", 409);
-  }
-
-  await prisma.$transaction([
-    prisma.claimRequest.create({
-      data: {
-        organizationId: organization.id,
-        contactName: body.contactName,
-        contactEmail: body.contactEmail,
-        contactPhone: body.contactPhone,
-        message: body.message,
-      },
-    }),
-    prisma.organization.update({
-      where: { id: organization.id },
-      data: { claimStatus: "CLAIM_REQUESTED" },
-    }),
-  ]);
-
-  await notifyStaff({
-    type: "SYSTEM",
-    title: `Übernahmeanfrage: ${organization.name}`,
-    body: `${body.contactName} (${body.contactEmail}) möchte das Profil übernehmen.`,
-    link: `/dashboard/organisationen/${organization.id}`,
-  });
-
-  return jsonOk({ ok: true }, 201);
-});
+export const dynamic="force-dynamic";
+export const POST=route(async(request)=>{const limit=checkRateLimit(clientKey(request,"claim"),5,60*60_000);if(!limit.ok)return jsonError("Zu viele Anfragen. Bitte versuche es später erneut.",429);const body=await parseBody(request,claimRequestSchema);const organization=await prisma.organization.findUnique({where:{id:body.organizationId},select:{id:true,name:true,claimStatus:true}});if(!organization)return jsonError("Diese Organisation existiert nicht.",404);if(organization.claimStatus==="CLAIMED")return jsonError("Dieses Profil wird bereits von der Organisation verwaltet.",409);await prisma.$transaction([prisma.claimRequest.create({data:{organizationId:organization.id,contactName:body.contactName,contactEmail:body.contactEmail,contactPhone:body.contactPhone,message:body.message}}),prisma.organization.update({where:{id:organization.id},data:{claimStatus:"CLAIM_REQUESTED"}})]);await notifyStaff({type:"SYSTEM",title:`Übernahmeanfrage: ${organization.name}`,body:`${body.contactName} (${body.contactEmail}) möchte das Profil übernehmen.`,link:`/dashboard/organisationen/${organization.id}`});const values={contactName:body.contactName,contactEmail:body.contactEmail,organizationName:organization.name,message:body.message,dashboardUrl:absoluteUrl(`/dashboard/organisationen/${organization.id}`)};await Promise.all([sendTemplateToStaff("claim_staff",values),sendTemplate("claim_received",body.contactEmail,values)]);return jsonOk({ok:true},201);});
