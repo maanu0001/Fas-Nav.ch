@@ -44,6 +44,69 @@
   50% { opacity: 1; transform: scale(1.08) rotate(10deg); }
 }
 
+/* Mobile Hero: bewusst kompakter, zentriert und stärker vom Keyvisual getragen. */
+@media (max-width: 1023px) {
+  .bg-hero > .container {
+    padding-top: 3.5rem;
+    padding-bottom: 2.75rem;
+  }
+
+  .bg-hero > .container > div:first-child {
+    gap: 1rem;
+  }
+
+  .bg-hero > .container > div:first-child > div:first-child {
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  /* Der beschreibende Untertitel wird auf Mobile zugunsten des Visuals entfernt. */
+  .bg-hero > .container > div:first-child > div:first-child > h1 + p {
+    display: none;
+  }
+
+  .bg-hero > .container > div:first-child > div:first-child > div {
+    justify-content: center;
+  }
+
+  /* Die Desktop-Grafik wird auf Mobile als kompakter, fliessender Mittelpunkt eingebaut. */
+  .bg-hero > .container > div:first-child > div:has(.fasnacht-hero-art) {
+    display: block;
+    width: min(100%, 430px);
+    min-height: 300px;
+    height: 300px;
+    margin: -0.25rem auto -1.25rem;
+    opacity: .96;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  }
+
+  .bg-hero .fasnacht-hero-art {
+    min-height: 300px;
+    transform: scale(.82);
+    transform-origin: center;
+  }
+
+  .bg-hero > .container > dl {
+    margin-top: 1.75rem;
+    text-align: center;
+    column-gap: 1rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .bg-hero > .container > div:first-child > div:has(.fasnacht-hero-art) {
+    height: 270px;
+    min-height: 270px;
+    margin-top: -0.75rem;
+  }
+
+  .bg-hero .fasnacht-hero-art {
+    min-height: 290px;
+    transform: scale(.72);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fasnacht-hero-art .hero-orbit,
   .fasnacht-hero-art .hero-float,
