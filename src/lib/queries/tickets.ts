@@ -4,12 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { isStaff, type SessionUser } from "@/lib/rbac";
 
 /**
- * Baut den Sichtbarkeitsfilter für Tickets.
- * Admin und Team sehen alle Tickets; Organisationen ausschliesslich ihre
- * eigenen. Dieser Filter wird in jeder Ticket-Abfrage verwendet.
+ * Baut den Sichtbarkeitsfilter für Support-Tickets.
+ *
+ * Website-Kontaktanfragen werden zwar aus Gründen der Rückwärtskompatibilität
+ * weiterhin in der bestehenden Tabelle gespeichert, gehören fachlich aber
+ * nicht zum Ticket-System und werden deshalb hier immer ausgeschlossen.
+ * Admin und Team sehen alle echten Support-Tickets; Organisationen
+ * ausschliesslich ihre eigenen.
  */
 export async function ticketScope(user: SessionUser): Promise<Prisma.TicketWhereInput> {
-  if (isStaff(user.role)) return {};
+  const supportOnly: Prisma.TicketWhereInput = { category: { not: "CONTACT" } };
+
+  if (isStaff(user.role)) return supportOnly;
 
   const memberships = await prisma.membership.findMany({
     where: { userId: user.id },
@@ -19,14 +25,19 @@ export async function ticketScope(user: SessionUser): Promise<Prisma.TicketWhere
   const organizationIds = memberships.map((m) => m.organizationId);
 
   return {
-    OR: [
-      { authorId: user.id },
-      ...(organizationIds.length ? [{ organizationId: { in: organizationIds } }] : []),
+    AND: [
+      supportOnly,
+      {
+        OR: [
+          { authorId: user.id },
+          ...(organizationIds.length ? [{ organizationId: { in: organizationIds } }] : []),
+        ],
+      },
     ],
   };
 }
 
-/** Lädt ein Ticket, sofern der Benutzer es sehen darf. */
+/** Lädt ein Support-Ticket, sofern der Benutzer es sehen darf. */
 export async function getVisibleTicket(id: string, user: SessionUser) {
   const scope = await ticketScope(user);
   const staff = isStaff(user.role);
