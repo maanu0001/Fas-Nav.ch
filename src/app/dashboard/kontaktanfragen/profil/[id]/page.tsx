@@ -2,160 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ClaimRequestActions } from "@/components/dashboard/claim-request-actions";
+import { DeleteResourceButton } from "@/components/dashboard/delete-resource-button";
 import { ClaimRequestBadge } from "@/components/dashboard/status-badge";
 import { CLAIM_STATUS_LABELS, ORGANIZATION_TYPE_LABELS } from "@/lib/constants";
 import { requirePermissionPage } from "@/lib/dashboard-context";
 import { formatDateTime } from "@/lib/dates";
 import { organizationPublicPath } from "@/lib/qr";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = { title: "Übernahmeanfrage" };
-
-type Params = { params: Promise<{ id: string }> };
-
-/** Alle Angaben einer Übernahmeanfrage samt Bearbeitungsstand. */
-export default async function ClaimRequestDetailPage({ params }: Params) {
-  const { id } = await params;
-  await requirePermissionPage("handleContactRequests");
-
-  const anfrage = await prisma.claimRequest.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      contactName: true,
-      contactEmail: true,
-      contactPhone: true,
-      message: true,
-      status: true,
-      handledAt: true,
-      createdAt: true,
-      organization: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          type: true,
-          city: true,
-          claimStatus: true,
-          _count: { select: { memberships: true } },
-        },
-      },
-    },
-  });
-
-  if (!anfrage) notFound();
-
-  const org = anfrage.organization;
-  const profilPfad = organizationPublicPath({ type: org.type, slug: org.slug });
-
-  const angaben: { label: string; wert: React.ReactNode }[] = [
-    { label: "Name", wert: anfrage.contactName },
-    {
-      label: "E-Mail",
-      wert: (
-        <a href={`mailto:${anfrage.contactEmail}`} className="text-primary-800 hover:underline">
-          {anfrage.contactEmail}
-        </a>
-      ),
-    },
-    {
-      label: "Telefon",
-      wert: anfrage.contactPhone ? (
-        <a href={`tel:${anfrage.contactPhone}`} className="text-primary-800 hover:underline">
-          {anfrage.contactPhone}
-        </a>
-      ) : (
-        "–"
-      ),
-    },
-    { label: "Eingang", wert: formatDateTime(anfrage.createdAt) },
-    { label: "Organisation", wert: org.name },
-    { label: "Typ", wert: ORGANIZATION_TYPE_LABELS[org.type] },
-    { label: "Ort", wert: org.city || "–" },
-    { label: "Übernahmestatus des Profils", wert: CLAIM_STATUS_LABELS[org.claimStatus] },
-    {
-      label: "Kennung der Organisation",
-      wert: <code className="font-mono text-xs">{org.id}</code>,
-    },
-    {
-      label: "Profil",
-      wert: (
-        <Link
-          href={profilPfad}
-          className="inline-flex items-center gap-1 text-primary-800 hover:underline"
-        >
-          {profilPfad}
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-      ),
-    },
-    {
-      label: "Bearbeitet am",
-      wert: anfrage.handledAt ? formatDateTime(anfrage.handledAt) : "–",
-    },
-  ];
-
-  return (
-    <>
-      <PageHeader
-        title={`Übernahme: ${org.name}`}
-        breadcrumbs={[
-          { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen" },
-          { href: "/dashboard/kontaktanfragen/profil", label: "Profil beanspruchen" },
-          { label: anfrage.contactName },
-        ]}
-        actions={<ClaimRequestBadge status={anfrage.status} />}
-      />
-
-      <div className="space-y-6">
-        <Card className="p-5">
-          <h2 className="mb-4 font-display text-base font-semibold">Angaben aus dem Formular</h2>
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {angaben.map((angabe) => (
-              <div key={angabe.label} className="min-w-0">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {angabe.label}
-                </dt>
-                <dd className="mt-0.5 break-words">{angabe.wert}</dd>
-              </div>
-            ))}
-          </dl>
-
-          <div className="mt-5 border-t border-border pt-4">
-            <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Nachricht</h3>
-            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{anfrage.message}</p>
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="mb-1 font-display text-base font-semibold">Bearbeitung</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Genehmigen hält nur fest, dass die Anfrage berechtigt ist. Den Zugriff erteilst du in
-            der Zugriffsverwaltung der Organisation – erst damit gilt das Profil als übernommen.
-            Eine Ablehnung gibt das Profil wieder für Anfragen frei.
-          </p>
-
-          <ClaimRequestActions
-            requestId={anfrage.id}
-            status={anfrage.status}
-            organizationId={org.id}
-          />
-
-          {anfrage.status === "APPROVED" && org._count.memberships === 0 ? (
-            <Alert variant="warning" className="mt-4">
-              Die Anfrage ist genehmigt, aber noch hat kein Konto Zugriff auf diese Organisation.
-              Das Profil gilt deshalb weiterhin als nicht übernommen.
-            </Alert>
-          ) : null}
-        </Card>
-      </div>
-    </>
-  );
-}
+export const dynamic="force-dynamic";export const metadata:Metadata={title:"Übernahmeanfrage"};type Params={params:Promise<{id:string}>};
+export default async function ClaimRequestDetailPage({params}:Params){const{id}=await params;await requirePermissionPage("handleContactRequests");const anfrage=await prisma.claimRequest.findUnique({where:{id},select:{id:true,contactName:true,contactEmail:true,contactPhone:true,message:true,status:true,handledAt:true,createdAt:true,organization:{select:{id:true,name:true,slug:true,type:true,city:true,claimStatus:true,_count:{select:{memberships:true}}}}}});if(!anfrage)notFound();const org=anfrage.organization;const profilPfad=organizationPublicPath({type:org.type,slug:org.slug});const angaben:{label:string;wert:React.ReactNode}[]=[{label:"Name",wert:anfrage.contactName},{label:"E-Mail",wert:<a href={`mailto:${anfrage.contactEmail}`} className="text-primary-800 hover:underline">{anfrage.contactEmail}</a>},{label:"Telefon",wert:anfrage.contactPhone?<a href={`tel:${anfrage.contactPhone}`} className="text-primary-800 hover:underline">{anfrage.contactPhone}</a>:"–"},{label:"Eingang",wert:formatDateTime(anfrage.createdAt)},{label:"Organisation",wert:org.name},{label:"Typ",wert:ORGANIZATION_TYPE_LABELS[org.type]},{label:"Ort",wert:org.city||"–"},{label:"Übernahmestatus des Profils",wert:CLAIM_STATUS_LABELS[org.claimStatus]},{label:"Kennung der Organisation",wert:<code className="font-mono text-xs">{org.id}</code>},{label:"Profil",wert:<Link href={profilPfad} className="inline-flex items-center gap-1 text-primary-800 hover:underline">{profilPfad}<ExternalLink className="h-3.5 w-3.5" aria-hidden/></Link>},{label:"Bearbeitet am",wert:anfrage.handledAt?formatDateTime(anfrage.handledAt):"–"}];return <><PageHeader title={`Übernahme: ${org.name}`} breadcrumbs={[{href:"/dashboard/kontaktanfragen",label:"Kontaktanfragen"},{href:"/dashboard/kontaktanfragen/profil",label:"Profil beanspruchen"},{label:anfrage.contactName}]} actions={<div className="flex items-center gap-2"><ClaimRequestBadge status={anfrage.status}/><DeleteResourceButton endpoint={`/api/claim-requests/${anfrage.id}`} label="Profil-Claim" confirmText="Diese Übernahmeanfrage wird endgültig gelöscht. Die Organisation selbst bleibt unverändert bestehen." redirectTo="/dashboard/kontaktanfragen/profil"/></div>}/><div className="space-y-6"><Card className="p-5"><h2 className="mb-4 font-display text-base font-semibold">Angaben aus dem Formular</h2><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{angaben.map(a=><div key={a.label} className="min-w-0"><dt className="text-xs uppercase tracking-wide text-muted-foreground">{a.label}</dt><dd className="mt-0.5 break-words">{a.wert}</dd></div>)}</dl><div className="mt-5 border-t border-border pt-4"><h3 className="text-xs uppercase tracking-wide text-muted-foreground">Nachricht</h3><p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{anfrage.message}</p></div></Card><Card className="p-5"><h2 className="mb-1 font-display text-base font-semibold">Bearbeitung</h2><p className="mb-4 text-sm text-muted-foreground">Genehmigen hält nur fest, dass die Anfrage berechtigt ist. Den Zugriff erteilst du in der Zugriffsverwaltung der Organisation – erst damit gilt das Profil als übernommen. Eine Ablehnung gibt das Profil wieder für Anfragen frei.</p><ClaimRequestActions requestId={anfrage.id} status={anfrage.status} organizationId={org.id}/>{anfrage.status==="APPROVED"&&org._count.memberships===0?<Alert variant="warning" className="mt-4">Die Anfrage ist genehmigt, aber noch hat kein Konto Zugriff auf diese Organisation. Das Profil gilt deshalb weiterhin als nicht übernommen.</Alert>:null}</Card></div></>}
