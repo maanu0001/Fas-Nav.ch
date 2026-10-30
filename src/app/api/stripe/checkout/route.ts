@@ -9,7 +9,6 @@ import { stripePost } from "@/lib/stripe";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({ organizationId: z.string().cuid(), planId: z.string().cuid() });
-
 type CheckoutSession = { id: string; url: string | null };
 
 function recurringInterval(interval: BillingInterval) {
@@ -29,10 +28,17 @@ export async function POST(request: Request) {
         select: { id: true, key: true, name: true, description: true, priceChf: true, currency: true, billingInterval: true },
       }),
       prisma.organization.findUnique({ where: { id: body.organizationId }, select: { id: true, name: true } }),
-      prisma.subscription.findUnique({ where: { organizationId: body.organizationId }, select: { externalCustomerId: true } }),
+      prisma.subscription.findUnique({
+        where: { organizationId: body.organizationId },
+        select: { externalCustomerId: true, externalSubscriptionId: true, status: true },
+      }),
     ]);
 
     if (!plan || !organization) return jsonError("Tarif oder Organisation nicht gefunden.", 404);
+    if (current?.externalSubscriptionId && !["CANCELLED", "EXPIRED"].includes(current.status)) {
+      return jsonError("Für diese Organisation besteht bereits ein aktives Stripe-Abo. So verhindern wir eine doppelte Belastung.", 409);
+    }
+
     const interval = recurringInterval(plan.billingInterval);
     if (!interval) return jsonError("Dieser Tarif kann nicht als wiederkehrendes Stripe-Abo gebucht werden.", 422);
 
