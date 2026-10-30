@@ -12,7 +12,14 @@ const Task=({href,title,description,tone="blue"}:{href:string;title:string;descr
 export async function AdminDashboard({context}:{context:DashboardContext}) {
  const now=new Date(),monthAgo=new Date(Date.now()-30*86400000),stale=new Date(Date.now()-365*86400000);
  const[contacts,tickets,claims,pending,newAccounts,upcoming,orgs,noLogo,noDescription,noWebsite,unclaimed,staleOrgs,recent,crm,mail]=await Promise.all([
-  prisma.ticket.count({where:{category:"CONTACT",status:{in:["OPEN","IN_PROGRESS"]}}}),prisma.ticket.count({where:{category:{not:"CONTACT"},status:{in:["OPEN","IN_PROGRESS"]}}}),prisma.claimRequest.count({where:{status:{in:["PENDING","IN_REVIEW"]}}}),prisma.organization.count({where:{OR:[{status:"PENDING_REVIEW"},{needsManualReview:true}]}}),prisma.user.count({where:{createdAt:{gte:monthAgo}}),prisma.event.count({where:{startDate:{gte:now},status:"PUBLISHED"}}),prisma.organization.count(),prisma.organization.count({where:{logoId:null}}),prisma.organization.count({where:{OR:[{description:null},{description:""}]}}),prisma.organization.count({where:{website:null}}),prisma.organization.count({where:{claimStatus:"UNCLAIMED"}}),prisma.organization.count({where:{updatedAt:{lt:stale}}),prisma.auditLog.findMany({orderBy:{createdAt:"desc"},take:5,select:{id:true,action:true,entityLabel:true,userLabel:true,createdAt:true}}),prisma.siteSetting.findMany({where:{group:"crm"},select:{key:true,value:true}}),getMailSettingsForAdmin()
+  prisma.ticket.count({where:{category:"CONTACT",status:{in:["OPEN","IN_PROGRESS"]}}}),
+  prisma.ticket.count({where:{category:{not:"CONTACT"},status:{in:["OPEN","IN_PROGRESS"]}}}),
+  prisma.claimRequest.count({where:{status:{in:["PENDING","IN_REVIEW"]}}}),
+  prisma.organization.count({where:{OR:[{status:"PENDING_REVIEW"},{needsManualReview:true}]}}),
+  prisma.user.count({where:{createdAt:{gte:monthAgo}}}),
+  prisma.event.count({where:{startDate:{gte:now},status:"PUBLISHED"}}),prisma.organization.count(),prisma.organization.count({where:{logoId:null}}),prisma.organization.count({where:{OR:[{description:null},{description:""}]}}),prisma.organization.count({where:{website:null}}),prisma.organization.count({where:{claimStatus:"UNCLAIMED"}}),
+  prisma.organization.count({where:{updatedAt:{lt:stale}}}),
+  prisma.auditLog.findMany({orderBy:{createdAt:"desc"},take:5,select:{id:true,action:true,entityLabel:true,userLabel:true,createdAt:true}}),prisma.siteSetting.findMany({where:{group:"crm"},select:{key:true,value:true}}),getMailSettingsForAdmin()
  ]);
  const today=now.toISOString().slice(0,10);const followups=crm.flatMap(s=>{const v=s.value&&typeof s.value==="object"&&!Array.isArray(s.value)?s.value as Record<string,unknown>:{};return typeof v.nextFollowUp==="string"&&v.nextFollowUp<=today?[s.key]:[]});const attention=contacts+tickets+claims+pending+followups.length;const season=now.getMonth()<=2?"Hochsaison":now.getMonth()>=8?"Saison vorbereiten":"Datenpflege";
  return <><PageHeader title={`Control Center · ${context.user.name.split(" ")[0]}`} description="Alles Wichtige für deinen täglichen Betrieb – ohne doppelte To-do-Zähler."/>
