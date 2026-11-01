@@ -25,7 +25,7 @@ export default async function CheckoutPage() {
 
   return (
     <>
-      <PageHeader title="Tarif online buchen" description={`Wähle den passenden Tarif für ${context.organization.name}. Die Zahlung wird sicher über Stripe abgewickelt.`} />
+      <PageHeader title="Tarif online buchen" description={`Wähle den passenden Tarif für ${context.organization.name}. Die Zahlung wird sicher über Stripe abgewickelt – inklusive TWINT.`} />
 
       {!canManage ? <Alert variant="warning" title="Keine Berechtigung">Nur Owner und Manager können ein Abonnement buchen oder wechseln.</Alert> : null}
       {!configured ? <Alert variant="error" title="Online-Zahlung noch nicht verfügbar" className="mt-4">Stripe ist auf dem Produktionsserver noch nicht vollständig konfiguriert.</Alert> : null}
@@ -46,12 +46,15 @@ export default async function CheckoutPage() {
               <ul className="my-5 flex-1 space-y-2">
                 {plan.features.slice(0, 8).map((item) => <li key={item.id} className="flex gap-2 text-sm text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{item.feature.name}</li>)}
               </ul>
-              <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current ? `${plan.name} erneut buchen` : `${plan.name} mit Stripe buchen`} disabled={!canManage || !configured} />
+              <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current ? `${plan.name} erneut buchen` : `${plan.name} online buchen`} disabled={!canManage || !configured} />
             </Card>
           );
         })}
       </div>
-      <p className="mt-5 text-xs text-muted-foreground">Die verfügbaren Zahlungsmethoden werden von Stripe passend zu deinem Gerät und Konto angezeigt. TWINT erscheint, sobald die Freigabe durch Stripe abgeschlossen ist. Bestehende manuelle Rechnungen bleiben unverändert möglich.</p>
+      <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <p className="font-semibold">TWINT ist verfügbar.</p>
+        <p className="mt-1 text-emerald-800">Im sicheren Stripe Checkout werden TWINT und weitere für das Gerät verfügbare Zahlungsmethoden automatisch angezeigt. Wiederkehrende Zahlungen werden über das gewählte Zahlungsmittel abgewickelt. Bestehende manuelle Rechnungen bleiben weiterhin möglich.</p>
+      </div>
     </>
   );
 }
