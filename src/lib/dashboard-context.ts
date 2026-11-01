@@ -1,187 +1,20 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { MembershipRole, OrganizationType, Role } from "@prisma/client";
-
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  can,
-  isAdmin,
-  isStaff,
-  resolveOrganizationAccess,
-  type OrgAccess,
-  type OrgCapability,
-  type PermissionKey,
-} from "@/lib/rbac";
+import { can, isAdmin, isStaff, resolveOrganizationAccess, type OrgAccess, type OrgCapability, type PermissionKey } from "@/lib/rbac";
 import { getSubscription, type SubscriptionWithPlan } from "@/lib/subscription";
-
-/** Name des Cookies, in dem die aktive Organisation gemerkt wird. */
 export const ACTIVE_ORG_COOKIE = "fasnav_org";
-
-export type DashboardOrganization = {
-  id: string;
-  name: string;
-  slug: string;
-  type: OrganizationType;
-  status: string;
-  verification: string;
-  claimStatus: string;
-  onboardingCompleted: boolean;
-  membershipRole: MembershipRole;
-};
-
-export type DashboardContext = {
-  user: { id: string; name: string; email: string; role: string };
-  staff: boolean;
-  /** Aktuell ausgewählte Organisation eines Organisationskontos. */
-  organization: DashboardOrganization | null;
-  /** Alle Organisationen, auf die das Konto Zugriff hat. */
-  organizations: DashboardOrganization[];
-  subscription: SubscriptionWithPlan | null;
-  /** Fähigkeiten in der aktiven Organisation. */
-  capabilities: OrgCapability[];
-  can: (capability: OrgCapability) => boolean;
-};
-
-/**
- * Lädt den gemeinsamen Kontext für alle Dashboard-Seiten.
- * Leitet nicht angemeldete oder deaktivierte Benutzer zur Anmeldung um.
- *
- * Für Organisationsaccounts wird hier die zugewiesene Organisation ermittelt;
- * jede weitere Abfrage arbeitet ausschliesslich mit dieser ID.
- */
-export async function getDashboardContext(): Promise<DashboardContext> {
-  const session = await auth();
-
-  if (!session?.user?.id) redirect("/login");
-  if (!session.user.isActive) redirect("/login?error=inactive");
-
-  const staff = isStaff(session.user.role);
-
-  const memberships = await prisma.membership.findMany({
-    where: { userId: session.user.id },
-    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-    select: {
-      role: true,
-      organization: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          type: true,
-          status: true,
-          verification: true,
-          claimStatus: true,
-          onboardingCompleted: true,
-        },
-      },
-    },
-  });
-
-  const organizations: DashboardOrganization[] = memberships.map((m) => ({
-    ...m.organization,
-    membershipRole: m.role,
-  }));
-
-  // Aktive Organisation aus dem Cookie – aber nur, wenn dafür tatsächlich
-  // eine Zuweisung besteht. Ein manipuliertes Cookie kann damit keinen
-  // Zugriff auf eine fremde Organisation herstellen.
-  const cookieStore = await cookies();
-  const preferredId = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
-  const organization =
-    organizations.find((org) => org.id === preferredId) ?? organizations[0] ?? null;
-
-  const subscription = organization ? await getSubscription(organization.id) : null;
-
-  const capabilities: OrgCapability[] = staff
-    ? ["view", "edit", "manage", "manageMembers"]
-    : organization
-      ? ORG_CAPABILITIES_BY_ROLE[organization.membershipRole]
-      : [];
-
-  return {
-    user: {
-      id: session.user.id,
-      name: session.user.name ?? session.user.email ?? "Benutzer",
-      email: session.user.email ?? "",
-      role: session.user.role,
-    },
-    staff,
-    organization,
-    organizations,
-    subscription,
-    capabilities,
-    can: (capability) => capabilities.includes(capability),
-  };
+export const ADMIN_TEST_ORG_COOKIE = "fasnav_admin_test_org";
+export type DashboardOrganization={id:string;name:string;slug:string;type:OrganizationType;status:string;verification:string;claimStatus:string;onboardingCompleted:boolean;membershipRole:MembershipRole};
+export type DashboardContext={user:{id:string;name:string;email:string;role:string};staff:boolean;organization:DashboardOrganization|null;organizations:DashboardOrganization[];subscription:SubscriptionWithPlan|null;capabilities:OrgCapability[];can:(capability:OrgCapability)=>boolean;testMode:null|{organizationId:string;organizationName:string;originalRole:Role}};
+const ORG_CAPABILITIES_BY_ROLE:Record<MembershipRole,OrgCapability[]>={OWNER:["view","edit","manage","manageMembers"],MANAGER:["view","edit","manage"],EDITOR:["view","edit"]};
+export async function getDashboardContext():Promise<DashboardContext>{
+ const session=await auth();if(!session?.user?.id)redirect("/login");if(!session.user.isActive)redirect("/login?error=inactive");
+ const cookieStore=await cookies();const originalRole=session.user.role as Role;const testOrgId=isAdmin(originalRole)?cookieStore.get(ADMIN_TEST_ORG_COOKIE)?.value:null;
+ if(testOrgId){const org=await prisma.organization.findUnique({where:{id:testOrgId},select:{id:true,name:true,slug:true,type:true,status:true,verification:true,claimStatus:true,onboardingCompleted:true}});if(org){const organization:DashboardOrganization={...org,membershipRole:"OWNER"};const capabilities=ORG_CAPABILITIES_BY_ROLE.OWNER;return{user:{id:session.user.id,name:session.user.name??session.user.email??"Benutzer",email:session.user.email??"",role:org.type==="CARNIVAL"?"FASNACHT":"GUGGE"},staff:false,organization,organizations:[organization],subscription:await getSubscription(org.id),capabilities,can:c=>capabilities.includes(c),testMode:{organizationId:org.id,organizationName:org.name,originalRole}}}}
+ const staff=isStaff(originalRole);const memberships=await prisma.membership.findMany({where:{userId:session.user.id},orderBy:[{role:"asc"},{createdAt:"asc"}],select:{role:true,organization:{select:{id:true,name:true,slug:true,type:true,status:true,verification:true,claimStatus:true,onboardingCompleted:true}}}});const organizations:DashboardOrganization[]=memberships.map(m=>({...m.organization,membershipRole:m.role}));const preferredId=cookieStore.get(ACTIVE_ORG_COOKIE)?.value;const organization=organizations.find(o=>o.id===preferredId)??organizations[0]??null;const subscription=organization?await getSubscription(organization.id):null;const capabilities:OrgCapability[]=staff?["view","edit","manage","manageMembers"]:organization?ORG_CAPABILITIES_BY_ROLE[organization.membershipRole]:[];return{user:{id:session.user.id,name:session.user.name??session.user.email??"Benutzer",email:session.user.email??"",role:session.user.role},staff,organization,organizations,subscription,capabilities,can:c=>capabilities.includes(c),testMode:null};
 }
-
-/**
- * Fähigkeiten je organisationsinterner Rolle.
- * Spiegelt die verbindliche Definition in `src/lib/rbac.ts` für die
- * Darstellung im Dashboard; durchgesetzt wird sie serverseitig dort.
- */
-const ORG_CAPABILITIES_BY_ROLE: Record<MembershipRole, OrgCapability[]> = {
-  OWNER: ["view", "edit", "manage", "manageMembers"],
-  MANAGER: ["view", "edit", "manage"],
-  EDITOR: ["view", "edit"],
-};
-
-/**
- * Erzwingt eine zugeordnete Organisation.
- * Verhindert, dass ein Organisationsaccount ohne Zuweisung ins Leere läuft.
- */
-export async function requireOrganizationContext() {
-  const context = await getDashboardContext();
-
-  if (!context.organization) {
-    if (context.staff) redirect("/dashboard/organisationen");
-    redirect("/dashboard/keine-organisation");
-  }
-
-  return { ...context, organization: context.organization };
-}
-
-/**
- * Seiten-Guards für Dashboard-Routen.
- *
- * Im Gegensatz zu den API-Guards werfen sie keine Ausnahme, sondern leiten
- * auf eine verständliche Hinweisseite um. Die verbindliche Rechteprüfung
- * findet weiterhin in jedem API-Endpoint statt.
- */
-const DENIED = "/dashboard/kein-zugriff";
-
-export async function requireStaffPage(): Promise<DashboardContext> {
-  const context = await getDashboardContext();
-  if (!context.staff) redirect(DENIED);
-  return context;
-}
-
-export async function requireAdminPage(): Promise<DashboardContext> {
-  const context = await getDashboardContext();
-  if (!isAdmin(context.user.role as Role)) redirect(DENIED);
-  return context;
-}
-
-/**
- * Zugriff auf eine Organisation für eine Seite.
- *
- * Anders als requireOrganizationAccess wird hier nicht geworfen, sondern auf
- * die Hinweisseite umgeleitet. Ein Aufruf mit fremder Kennung endet damit als
- * saubere Abweisung statt als Serverfehler.
- */
-export async function requireOrganizationAccessPage(
-  organizationId: string,
-  capability: OrgCapability = "view",
-): Promise<OrgAccess> {
-  const result = await resolveOrganizationAccess(organizationId, capability);
-  if (!result.ok) redirect(result.status === 401 ? "/login" : DENIED);
-  return result.access;
-}
-
-export async function requirePermissionPage(
-  permission: PermissionKey,
-): Promise<DashboardContext> {
-  const context = await getDashboardContext();
-  if (!can(context.user.role as Role, permission)) redirect(DENIED);
-  return context;
-}
+export async function requireOrganizationContext(){const context=await getDashboardContext();if(!context.organization){if(context.staff)redirect("/dashboard/organisationen");redirect("/dashboard/keine-organisation")}return{...context,organization:context.organization}}
+const DENIED="/dashboard/kein-zugriff";export async function requireStaffPage(){const c=await getDashboardContext();if(!c.staff)redirect(DENIED);return c}export async function requireAdminPage(){const c=await getDashboardContext();if(!isAdmin(c.user.role as Role))redirect(DENIED);return c}export async function requireOrganizationAccessPage(organizationId:string,capability:OrgCapability="view"):Promise<OrgAccess>{const r=await resolveOrganizationAccess(organizationId,capability);if(!r.ok)redirect(r.status===401?"/login":DENIED);return r.access}export async function requirePermissionPage(permission:PermissionKey){const c=await getDashboardContext();if(!can(c.user.role as Role,permission))redirect(DENIED);return c}
