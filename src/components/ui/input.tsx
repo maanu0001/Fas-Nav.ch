@@ -3,11 +3,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "flex w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
-    <input ref={ref} className={cn(base, "h-10", className)} {...props} />
+    <input ref={ref} className={cn(base, "h-11 py-2", className)} {...props} />
   ),
 );
 Input.displayName = "Input";
@@ -16,7 +16,7 @@ export const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
 >(({ className, rows = 4, ...props }, ref) => (
-  <textarea ref={ref} rows={rows} className={cn(base, "min-h-20 resize-y", className)} {...props} />
+  <textarea ref={ref} rows={rows} className={cn(base, "min-h-24 resize-y py-2.5 leading-5", className)} {...props} />
 ));
 Textarea.displayName = "Textarea";
 
@@ -24,7 +24,7 @@ export const Select = React.forwardRef<
   HTMLSelectElement,
   React.SelectHTMLAttributes<HTMLSelectElement>
 >(({ className, ...props }, ref) => (
-  <select ref={ref} className={cn(base, "h-10 pr-8", className)} {...props} />
+  <select ref={ref} className={cn(base, "h-11 py-2 pr-9", className)} {...props} />
 ));
 Select.displayName = "Select";
 
@@ -35,7 +35,7 @@ export function Label({
 }: React.LabelHTMLAttributes<HTMLLabelElement> & { required?: boolean }) {
   return (
     <label
-      className={cn("block text-sm font-medium text-slate-700", className)}
+      className={cn("block text-sm font-medium leading-5 text-slate-700", className)}
       {...props}
     >
       {props.children}
@@ -72,7 +72,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("min-w-0 space-y-1.5", className)}>
       {label ? (
         <Label htmlFor={htmlFor} required={required}>
           {label}
