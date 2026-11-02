@@ -24,7 +24,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{organizati
   const nextHistory:HistoryEntry[]=changes.length?[...history,{at:new Date().toISOString(),by:user.name??user.email??"Admin",changes}]:history;
   const value:Prisma.InputJsonObject={status:body.status,nextFollowUp:body.nextFollowUp,notes:body.notes,contactPerson:body.contactPerson,history:nextHistory};
   await prisma.siteSetting.upsert({where:{key},create:{key,value,group:"crm",label:"CRM"},update:{value,group:"crm"}});
-  await prisma.auditLog.create({data:{action:"CRM_UPDATED",entityType:"Organization",entityId:organization.id,entityLabel:organization.name,userId:user.id,userLabel:user.name??user.email??null,metadata:{changes}}});
+  await prisma.auditLog.create({data:{action:"CRM_UPDATED",entity:"Organization",entityId:organization.id,entityLabel:organization.name,userId:user.id,userLabel:user.name??user.email??null,after:{changes}}});
   return jsonOk(value);
  }catch(error){return handleApiError(error)}
 }
