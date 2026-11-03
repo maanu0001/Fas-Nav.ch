@@ -102,6 +102,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           icon: "image",
         },
         { href: "/dashboard/qr-code", label: "QR-Code", icon: "layout" },
+        { href: "/dashboard/studio", label: "Social Media Studio", icon: "image" },
         { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
       ],
     },
