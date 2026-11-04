@@ -559,7 +559,7 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  surveyInvitations SurveyInvitation[]
+  marketplaceListings MarketplaceListing[]
   memberships   Membership[]
   events        Event[]
   media         Media[]        @relation("OrganizationMedia")
@@ -1243,4 +1243,43 @@ model ImportRecord {
   @@index([jobId, action])
   @@index([organizationId])
   @@map("import_records")
+}
+
+model MarketplaceListing {
+ id String @id @default(cuid())
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ title String
+ description String @db.Text
+ category String
+ listingType String
+ status String @default("DRAFT")
+ city String
+ canton String?
+ price Int?
+ date DateTime?
+ details Json?
+ imageUrls String[] @default([])
+ views Int @default(0)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ publishedAt DateTime?
+ expiresAt DateTime?
+ inquiries MarketplaceInquiry[]
+ @@index([status,category,createdAt])
+ @@index([organizationId,status])
+ @@map("marketplace_listings")
+}
+model MarketplaceInquiry {
+ id String @id @default(cuid())
+ listingId String
+ listing MarketplaceListing @relation(fields:[listingId],references:[id],onDelete:Cascade)
+ senderName String
+ senderEmail String
+ message String @db.Text
+ reply String? @db.Text
+ repliedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([listingId,createdAt])
+ @@map("marketplace_inquiries")
 }
