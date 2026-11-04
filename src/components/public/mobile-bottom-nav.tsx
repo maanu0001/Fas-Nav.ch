@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, CalendarDays, Heart, Users } from "lucide-react";
+import { Home, Search, CalendarDays, Users, Tent } from "lucide-react";
 const items = [
   { href: "/", label: "Start", Icon: Home },
   { href: "/suche", label: "Suche", Icon: Search },
   { href: "/agenda", label: "Agenda", Icon: CalendarDays },
-  { href: "/favoriten", label: "Merkliste", Icon: Heart },
+  { href: "/fasnachten", label: "Fasnachten", Icon: Tent },
   { href: "/guggen", label: "Vereine", Icon: Users },
 ];
 export function MobileBottomNav() {
