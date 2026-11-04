@@ -87,6 +87,10 @@ export const getPublicOrganization = cache(async function getPublicOrganization(
         },
         orderBy: { sortOrder: "asc" },
       },
+      paradeEntries: {
+        select: { id: true, number: true, groupName: true, startTime: true, notes: true },
+        orderBy: { number: "asc" },
+      },
       programItems: {
         select: {
           id: true,
