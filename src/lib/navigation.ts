@@ -69,13 +69,13 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           // gemeinsam; die Prüfung dazu hängt am Recht handleContactRequests.
           { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen", icon: "mail" },
           { href: "/dashboard/werbung", label: "Werbung", icon: "megaphone" },
+          { href: "/dashboard/boerse", label: "Börse", icon: "tag" },
         ],
       },
       {
         title: "Auswertung",
         items: [
           { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
-          { href: "/dashboard/saisonfeedback", label: "Saisonfeedback", icon: "mail" },
           { href: "/dashboard/logs", label: "Logs", icon: "scroll" },
           // Die Einstellungen enthalten für jede Rolle das eigene Konto –
           // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile
@@ -97,6 +97,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
       items: [
         { href: "/dashboard/seite", label: "Meine Seite", icon: "layout" },
         { href: "/dashboard/veranstaltungen", label: "Veranstaltungen", icon: "calendar" },
+        { href: "/dashboard/boerse", label: "Meine Inserate", icon: "tag" },
         {
           href: organizationId ? organizationGalleryPath(organizationId) : "/dashboard/galerie",
           label: "Galerie",

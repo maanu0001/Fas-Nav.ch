@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { hashToken,type Question } from "@/lib/season-survey";
+import { hashToken } from "@/lib/season-survey";
+import type { Question } from "@/lib/season-survey-questions";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
 export const dynamic="force-dynamic";
 type Params={params:Promise<{token:string}>};

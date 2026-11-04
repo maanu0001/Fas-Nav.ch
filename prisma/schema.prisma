@@ -560,6 +560,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   surveyInvitations SurveyInvitation[]
+  marketplaceListings MarketplaceListing[]
   memberships   Membership[]
   events        Event[]
   media         Media[]        @relation("OrganizationMedia")
@@ -1243,4 +1244,84 @@ model ImportRecord {
   @@index([jobId, action])
   @@index([organizationId])
   @@map("import_records")
+}
+
+model MarketplaceListing {
+ id String @id @default(cuid())
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ title String
+ description String @db.Text
+ category String
+ listingType String
+ status String @default("DRAFT")
+ city String
+ canton String?
+ price Int?
+ date DateTime?
+ details Json?
+ imageUrls String[] @default([])
+ views Int @default(0)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ publishedAt DateTime?
+ expiresAt DateTime?
+ inquiries MarketplaceInquiry[]
+ @@index([status,category,createdAt])
+ @@index([organizationId,status])
+ @@map("marketplace_listings")
+}
+model MarketplaceInquiry {
+ id String @id @default(cuid())
+ listingId String
+ listing MarketplaceListing @relation(fields:[listingId],references:[id],onDelete:Cascade)
+ senderName String
+ senderEmail String
+ message String @db.Text
+ reply String? @db.Text
+ repliedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([listingId,createdAt])
+ @@map("marketplace_inquiries")
+}
+
+model SeasonSurvey {
+ id String @id @default(cuid())
+ title String
+ season String
+ status String @default("DRAFT")
+ audience String @default("ALL")
+ questions Json
+ anonymousAllowed Boolean @default(true)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ invitations SurveyInvitation[]
+ @@map("season_surveys")
+}
+model SurveyInvitation {
+ id String @id @default(cuid())
+ surveyId String
+ survey SeasonSurvey @relation(fields:[surveyId],references:[id],onDelete:Cascade)
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ email String
+ tokenHash String @unique
+ sentAt DateTime?
+ reminderSentAt DateTime?
+ answeredAt DateTime?
+ optedOutAt DateTime?
+ response SurveyResponse?
+ @@unique([surveyId,organizationId])
+ @@index([surveyId,answeredAt])
+ @@map("survey_invitations")
+}
+model SurveyResponse {
+ id String @id @default(cuid())
+ invitationId String @unique
+ invitation SurveyInvitation @relation(fields:[invitationId],references:[id],onDelete:Cascade)
+ answers Json
+ revealIdentity Boolean @default(false)
+ contactConsent Boolean @default(false)
+ createdAt DateTime @default(now())
+ @@map("survey_responses")
 }

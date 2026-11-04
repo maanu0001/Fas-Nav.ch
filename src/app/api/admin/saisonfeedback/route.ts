@@ -2,7 +2,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/rbac";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
-import { defaultQuestions,deliverSurvey } from "@/lib/season-survey";
+import { deliverSurvey } from "@/lib/season-survey";
+import { defaultQuestions } from "@/lib/season-survey-questions";
 export const dynamic="force-dynamic";
 const q=z.object({id:z.string().min(1).max(60),label:z.string().min(3).max(300),type:z.enum(["rating","nps","single","multi","text"]),options:z.array(z.string().min(1).max(100)).max(20).optional()});
 export async function POST(request:Request){
