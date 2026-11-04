@@ -87,6 +87,10 @@ export const getPublicOrganization = cache(async function getPublicOrganization(
         },
         orderBy: { sortOrder: "asc" },
       },
+      audioSamples: {
+        select: { id: true, title: true, url: true, durationSeconds: true, sortOrder: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
       programItems: {
         select: {
           id: true,

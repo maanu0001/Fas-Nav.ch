@@ -109,6 +109,9 @@ export function OrganizationProfile({
   const isCarnival = org.type === "CARNIVAL";
   const showGallery = orgHasFeature(org, FEATURE_KEYS.GALLERY) && org.media.length > 0;
   const showSponsors = orgHasFeature(org, FEATURE_KEYS.SPONSORS) && org.sponsors.length > 0;
+  const audioTier = org.subscription && !["EXPIRED", "CANCELLED", "SUSPENDED"].includes(org.subscription.status) && (!org.subscription.endDate || org.subscription.endDate.getTime() >= Date.now()) ? org.subscription.plan.key.toLowerCase() : "free";
+  const audioLimit = audioTier === "premium" ? { count: 5, seconds: 180 } : audioTier === "basic" ? { count: 3, seconds: 60 } : { count: 1, seconds: 30 };
+  const visibleAudio = !isCarnival ? org.audioSamples.filter((item) => item.durationSeconds <= audioLimit.seconds + 0.1).slice(0, audioLimit.count) : [];
   const showProgram = org.programItems.length > 0;
   const showDownloads = org.downloads.length > 0;
   const showFaq = org.faqs.length > 0;
@@ -244,6 +247,18 @@ export function OrganizationProfile({
               </Panel>
             ) : null}
 
+            {visibleAudio.length > 0 ? (
+              <Panel title="Hörproben" id="hoerproben">
+                <div className="space-y-3">
+                  {visibleAudio.map((sample) => (
+                    <div key={sample.id} className="rounded-xl border border-border bg-card p-4">
+                      <p className="mb-2 font-semibold">{sample.title}</p>
+                      <audio controls preload="none" controlsList="nodownload" className="w-full" src={sample.url}>Dein Browser unterstützt keine Audiowiedergabe.</audio>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            ) : null}
             {showProgram ? (
               <Panel title="Programm" id="programm">
                 <ol className="space-y-3">

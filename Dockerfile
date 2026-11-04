@@ -6,7 +6,7 @@
 
 FROM node:22-alpine AS base
 # libc6-compat wird von einigen nativen Abhängigkeiten (u.a. sharp) benötigt.
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl ffmpeg
 WORKDIR /app
 
 

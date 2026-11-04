@@ -23,6 +23,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
   ".pdf": "application/pdf",
+  ".mp3": "audio/mpeg",
 };
 
 const UPLOAD_ROOT = path.resolve(process.env.UPLOAD_DIR ?? "./public/uploads");

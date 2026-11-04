@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { AudioSamplesEditor } from "@/components/dashboard/editor/audio-samples-editor";
 import { ImageUpload } from "@/components/dashboard/image-upload";
 import { OrganizationPreview } from "@/components/dashboard/editor/preview";
 import type { EditorState, SocialLinkDraft } from "@/components/dashboard/editor/types";
@@ -26,6 +27,7 @@ const SECTIONS = [
   { id: "beschreibung", label: "Beschreibung" },
   { id: "merkmale", label: "Merkmale" },
   { id: "bilder", label: "Bilder" },
+  { id: "hoerprobe", label: "Hörprobe" },
   { id: "kontakt", label: "Kontakt" },
   { id: "anreise", label: "Anreise" },
   { id: "social", label: "Social Media" },
@@ -240,7 +242,7 @@ export function OrganizationEditor({
         {/* Sektionsauswahl */}
         <div className="-mx-1 mb-5 overflow-x-auto">
           <div className="flex min-w-max gap-1 border-b border-border px-1">
-            {SECTIONS.map((item) => (
+            {SECTIONS.filter((item) => type === "GUGGE" || item.id !== "hoerprobe").map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -830,6 +832,8 @@ export function OrganizationEditor({
               ) : null}
             </div>
           ) : null}
+
+          {section === "hoerprobe" && type === "GUGGE" ? <AudioSamplesEditor organizationId={organizationId} /> : null}
 
           {section === "seo" ? (
             <div className="space-y-4">
