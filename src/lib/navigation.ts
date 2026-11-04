@@ -69,7 +69,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           // gemeinsam; die Prüfung dazu hängt am Recht handleContactRequests.
           { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen", icon: "mail" },
           { href: "/dashboard/werbung", label: "Werbung", icon: "megaphone" },
-          { href: "/dashboard/boerse", label: "Börse", icon: "tag" },
+          { href: "/dashboard/boerse", label: "Inserate", icon: "tag" },
         ],
       },
       {

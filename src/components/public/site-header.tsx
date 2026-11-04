@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Menu, Search, X } from "lucide-react";
+import { LayoutDashboard, Menu, Search, X, CalendarDays, Tag, PartyPopper, Music2, MapPinned, Building2 } from "lucide-react";
 
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -11,12 +11,12 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/agenda", label: "Agenda" },
-  { href: "/boerse", label: "Börse" },
-  { href: "/fasnachten", label: "Fasnachten" },
-  { href: "/guggen", label: "Guggen" },
-  { href: "/kantone", label: "Kantone" },
-  { href: "/preise", label: "Für Organisationen" },
+  { href: "/agenda", label: "Agenda", icon: CalendarDays },
+  { href: "/boerse", label: "Inserate", icon: Tag },
+  { href: "/fasnachten", label: "Fasnachten", icon: PartyPopper },
+  { href: "/guggen", label: "Guggen", icon: Music2 },
+  { href: "/kantone", label: "Kantone", icon: MapPinned },
+  { href: "/preise", label: "Für Organisationen", icon: Building2 },
 ];
 
 export function SiteHeader({ isAuthenticated }: { isAuthenticated: boolean }) {
@@ -129,9 +129,9 @@ export function SiteHeader({ isAuthenticated }: { isAuthenticated: boolean }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"
                 >
-                  {item.label}
+                  <item.icon className="h-5 w-5 shrink-0" aria-hidden />{item.label}
                 </Link>
               ))}
             </nav>
