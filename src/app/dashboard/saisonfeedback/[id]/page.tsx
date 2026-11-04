@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import type { Question } from "@/lib/season-survey";
+import type { Question } from "@/lib/season-survey-questions";
 export const dynamic="force-dynamic";
 export default async function Page({params}:{params:Promise<{id:string}>}){await requireAdmin();const {id}=await params;const survey=await prisma.seasonSurvey.findUniqueOrThrow({where:{id},include:{invitations:{include:{organization:{select:{name:true,type:true,canton:{select:{name:true}}},subscription:{select:{plan:{select:{tier:true}}}}},response:true}}}});const qs=survey.questions as Question[];const invites=survey.invitations;const answered=invites.filter(i=>i.response);const count=answered.length;const percent=invites.length?Math.round(count/invites.length*100):0;const scores=(id:string)=>answered.map(i=>i.response?.answers as Record<string,unknown>).map(a=>a?.[id]).filter((n):n is number=>typeof n==="number");const average=(a:number[])=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1):"–";
  return <main className="space-y-6"><Link className="underline" href="/dashboard/saisonfeedback">Zurück</Link><h1 className="text-2xl font-bold">{survey.title} · {survey.season}</h1>
