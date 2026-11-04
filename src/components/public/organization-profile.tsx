@@ -244,23 +244,6 @@ export function OrganizationProfile({
               </Panel>
             ) : null}
 
-            {isCarnival && org.paradeEntries.length > 0 ? (
-              <Panel title="Umzugsaufstellung" id="umzugsaufstellung">
-                <ol className="space-y-2">
-                  {org.paradeEntries.map((entry) => (
-                    <li key={entry.id} className="flex items-start gap-4 rounded-xl border border-border bg-card p-4">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary font-bold text-primary-900">{entry.number}</span>
-                      <div>
-                        <p className="font-semibold">{entry.groupName}</p>
-                        {entry.startTime ? <p className="text-sm text-muted-foreground">Start: {entry.startTime} Uhr</p> : null}
-                        {entry.notes ? <p className="mt-1 text-sm text-muted-foreground">{entry.notes}</p> : null}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </Panel>
-            ) : null}
-
             {showProgram ? (
               <Panel title="Programm" id="programm">
                 <ol className="space-y-3">
