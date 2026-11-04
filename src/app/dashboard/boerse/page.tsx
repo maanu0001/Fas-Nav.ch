@@ -1,13 +1,12 @@
 import { getDashboardContext } from "@/lib/dashboard-context";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/rbac";
 import { MarketplaceManager } from "@/components/marketplace/manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const ctx = await getDashboardContext();
-  const orgs = isAdmin(ctx.user.role)
+  const orgs = ctx.user.role === "ADMIN"
     ? await prisma.organization.findMany({
         select: { id: true, name: true },
         orderBy: { name: "asc" },
