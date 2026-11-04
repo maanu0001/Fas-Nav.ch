@@ -1,0 +1,10 @@
+CREATE TABLE "season_surveys" ("id" TEXT NOT NULL,"title" TEXT NOT NULL,"season" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'DRAFT',"audience" TEXT NOT NULL DEFAULT 'ALL',"questions" JSONB NOT NULL,"anonymousAllowed" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "season_surveys_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "survey_invitations" ("id" TEXT NOT NULL,"surveyId" TEXT NOT NULL,"organizationId" TEXT NOT NULL,"email" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"sentAt" TIMESTAMP(3),"reminderSentAt" TIMESTAMP(3),"answeredAt" TIMESTAMP(3),"optedOutAt" TIMESTAMP(3),CONSTRAINT "survey_invitations_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "survey_responses" ("id" TEXT NOT NULL,"invitationId" TEXT NOT NULL,"answers" JSONB NOT NULL,"revealIdentity" BOOLEAN NOT NULL DEFAULT false,"contactConsent" BOOLEAN NOT NULL DEFAULT false,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "survey_responses_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "survey_invitations_tokenHash_key" ON "survey_invitations"("tokenHash");
+CREATE UNIQUE INDEX "survey_invitations_surveyId_organizationId_key" ON "survey_invitations"("surveyId","organizationId");
+CREATE INDEX "survey_invitations_surveyId_answeredAt_idx" ON "survey_invitations"("surveyId","answeredAt");
+CREATE UNIQUE INDEX "survey_responses_invitationId_key" ON "survey_responses"("invitationId");
+ALTER TABLE "survey_invitations" ADD CONSTRAINT "survey_invitations_surveyId_fkey" FOREIGN KEY ("surveyId") REFERENCES "season_surveys"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "survey_invitations" ADD CONSTRAINT "survey_invitations_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "survey_responses" ADD CONSTRAINT "survey_responses_invitationId_fkey" FOREIGN KEY ("invitationId") REFERENCES "survey_invitations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
