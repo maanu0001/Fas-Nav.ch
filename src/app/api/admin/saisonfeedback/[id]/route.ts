@@ -2,7 +2,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/rbac";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
-import { deliverSurvey,defaultQuestions } from "@/lib/season-survey";
+import { deliverSurvey } from "@/lib/season-survey";
+import { defaultQuestions } from "@/lib/season-survey-questions";
 export const dynamic="force-dynamic";
 type Params={params:Promise<{id:string}>};
 export async function PATCH(request:Request,{params}:Params){
