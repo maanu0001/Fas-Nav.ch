@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EventCard } from "@/components/public/event-card";
+import { AddToCalendar } from "@/components/public/add-to-calendar";
 import { MediaImage } from "@/components/public/media-image";
 import { TrackedLink } from "@/components/public/tracked-link";
 import { ViewTracker } from "@/components/public/view-tracker";
@@ -271,6 +272,17 @@ export default async function EventPage({ params }: Props) {
               </ul>
 
               <div className="mt-5 space-y-2">
+                {!isPast ? (
+                  <AddToCalendar
+                    title={event.title}
+                    slug={event.slug}
+                    startDate={event.startDate.toISOString()}
+                    endDate={event.endDate?.toISOString() ?? null}
+                    allDay={event.allDay}
+                    location={[event.venueName, address, "Schweiz"].filter(Boolean).join(", ")}
+                    description={event.shortDescription ?? event.description ?? ""}
+                  />
+                ) : null}
                 {event.ticketUrl && !isPast ? (
                   <TrackedLink
                     href={event.ticketUrl}
