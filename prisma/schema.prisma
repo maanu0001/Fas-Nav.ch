@@ -571,6 +571,7 @@ model Organization {
   pageViews     PageView[]
   placements    Placement[]
   faqs          Faq[]
+  paradeEntries ParadeEntry[]
   programItems  ProgramItem[]
   downloads     Download[]
   claimRequests ClaimRequest[]
@@ -1242,4 +1243,22 @@ model ImportRecord {
   @@index([jobId, action])
   @@index([organizationId])
   @@map("import_records")
+}
+
+ 
+/// Reihenfolge der Gruppen im Fasnachtsumzug.
+model ParadeEntry {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         Int
+  groupName      String
+  startTime      String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, number])
+  @@index([organizationId])
+  @@map("parade_entries")
 }
