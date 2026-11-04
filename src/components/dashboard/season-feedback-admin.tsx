@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { apiRequest,errorMessage } from "@/lib/client-api";
-import { defaultQuestions,type Question } from "@/lib/season-survey";
+import { defaultQuestions,type Question } from "@/lib/season-survey-questions";
 type Survey={id:string;title:string;season:string;status:string;audience:string;questions:Question[];_count:{invitations:number}};
 export function SeasonFeedbackAdmin({initial}:{initial:Survey[]}){
  const [surveys,setSurveys]=React.useState(initial),[title,setTitle]=React.useState("Saisonfeedback"),[season,setSeason]=React.useState(String(new Date().getFullYear())),[audience,setAudience]=React.useState("ALL"),[questions,setQuestions]=React.useState<Question[]>(defaultQuestions),[error,setError]=React.useState(""),[busy,setBusy]=React.useState(false),[result,setResult]=React.useState("");

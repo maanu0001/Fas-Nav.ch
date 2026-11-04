@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import { apiRequest,errorMessage } from "@/lib/client-api";
-import type { Question } from "@/lib/season-survey";
+import type { Question } from "@/lib/season-survey-questions";
 type Survey={title:string;season:string;questions:Question[];answered:boolean;optedOut:boolean};
 export default function SurveyPage(){
  const {token}=useParams<{token:string}>();const [survey,setSurvey]=React.useState<Survey|null>(null);const [answers,setAnswers]=React.useState<Record<string,string|number|string[]>>({});
