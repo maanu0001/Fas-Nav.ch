@@ -560,6 +560,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   surveyInvitations SurveyInvitation[]
+  audioSamples AudioSample[]
   marketplaceListings MarketplaceListing[]
   memberships   Membership[]
   events        Event[]
@@ -1324,4 +1325,20 @@ model SurveyResponse {
  contactConsent Boolean @default(false)
  createdAt DateTime @default(now())
  @@map("survey_responses")
+}
+
+model AudioSample {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  key            String
+  url            String
+  durationSeconds Float
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, sortOrder])
+  @@map("audio_samples")
 }
