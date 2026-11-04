@@ -76,6 +76,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
         title: "Auswertung",
         items: [
           { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
+          ...(isAdmin(role) ? [{ href: "/dashboard/saisonfeedback", label: "Saisonfeedback", icon: "clipboard-list" }] : []),
           { href: "/dashboard/logs", label: "Logs", icon: "scroll" },
           // Die Einstellungen enthalten für jede Rolle das eigene Konto –
           // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile

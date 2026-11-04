@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { MaintenanceScreen } from "@/components/maintenance/maintenance-screen";
 import { SiteFooter } from "@/components/public/site-footer";
-import { MobileBottomNav } from "@/components/public/mobile-bottom-nav";
 import { SiteHeader } from "@/components/public/site-header";
 import { maintenanceScreenFor } from "@/lib/maintenance";
 
@@ -21,11 +20,10 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader isAuthenticated={Boolean(session?.user)} />
-      <main id="inhalt" className="flex-1 max-md:pb-[calc(76px+env(safe-area-inset-bottom))]">
+      <main id="inhalt" className="flex-1">
         {children}
       </main>
       <SiteFooter />
-      <MobileBottomNav />
     </div>
   );
 }

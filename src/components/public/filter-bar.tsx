@@ -70,7 +70,7 @@ export function FilterBar({
             variant="outline"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className="hidden"
+            className="sm:hidden"
             block
           >
             <SlidersHorizontal />
@@ -90,24 +90,10 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="mt-3 space-y-3 md:hidden">
-        {filters.map((filter) => (
-          <div key={filter.name}>
-            <p className="mb-2 text-xs font-semibold text-muted-foreground">{filter.label}</p>
-            <div className="flex snap-x gap-2 overflow-x-auto pb-2" role="group" aria-label={filter.label}>
-              {[{value:"",label:"Alle"},...filter.options].map((option) => {
-                const active = (searchParams.get(filter.name) ?? "") === option.value;
-                return <button key={option.value} type="button" aria-pressed={active} onClick={() => applyParam(filter.name, option.value)} className={cn("min-h-11 shrink-0 snap-start rounded-full border px-4 text-sm font-medium", active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground")}>{option.label}</button>;
-              })}
-            </div>
-          </div>
-        ))}
-        {extra ? <div className="grid grid-cols-2 gap-2">{extra}</div> : null}
-      </div>
       <div
         className={cn(
-          "mt-3 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-4",
-          "md:grid",
+          "mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+          open ? "grid" : "hidden sm:grid",
         )}
       >
         {filters.map((filter) => (
