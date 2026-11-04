@@ -6,11 +6,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const ctx = await getDashboardContext();
-  const orgs = ctx.staff
+  const orgs = ctx.user.role === "ADMIN"
     ? await prisma.organization.findMany({
-        where: { memberships: { some: { userId: ctx.user.id } } },
         select: { id: true, name: true },
-        take: 20,
+        orderBy: { name: "asc" },
       })
     : ctx.organizations.map((o) => ({ id: o.id, name: o.name }));
 
