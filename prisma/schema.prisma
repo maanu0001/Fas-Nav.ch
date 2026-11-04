@@ -571,6 +571,7 @@ model Organization {
   pageViews     PageView[]
   placements    Placement[]
   faqs          Faq[]
+  audioSamples AudioSample[]
   programItems  ProgramItem[]
   downloads     Download[]
   claimRequests ClaimRequest[]
@@ -1242,4 +1243,20 @@ model ImportRecord {
   @@index([jobId, action])
   @@index([organizationId])
   @@map("import_records")
+}
+
+model AudioSample {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  key            String
+  url            String
+  durationSeconds Float
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, sortOrder])
+  @@map("audio_samples")
 }
