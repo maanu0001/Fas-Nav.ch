@@ -136,12 +136,6 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
               description: "Texte, Bilder, Kontakt",
               icon: "layout",
             },
-            ...(org.type === "CARNIVAL" ? [{
-              href: "/dashboard/umzugsaufstellung",
-              label: "Umzugsaufstellung",
-              description: "Startnummern und Gruppen",
-              icon: "list",
-            }] : []),
             {
               href: "/dashboard/veranstaltungen/neu",
               label: "Veranstaltung erstellen",
