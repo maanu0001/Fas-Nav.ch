@@ -100,7 +100,7 @@ function address(value:string){return decodeWord(value.match(/<([^>]+)>/)?.[1]||
 function threadKey(h:Record<string,string>){const refs=(h.references||"").match(/<[^>]+>/g);return refs?.[0]||h["in-reply-to"]?.match(/<[^>]+>/)?.[0]||h["message-id"]?.match(/<[^>]+>/)?.[0]||"subject:"+((h.subject||"").replace(/^(re|fw|fwd):\s*/gi,"").toLowerCase());}
 async function folders(client:Imap){const result=await client.command('LIST "" "*"');const names=result.lines.filter(l=>l.startsWith("* LIST")).map(l=>l.match(/"([^"]+)"$/)?.[1]||l.split(" ").at(-1)?.replace(/^"|"$/g,"")||"");const sent=names.find(n=>/^(sent|sent items|gesendet|sent messages)$/i.test(n))||"Sent";return ["INBOX",sent];}
 export async function testMailboxConnection(){return withImap(async client=>{await client.command('SELECT "INBOX"');return {ok:true};});}
-export async function syncMailCenter(options:{full?:boolean}={}){
+async function performMailCenterSync(options:{full?:boolean}={}){
  return withImap(async client=>{
   let processed=0;for(const folder of await folders(client)){
    const selection=await client.command("EXAMINE "+quote(folder));
@@ -135,6 +135,18 @@ export async function syncMailCenter(options:{full?:boolean}={}){
  });
 }
 /** Display the MIME HTML in a separately sandboxed iframe; never inject into dashboard DOM. */
+// Coalesce simultaneous browser polling and scheduled cron requests in one server process.
+// A minimum interval prevents repeated full IMAP roundtrips from several open tabs.
+let activeSync:Promise<{processed:number}>|null=null;
+let lastSyncStartedAt=0;
+export async function syncMailCenter(options:{full?:boolean}={}):Promise<{processed:number}>{
+ if(activeSync)return activeSync;
+ if(!options.full&&Date.now()-lastSyncStartedAt<2500)return {processed:0};
+ lastSyncStartedAt=Date.now();
+ const work=performMailCenterSync(options);
+ activeSync=work;
+ try{return await work;}finally{if(activeSync===work)activeSync=null;}
+}
 export async function mailboxMessageHtml(providerId:string){
  const message=await prisma.mailCenterMessage.findUnique({where:{providerId},select:{htmlBody:true,textBody:true}});
  if(!message)throw new Error("Nachricht nicht gefunden.");
