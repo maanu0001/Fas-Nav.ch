@@ -64,21 +64,19 @@ export async function marketplaceTier(organizationId: string): Promise<Marketpla
 
 export async function marketplaceLimits(organizationId: string) {
   const { tier, features } = await organizationPlanFeatures(organizationId);
-  const fallback = MARKETPLACE_LIMITS[tier];
-  const number = (key: string, defaultValue: number) => {
+  const number = (key: string) => {
     const entry = features.get(key);
-    return entry ? (entry.enabled ? Math.max(0, entry.limit ?? defaultValue) : 0) : defaultValue;
+    return entry ? (entry.enabled ? Math.max(0, entry.limit ?? 0) : 0) : 0;
   };
-  const enabled = (key: string, defaultValue: boolean) =>
-    features.get(key)?.enabled ?? defaultValue;
+  const enabled = (key: string) => features.get(key)?.enabled ?? false;
 
   return {
     tier,
-    active: number("marketplace_active", fallback.active),
-    images: number("marketplace_images", fallback.images),
-    days: number("marketplace_days", fallback.days),
-    externalContact: enabled("marketplace_external_contact", fallback.externalContact),
-    featured: enabled("marketplace_featured", fallback.featured),
+    active: number("marketplace_active"),
+    images: number("marketplace_images"),
+    days: number("marketplace_days"),
+    externalContact: enabled("marketplace_external_contact"),
+    featured: enabled("marketplace_featured"),
   };
 }
 
