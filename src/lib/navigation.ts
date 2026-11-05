@@ -70,6 +70,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen", icon: "mail" },
           { href: "/dashboard/werbung", label: "Werbung", icon: "megaphone" },
           { href: "/dashboard/boerse", label: "Inserate", icon: "tag" },
+          ...(isAdmin(role) ? [{ href: "/dashboard/anleitungen", label: "Anleitungen verwalten", icon: "book" }] : []),
         ],
       },
       {
@@ -78,6 +79,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
           ...(isAdmin(role) ? [{ href: "/dashboard/saisonfeedback", label: "Saisonfeedback", icon: "book" }] : []),
           { href: "/dashboard/logs", label: "Logs", icon: "scroll" },
+          ...(isAdmin(role) ? [{ href: "/dashboard/testmodus", label: "Testmodus", icon: "eye" }] : []),
           // Die Einstellungen enthalten für jede Rolle das eigene Konto –
           // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile
           // darin bleiben der Administration vorbehalten und werden auf der
@@ -105,7 +107,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           icon: "image",
         },
         { href: "/dashboard/qr-code", label: "QR-Code", icon: "layout" },
-        { href: "/dashboard/studio", label: "Social Media Studio", icon: "image" },
+        { href: "/dashboard/anleitung", label: "Anleitung", icon: "book" },
         { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
       ],
     },
