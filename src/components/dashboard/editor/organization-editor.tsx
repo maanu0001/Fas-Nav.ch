@@ -779,7 +779,7 @@ export function OrganizationEditor({
           {section === "social" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Verlinke deine Kanäle. Pro Plattform ist ein Link möglich.
+                Verlinke deine Kanäle. Pro Plattform ist ein Link möglich. Ein YouTube-Videolink (youtube.com/watch, Shorts oder youtu.be) wird für alle Tarife direkt auf dem öffentlichen Profil als Video eingebettet.
               </p>
 
               {state.socialLinks.map((link, index) => (
