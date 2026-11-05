@@ -26,6 +26,7 @@ export async function saveMailboxConfiguration(input:{user:string;password?:stri
  const old=(previous?.value||{}) as Saved;
  const password=input.password?encryptSecret(input.password):old.password;
  if(!password)throw new Error("Postfachpasswort fehlt.");
+ if(/[\r\n]/.test(input.user)||/[\r\n]/.test(input.password||""))throw new Error("Ungültige Zugangsdaten.");
  if(old.user&&old.user!==input.user&&await prisma.mailCenterMessage.count()>0)throw new Error("Postfachwechsel nach Import erfordert eine gesonderte Migration.");
  const value={host:HOST,port:993,smtpPort:587,mailbox:"info@fas-nav.ch",user:input.user,password};
  await prisma.siteSetting.upsert({where:{key:KEY},create:{key:KEY,group:"mail",value},update:{value}});
@@ -49,7 +50,7 @@ class Imap {
  }
  private async enough(n:number){while(this.data.length<n){if(this.closed)throw new Error("IMAP-Verbindung unterbrochen.");await new Promise<void>(resolve=>{this.waiting=resolve;});this.waiting=null;}}
  private async line(){let pos=this.data.indexOf("\r\n");while(pos<0){await this.enough(this.data.length+1);pos=this.data.indexOf("\r\n");}const line=this.data.subarray(0,pos).toString("utf8");this.data=this.data.subarray(pos+2);return line;}
- private async bytes(n:number){if(n>MAX_MESSAGE)throw new Error("E-Mail überschreitet die erlaubte Grösse.");await this.enough(n+2);const bytes=Buffer.from(this.data.subarray(0,n));this.data=this.data.subarray(n+2);return bytes;}
+ private async bytes(n:number){if(n>MAX_MESSAGE)throw new Error("E-Mail überschreitet die erlaubte Grösse.");await this.enough(n);const bytes=Buffer.from(this.data.subarray(0,n));this.data=this.data.subarray(n);return bytes;}
  async command(command:string):Promise<Reply>{
   const tag="A"+(++this.counter).toString().padStart(5,"0");
   this.socket.write(tag+" "+command+"\r\n");
