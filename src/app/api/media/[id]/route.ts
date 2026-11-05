@@ -70,6 +70,10 @@ export async function DELETE(_request: Request, { params }: Params) {
     const { media, user } = await assertMediaAccess(id);
     if (!media) return jsonError("Medium nicht gefunden.", 404);
 
+    const uses = await prisma.media.findUnique({where:{id},select:{logoOf:{select:{id:true}},headerOf:{select:{id:true}},ogImageOf:{select:{id:true}},eventImages:{select:{id:true},take:1},sponsorLogos:{select:{id:true},take:1},downloads:{select:{id:true},take:1},homepageSections:{select:{id:true},take:1}}});
+    if (uses && (uses.logoOf || uses.headerOf || uses.ogImageOf || uses.eventImages.length || uses.sponsorLogos.length || uses.downloads.length || uses.homepageSections.length)) {
+      return jsonError("Dieses Medium ist noch auf einer Seite oder in einem Eintrag eingebunden. Bitte zuerst dort entfernen.", 409);
+    }
     await deleteMedia(id);
 
     await logAudit({
