@@ -57,12 +57,18 @@ jobs:
               docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate app >/dev/null
             fi
             # Secret über stdin an curl, nie über CLI-Argumente oder Logs.
-            code="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 240 -X POST -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/jobs/mail-center)"
+            # Nach einer Erstkonfiguration kurz auf den App-Healthcheck warten.
+            for attempt in $(seq 1 20); do
+              if curl -fsS --max-time 3 http://127.0.0.1:3000/api/health >/dev/null; then break; fi
+              sleep 3
+            done
+            response="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 240 -X POST -w '\n%{http_code}' http://127.0.0.1:3000/api/jobs/mail-center)"
+            code="$(printf '%s\n' "$response" | tail -n 1)"
             if [ "$code" != "200" ]; then
               echo "Mail-Center-Synchronisierung fehlgeschlagen (HTTP $code)." >&2
               exit 1
             fi
-            echo "Mail-Center-Synchronisierung erfolgreich."
+            echo "Mail-Center-Synchronisierung erfolgreich: $(printf '%s\n' "$response" | head -n 1 | cut -c 1-180)"
           }
           sync_mail < /dev/null
           REMOTE
