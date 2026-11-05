@@ -34,6 +34,8 @@ export function AgendaReminderSettings({ initial }: { initial: ReminderSettings 
   const [werte, setWerte] = React.useState(initial);
   const [pending, setPending] = React.useState(false);
   const [laufPending, setLaufPending] = React.useState(false);
+  const [testTo,setTestTo]=React.useState("");
+  const [testing,setTesting]=React.useState(false);
 
   const vorschauBetreff = fillPlaceholders(werte.subject, PREVIEW_PLACEHOLDERS);
   const vorschauText = fillPlaceholders(werte.body, PREVIEW_PLACEHOLDERS);
@@ -67,6 +69,8 @@ export function AgendaReminderSettings({ initial }: { initial: ReminderSettings 
       setPending(false);
     }
   }
+
+  async function testmail(){if(!testTo.trim())return;setTesting(true);try{await apiRequest("/api/settings/mail/test",{method:"POST",body:{to:testTo,subject:"[TEST] "+vorschauBetreff,text:vorschauText+"\n\n"+werte.ctaLabel+": "+PREVIEW_PLACEHOLDERS.eventCreateUrl}});toast("Erinnerungs-Testmail versendet.","success")}catch(e){toast(errorMessage(e),"error")}finally{setTesting(false)}}
 
   async function jetztAusfuehren() {
     setLaufPending(true);
@@ -181,6 +185,8 @@ export function AgendaReminderSettings({ initial }: { initial: ReminderSettings 
             <p className="mt-3 text-xs text-muted-foreground">{werte.ctaLabel}</p>
           </div>
         </div>
+
+        <div className="rounded-xl border p-3"><p className="mb-2 text-sm font-semibold">Erinnerung als Testmail versenden</p><div className="flex flex-wrap gap-2"><Input type="email" value={testTo} onChange={e=>setTestTo(e.target.value)} placeholder="test@beispiel.ch" aria-label="Empfänger für Erinnerungs-Testmail"/><Button type="button" variant="outline" disabled={testing||!testTo.trim()} onClick={testmail}>{testing?"Wird gesendet …":"Testmail senden"}</Button></div></div>
 
         {!werte.enabled ? (
           <Alert variant="info">
