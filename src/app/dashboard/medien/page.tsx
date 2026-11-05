@@ -55,6 +55,8 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
         url: true,
         thumbnailUrl: true,
         filename: true,
+        alt: true,
+        caption: true,
         type: true,
         size: true,
         width: true,
