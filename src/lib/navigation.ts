@@ -68,6 +68,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           // Zuschriften über die Website. Admin und Team bearbeiten sie
           // gemeinsam; die Prüfung dazu hängt am Recht handleContactRequests.
           { href: "/dashboard/kontaktanfragen", label: "Kontaktanfragen", icon: "mail" },
+          ...(isAdmin(role) ? [{ href: "/dashboard/mails", label: "Mails", icon: "mail" }] : []),
           { href: "/dashboard/werbung", label: "Werbung", icon: "megaphone" },
           { href: "/dashboard/boerse", label: "Inserate", icon: "tag" },
           ...(isAdmin(role) ? [{ href: "/dashboard/anleitungen", label: "Anleitungen verwalten", icon: "book" }] : []),
