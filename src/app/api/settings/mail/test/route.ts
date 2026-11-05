@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       after: { to: body.to, sent: result.sent, customContent: Boolean(body.subject || body.text) },
     });
 
-    if (!result.sent) return jsonError(result.message ?? "Mailversand fehlgeschlagen.", 502);
+    if (!result.sent) return jsonError("Mailversand fehlgeschlagen.", 502);
     return jsonOk({ sent: true });
   } catch (error) {
     return handleApiError(error);
