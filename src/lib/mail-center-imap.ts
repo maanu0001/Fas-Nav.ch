@@ -138,7 +138,7 @@ export async function mailboxAttachments(providerId:string){
  if(!m?.htmlBody)throw new Error("Nachricht nicht gefunden.");
  return parseMime(Buffer.from(m.htmlBody,"base64")).attachments;
 }
-export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;subject:string;text:string;replyToId?:string;attachments?:OutgoingAttachment[]}){
+export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;subject:string;text:string;html?:string;replyToId?:string;attachments?:OutgoingAttachment[]}){
   const c=await config();let replyHeaders:Record<string,string>={};
   let replyConversationId:string|undefined;
   if(input.replyToId){
@@ -150,7 +150,7 @@ export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;su
   const files=(input.attachments||[]).map(a=>({filename:a.name,content:Buffer.from(a.data,"base64"),contentType:a.type||"application/octet-stream"}));
   if(files.some(f=>f.content.length>5_000_000)||files.reduce((sum,f)=>sum+f.content.length,0)>10_000_000)throw new Error("Anhänge sind zu gross.");
   const messageId="<"+randomBytes(16).toString("hex")+"@fas-nav.ch>";
-  const options={from:c.mailbox,to:input.to,cc:input.cc||undefined,bcc:input.bcc||undefined,subject:input.subject,text:input.text,html:brandedHtml(input.subject,input.text),attachments:files,messageId,...(replyHeaders["message-id"]?{inReplyTo:replyHeaders["message-id"],references:[replyHeaders.references,replyHeaders["message-id"]].filter(Boolean).join(" ")}:{})};
+  const options={from:c.mailbox,to:input.to,cc:input.cc||undefined,bcc:input.bcc||undefined,subject:input.subject,text:input.text,html:input.html||brandedHtml(input.subject,input.text),attachments:files,messageId,...(replyHeaders["message-id"]?{inReplyTo:replyHeaders["message-id"],references:[replyHeaders.references,replyHeaders["message-id"]].filter(Boolean).join(" ")}:{})};
   const generator=nodemailer.createTransport({streamTransport:true,buffer:true});
   const composed=await generator.sendMail(options);
   const raw=Buffer.from(composed.message as Buffer);
