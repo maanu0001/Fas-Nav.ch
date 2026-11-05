@@ -52,6 +52,13 @@ const FEATURES = [
   { key: "faq", name: "FAQ-Bereich", description: "Beantworte häufige Fragen direkt auf der Seite.", sortOrder: 80 },
   { key: "downloads", name: "Downloads", description: "Stelle Flyer und Dokumente bereit.", sortOrder: 90 },
   { key: "statistics", name: "Besucherstatistik", description: "Auswertung der Aufrufe und Klicks.", sortOrder: 100 },
+  { key: "marketplace_active", name: "Aktive Inserate", description: "Gleichzeitig öffentlich sichtbare Inserate.", sortOrder: 120 },
+  { key: "marketplace_images", name: "Bilder pro Inserat", description: "Maximale Anzahl Bilder je Inserat.", sortOrder: 130 },
+  { key: "marketplace_days", name: "Inserate-Laufzeit (Tage)", description: "Laufzeit ab Veröffentlichung oder Verlängerung.", sortOrder: 140 },
+  { key: "marketplace_external_contact", name: "Direkter Inserate-Kontakt", description: "E-Mail und Telefon zusätzlich zum Fas-Nav-Kontakt.", sortOrder: 150 },
+  { key: "marketplace_featured", name: "Bevorzugte Inserate-Platzierung", description: "Hervorhebung in der Inserate-Übersicht.", sortOrder: 160 },
+  { key: "audio_samples", name: "Hörproben", description: "Maximale Anzahl MP3-Hörproben.", sortOrder: 170 },
+  { key: "audio_seconds", name: "Hörproben-Länge (Sekunden)", description: "Maximale Länge eines MP3-Ausschnitts.", sortOrder: 180 },
   { key: "highlighted", name: "Hervorgehobene Darstellung", description: "Bevorzugte Platzierung in Listen.", sortOrder: 110 },
 ];
 
@@ -71,6 +78,7 @@ const PLANS = [
       public_page: { enabled: true },
       social_links: { enabled: true },
       events: { enabled: true, limit: 3 },
+      marketplace_active: { enabled: true, limit: 1 }, marketplace_images: { enabled: true, limit: 3 }, marketplace_days: { enabled: true, limit: 30 }, audio_samples: { enabled: true, limit: 1 }, audio_seconds: { enabled: true, limit: 30 },
     },
   },
   {
@@ -89,6 +97,7 @@ const PLANS = [
       events: { enabled: true, limit: 20 },
       program: { enabled: true },
       faq: { enabled: true },
+      marketplace_active: { enabled: true, limit: 5 }, marketplace_images: { enabled: true, limit: 8 }, marketplace_days: { enabled: true, limit: 60 }, marketplace_external_contact: { enabled: true }, audio_samples: { enabled: true, limit: 3 }, audio_seconds: { enabled: true, limit: 60 },
     },
   },
   {
@@ -112,6 +121,7 @@ const PLANS = [
       downloads: { enabled: true, limit: 20 },
       statistics: { enabled: true },
       highlighted: { enabled: true },
+      marketplace_active: { enabled: true, limit: 15 }, marketplace_images: { enabled: true, limit: 12 }, marketplace_days: { enabled: true, limit: 90 }, marketplace_external_contact: { enabled: true }, marketplace_featured: { enabled: true }, audio_samples: { enabled: true, limit: 5 }, audio_seconds: { enabled: true, limit: 180 },
     },
   },
 ];
