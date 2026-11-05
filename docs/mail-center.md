@@ -1,26 +1,21 @@
-# Fas-Nav Mail Center
+# Mail Center – eigener Mailserver
 
-## Status und Einrichtung
+Fas-Nav verwendet das bestehende Postfach \`info@fas-nav.ch\` über IMAP (Dovecot, \`mail.fas-nav.ch:993\`, TLS) und SMTP (Postfix, \`mail.fas-nav.ch:587\`, STARTTLS). Microsoft Graph wird nicht mehr verwendet.
 
-Das Admin-Modul ist unter `/dashboard/mails` erreichbar. Der Posteingang ist **nicht** mit SMTP allein abrufbar. Die aktuelle Implementierung unterstützt Microsoft 365 über Microsoft Graph (Application Permissions). Ohne Mailanbieter-Konfiguration bleibt die Verbindung deaktiviert.
+## Einrichtung
+1. Admin → **Mails** → **Postfach verbinden** öffnen.
+2. Benutzername \`info@fas-nav.ch\` und Postfachpasswort eingeben (niemals in GitHub, Chat oder Logs).
+3. Verbindung speichern und **Verbindung testen**.
+4. **Synchronisieren** und Posteingang / Gesendet in Roundcube vergleichen.
+5. Testmail empfangen und beantworten, anschliessend Roundcube auf vollständigen Versand prüfen.
+6. Den GitHub-Actions-Job \`mail-center-sync\` mit dem vorhandenen \`CRON_SECRET\` und den Deployment-SSH-Secrets aktivieren. Ohne diese Secrets läuft keine automatische Synchronisierung.
 
-1. In Microsoft Entra ID eine App registrieren und Tenant ID, Client ID und ein Client Secret erzeugen.
-2. Microsoft Graph **Application** Permissions `Mail.Read` und `Mail.Send` konfigurieren und Admin-Consent erteilen.
-3. **Unbedingt** den Zugriff der App auf `info@fas-nav.ch` einschränken (Exchange Online Application RBAC / geeignete Application Access Policy). Eine unbeschränkte App-Berechtigung wäre für ein einzelnes Postfach zu weitreichend.
-4. Im Admin-Dashboard unter **Mails → Postfach verbinden** Tenant, Client, Postfach und Secret eintragen. Das Secret wird verschlüsselt gespeichert und nicht wieder angezeigt.
-5. Mit **Synchronisieren** zunächst den Posteingang prüfen. Der automatische Lauf nutzt `CRON_SECRET` und die bestehenden Deployment-SSH-Secrets; er wird per GitHub Actions alle 10 Minuten angestossen, wobei GitHub-Schedules verzögert sein können.
-6. Mit einem Testpostfach Empfang, Antwort, Gesendet-Ordner, Anhänge und Rechte prüfen, bevor die produktive Kommunikation ausschliesslich über das Dashboard läuft.
-
-## Datenerhalt
-
-- Graph-Deltacursor wird erst nach erfolgreich gespeicherten Nachrichten vorgerückt; wiederholte Importe sind über `providerId` idempotent.
-- HTML-Original und lesbarer Text werden in PostgreSQL gespeichert. Die Chat-Ansicht rendert ausschliesslich Text, keine fremden HTML-Skripte.
-- Anhänge bleiben im Originalpostfach und werden auf Abruf über einen Admin-geschützten Endpunkt geladen; Downloads sind auf 10 MiB beschränkt.
-- Das Archivieren im Dashboard ändert nur den lokalen Bearbeitungsstatus. Beim Anbieter werden keine Nachrichten gelöscht.
-- Vor Aktivierung Backup/Restore inklusive der neuen Tabellen prüfen.
-
-## Noch nicht Bestandteil dieser Ausbaustufe
-
-Der aktuelle Graph-Adapter unterstützt Microsoft 365. Für andere Mailanbieter braucht es einen separaten, getesteten IMAP-/SMTP- oder API-Adapter. Entwürfe, Weiterleitungen, CC/BCC und ausgehende Anhänge sind noch nicht vollständig integriert. Nachrichten werden beim Antworten über Graph verschickt und nach Synchronisierung des Gesendet-Ordners im Verlauf angezeigt. Eine gesonderte persistente Outbox mit Versand-Idempotenz und Zustellbestätigung ist für den zuverlässigen Produktionsbetrieb noch erforderlich.
-
-**Deshalb darf diese Ausbaustufe vor Abschluss dieser Punkte nicht als vollständig produktionsbereit bezeichnet werden.**
+## Sicherheit und Grenzen
+- TLS-Zertifikatsprüfung ist aktiviert, SMTP-STARTTLS zwingend. Host und Ports sind fest auf den geprüften Mailserver beschränkt, damit Administratoren keine internen Netzadressen abfragen können.
+- Zugangsdaten sind AES-256-GCM-verschlüsselt. Zugriff nur für Administratoren.
+- Die vollständige RFC822-Nachricht wird als Base64 in der Datenbank gespeichert; Anhänge werden daraus bei Bedarf geladen. Die Chat-Ansicht zeigt ausschliesslich Text, nie unbereinigtes HTML.
+- IMAP \`BODY.PEEK[]\` verändert den Lesestatus auf dem Mailserver nicht. Die lokale Markierung «gelesen» verändert Roundcube nicht.
+- Synchronisierungsfortschritt wird pro Ordner und UIDVALIDITY erst nach erfolgreichem DB-Commit gespeichert; erneutes Einlesen ist über eindeutige Nachrichten-IDs idempotent.
+- Der Versand erfolgt per SMTP. Danach wird die exakt versendete Nachricht per IMAP APPEND im Gesendet-Ordner gespeichert. Falls das Speichern fehlschlägt, ist die Mail **möglicherweise bereits versendet**: nicht blind erneut senden.
+- IMAP und SMTP müssen auch vom **Webserver** aus erreichbar sein. Die bisherigen OpenSSL-Tests wurden auf dem Mailserver ausgeführt.
+- Noch offen für eine vollwertige Mail-Client-Erfahrung: serverseitige Entwürfe, Weiterleitungen, ausgehende Dateianhänge, umfangreiche MIME-Sonderfälle und eine dauerhafte Versandwarteschlange. Vor ausschliesslicher Nutzung des Dashboards sind End-to-End-Tests mit realen Mails erforderlich.
