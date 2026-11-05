@@ -33,6 +33,16 @@ jobs:
           echo "Docker disk usage:"; timeout 20 docker system df || true
           echo "Build activity:"; ps -eo pid,comm,etime,%cpu,%mem --sort=-%cpu | head -n 24
           echo "Registry connectivity:"; curl -sS -o /dev/null --max-time 8 -w '%{http_code} %{time_total}\\n' https://registry-1.docker.io/v2/ || true
+          echo "Mail sync counts:"
+          secret="$(sed -n 's/^CRON_SECRET=//p' .env | tail -n 1 | tr -d '\r')"
+          secret="${secret#\"}"
+          secret="${secret%\"}"
+          if [ -n "$secret" ]; then
+            printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 60 -X POST http://127.0.0.1:3000/api/jobs/mail-center
+            echo
+          fi
+          echo "E2E test message directions (no personal data):"
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT direction, count(*) FROM mail_center_messages WHERE subject = '\''[Fas-Nav] Posteingang-Systemtest'\'' GROUP BY direction ORDER BY direction;"' || true
           echo "Health status:"; curl -sS -o /dev/null -w '%{http_code}\n' --max-time 4 http://127.0.0.1:3000/api/health || true
           REMOTE
       - name: Cleanup key
