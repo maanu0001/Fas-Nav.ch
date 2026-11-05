@@ -21,6 +21,7 @@ async function config():Promise<GraphConfig>{
 export async function saveGraphConfiguration(input:{tenant:string;clientId:string;secret?:string;mailbox:string}){
  const old=await prisma.siteSetting.findUnique({where:{key:setting}});
  const previous=(old?.value??{}) as Record<string,unknown>;
+ if(previous.mailbox&&previous.mailbox!==input.mailbox&&await prisma.mailCenterMessage.count()>0)throw new Error("Das Postfach kann nach dem Import nicht ohne Datenmigration gewechselt werden.");
  const secret=input.secret?encryptSecret(input.secret):previous.secret;
  if(!secret)throw new Error("Client Secret fehlt.");
  const value={tenant:input.tenant,clientId:input.clientId,mailbox:input.mailbox,secret};
