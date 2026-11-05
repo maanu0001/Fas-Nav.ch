@@ -99,7 +99,7 @@ function address(value:string){return decodeWord(value.match(/<([^>]+)>/)?.[1]||
 function threadKey(h:Record<string,string>){const refs=(h.references||"").match(/<[^>]+>/g);return refs?.[0]||h["in-reply-to"]?.match(/<[^>]+>/)?.[0]||h["message-id"]?.match(/<[^>]+>/)?.[0]||"subject:"+((h.subject||"").replace(/^(re|fw|fwd):\s*/gi,"").toLowerCase());}
 async function folders(client:Imap){const result=await client.command('LIST "" "*"');const names=result.lines.filter(l=>l.startsWith("* LIST")).map(l=>l.match(/"([^"]+)"$/)?.[1]||l.split(" ").at(-1)?.replace(/^"|"$/g,"")||"");const sent=names.find(n=>/^(sent|sent items|gesendet|sent messages)$/i.test(n))||"Sent";return ["INBOX",sent];}
 export async function testMailboxConnection(){return withImap(async client=>{await client.command('SELECT "INBOX"');return {ok:true};});}
-export async function syncMailCenter(){
+export async function syncMailCenter(options:{full?:boolean}={}){
  return withImap(async client=>{
   let processed=0;for(const folder of await folders(client)){
    const selection=await client.command("EXAMINE "+quote(folder));
@@ -107,7 +107,7 @@ export async function syncMailCenter(){
    const cursorKey="mailcenter.imap.cursor."+folder;
    const old=await prisma.siteSetting.findUnique({where:{key:cursorKey}});
    const oldCursor=(old?.value||{}) as {uidvalidity?:string;uid?:number};
-   const start=oldCursor.uidvalidity===uidvalidity?Math.max(1,(oldCursor.uid||0)+1):1;
+   const start=options.full?1:oldCursor.uidvalidity===uidvalidity?Math.max(1,(oldCursor.uid||0)+1):1;
    const search=await client.command("UID SEARCH UID "+start+":*");
    const uids=search.lines.filter(l=>l.startsWith("* SEARCH")).flatMap(l=>l.slice(8).trim().split(/\s+/).map(Number).filter(n=>n>=start));
    for(const uid of uids){
