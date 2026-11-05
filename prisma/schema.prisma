@@ -1342,3 +1342,36 @@ model AudioSample {
   @@index([organizationId, sortOrder])
   @@map("audio_samples")
 }
+
+model MailConversation {
+ id String @id @default(cuid())
+ providerThreadId String @unique
+ subject String @db.Text
+ status String @default("OPEN")
+ unread Boolean @default(false)
+ lastMessageAt DateTime
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ messages MailCenterMessage[]
+ @@index([unread,lastMessageAt])
+ @@index([status,lastMessageAt])
+ @@map("mail_conversations")
+}
+model MailCenterMessage {
+ id String @id @default(cuid())
+ providerId String @unique
+ conversationId String
+ conversation MailConversation @relation(fields:[conversationId],references:[id],onDelete:Cascade)
+ internetMessageId String?
+ sender String
+ recipients Json
+ subject String @db.Text
+ textBody String @db.Text
+ htmlBody String? @db.Text
+ attachmentInfo Json?
+ direction String
+ receivedAt DateTime
+ createdAt DateTime @default(now())
+ @@index([conversationId,receivedAt])
+ @@map("mail_center_messages")
+}
