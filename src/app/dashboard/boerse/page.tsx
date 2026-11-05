@@ -25,7 +25,7 @@ export default async function Page() {
 
   return (
     <main className="space-y-6">
-      <h1 className="text-3xl font-bold">{ctx.staff ? "Börse – Administration" : "Meine Inserate"}</h1>
+      <h1 className="text-3xl font-bold">{ctx.staff ? "Inserate – Administration" : "Meine Inserate"}</h1>
       <p className="text-muted-foreground">Inserate verwalten, Anfragen beantworten und Angebote verlängern.</p>
       <MarketplaceManager organizations={orgs} initial={JSON.parse(JSON.stringify(listings))} staff={ctx.staff} />
     </main>
