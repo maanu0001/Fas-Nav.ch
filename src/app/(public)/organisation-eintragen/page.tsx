@@ -89,7 +89,7 @@ export default async function RegisterOrganizationPage({ searchParams }: { searc
                   <ul className="mt-4 space-y-2 text-sm">{plan.features.filter(f=>f.enabled).map(f=><li key={f.id} className="flex gap-2"><span className="text-emerald-600" aria-hidden>✓</span><span>{f.feature.name}{f.value?" ("+f.value+")":f.limit!==null?" (bis "+f.limit+")":""}{f.note?" – "+f.note:""}</span></li>)}</ul>
                 </div>)}
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">Die vollständige Vergleichstabelle findest du unter <a href="/preise" className="font-semibold underline">Preise</a>. Interne, nicht veröffentlichte Tarife werden hier nicht angezeigt.</p>
+              <p className="mt-4 text-xs text-muted-foreground">Die vollständige Vergleichstabelle findest du unter <a href="/preise" className="font-semibold underline">Preise</a>. Der kostenlose Verzeichniseintrag wird zur Orientierung mitgezeigt, auch wenn er nicht separat buchbar ist. Andere interne Tarife werden nicht angezeigt.</p>
             </section>
             <div className="mt-10 rounded-xl border border-border bg-secondary p-6">
               <h3 className="font-display text-base font-semibold">So läuft es ab</h3>
