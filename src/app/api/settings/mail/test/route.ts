@@ -1,6 +1,7 @@
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
+import { mailboxConfiguration,sendMailboxMail } from "@/lib/mail-center-imap";
 import { mailConfigComplete } from "@/lib/mail-config";
 import { getMailSettings } from "@/lib/mail-settings";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -17,16 +18,15 @@ export async function POST(request: Request) {
 
     const body = await parseBody(request, testMailSchema);
     const settings = await getMailSettings();
-    if (!mailConfigComplete(settings)) return jsonError("Mailversand ist noch nicht vollständig konfiguriert.", 400);
+    const useMailbox = !mailConfigComplete(settings);
+    if (useMailbox && !(await mailboxConfiguration()).configured) return jsonError("Weder SMTP noch Mail Center sind vollständig konfiguriert.", 400);
 
-    const result = await sendMail(
-      {
+    const outgoing = {
         to: body.to,
         subject: body.subject ?? "Testmail von Fas-Nav.ch",
         text: body.text ?? `Diese Testmail bestätigt, dass der Mailversand von Fas-Nav.ch funktioniert.\n\nAbsender: ${settings.fromName} <${settings.fromEmail}>\nServer: ${settings.host}:${settings.port}\n\nFreundliche Grüsse\nFas-Nav.ch`,
-      },
-      { ...settings, enabled: true },
-    );
+      };
+    const result = useMailbox ? await sendMailboxMail(outgoing) : await sendMail(outgoing, { ...settings, enabled: true });
 
     await logAudit({
       userId: actor.id,
