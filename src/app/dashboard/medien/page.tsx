@@ -48,7 +48,7 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
   const [media, totals, audio] = await Promise.all([
     prisma.media.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ type: "asc" }, { createdAt: "desc" }],
       take: 120,
       select: {
         id: true,
