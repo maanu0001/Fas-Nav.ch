@@ -6,6 +6,7 @@ import { ContactForm } from "@/components/public/contact-form";
 import { prisma } from "@/lib/prisma";
 import { buildMetadata } from "@/lib/seo";
 import { formatChf } from "@/lib/utils";
+import { BILLING_INTERVAL_SUFFIX, formatPlanPrice } from "@/lib/pricing";
 import { MARKETPLACE_LIMITS } from "@/lib/marketplace-limits";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,19 @@ export default async function RegisterOrganizationPage({ searchParams }: { searc
             <section className="mt-10 rounded-xl border border-border bg-card p-6"><h3 className="font-display text-xl font-bold">Alle Tarifleistungen</h3><p className="mt-2 text-sm text-muted-foreground">Die Leistungen werden direkt aus den aktuellen Tarifdaten geladen.</p><div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{plans.map(plan=><div key={plan.id} className="rounded-xl border border-border p-4"><h4 className="font-semibold text-primary-900">{plan.name}</h4><ul className="mt-3 space-y-2 text-sm">{plan.features.filter(f=>f.enabled).map(f=><li key={f.id}>✓ {f.feature.name}{f.value?" ("+f.value+")":f.limit!==null?" (bis "+f.limit+")":""}</li>)}</ul></div>)}</div></section>
             <section className="mt-6 rounded-xl border border-border bg-card p-6"><h3 className="font-display text-lg font-bold">Hörproben nach Tarif</h3><div className="mt-3 grid gap-3 sm:grid-cols-3">{[{name:"Gratis",value:"1 Hörprobe · 30 Sekunden"},{name:"Basic",value:"3 Hörproben · 60 Sekunden"},{name:"Premium",value:"5 Hörproben · 180 Sekunden"}].map(x=><div key={x.name} className="rounded-lg border p-3"><strong>{x.name}</strong><p className="mt-1 text-sm">{x.value}</p></div>)}</div></section>
             <div className="mt-10 rounded-xl border border-border bg-card p-6"><h3 className="font-display text-lg font-bold">Inserate nach Tarif</h3><div className="mt-4 grid gap-3 sm:grid-cols-3">{[{name:"Gratis",count:"1",images:"3",days:"30",extra:"Kontakt über Fas-Nav"},{name:"Basic",count:"5",images:"8",days:"60",extra:"Direktkontakt möglich"},{name:"Premium",count:"15",images:"12",days:"90",extra:"Bevorzugte Platzierung"}].map(p=><div key={p.name} className="rounded-xl border border-border p-4"><p className="font-semibold text-primary-900">{p.name}</p><p className="mt-2 text-sm">{p.count} aktive Inserate</p><p className="text-sm">{p.images} Bilder pro Inserat</p><p className="text-sm">{p.days} Tage Laufzeit</p><p className="mt-2 text-xs text-muted-foreground">{p.extra}</p></div>)}</div><p className="mt-3 text-xs text-muted-foreground">Entwürfe und archivierte Inserate zählen nicht zum Limit.</p></div>
+            <section className="mt-10 rounded-xl border border-border bg-card p-6">
+              <h2 className="font-display text-xl font-bold">Alle Vorteile nach Tarif</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Die folgenden Leistungen und Grenzen stammen direkt aus der Tarifverwaltung. Änderungen im Admin-Dashboard erscheinen hier automatisch.</p>
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {plans.map(plan=><div key={plan.id} className="rounded-xl border border-border p-4">
+                  <h3 className="font-display text-lg font-bold">{plan.name}</h3>
+                  <p className="mt-1 text-sm font-semibold">{Number(plan.priceChf)===0?"Gratis":formatPlanPrice(Number(plan.priceChf),plan.currency)+" "+BILLING_INTERVAL_SUFFIX[plan.billingInterval]}</p>
+                  {plan.description?<p className="mt-2 text-xs text-muted-foreground">{plan.description}</p>:null}
+                  <ul className="mt-4 space-y-2 text-sm">{plan.features.filter(f=>f.enabled).map(f=><li key={f.id} className="flex gap-2"><span className="text-emerald-600" aria-hidden>✓</span><span>{f.feature.name}{f.value?" ("+f.value+")":f.limit!==null?" (bis "+f.limit+")":""}{f.note?" – "+f.note:""}</span></li>)}</ul>
+                </div>)}
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">Die vollständige Vergleichstabelle findest du unter <a href="/preise" className="font-semibold underline">Preise</a>. Interne, nicht veröffentlichte Tarife werden hier nicht angezeigt.</p>
+            </section>
             <div className="mt-10 rounded-xl border border-border bg-secondary p-6">
               <h3 className="font-display text-base font-semibold">So läuft es ab</h3>
               <ol className="mt-4 space-y-3 text-sm text-slate-700">
