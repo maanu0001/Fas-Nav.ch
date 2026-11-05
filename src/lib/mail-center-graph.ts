@@ -49,8 +49,12 @@ export async function syncMailCenter(){
    const response=await fetch(url,{headers:{Authorization:"Bearer "+access,Prefer:'IdType="ImmutableId"'},cache:"no-store"});
    if(!response.ok)throw new Error("Synchronisierung fehlgeschlagen ("+response.status+").");
    const data=await response.json() as {value:(GraphMessage&{"@removed"?:unknown})[];"@odata.nextLink"?:string;"@odata.deltaLink"?:string};
-   for(const m of data.value){
-    if(!m.id||m["@removed"])continue;const thread=m.conversationId||m.id;
+   for(const delta of data.value){
+    if(!delta.id||delta["@removed"])continue;
+    const detailResponse=await fetch(base+"/messages/"+encodeURIComponent(delta.id)+"?$select=id,conversationId,internetMessageId,subject,from,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,isRead,hasAttachments,body,bodyPreview",{headers:{Authorization:"Bearer "+access,Prefer:'IdType="ImmutableId"'},cache:"no-store"});
+    if(!detailResponse.ok)throw new Error("Nachricht konnte nicht vollständig geladen werden ("+detailResponse.status+").");
+    const m=await detailResponse.json() as GraphMessage;
+    const thread=m.conversationId||m.id;
     const at=new Date(m.receivedDateTime||m.sentDateTime||Date.now());const date=Number.isNaN(at.getTime())?new Date():at;
     const direction=folder==="sentitems"?"OUT":"IN";
     const from=m.from?.emailAddress?.address||"";
