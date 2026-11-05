@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, Layers3 } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/button";
 import { Table, TableWrapper, Td, Th, Thead, Tr } from "@/components/ui/table";
@@ -101,6 +101,7 @@ export default async function OrganizationsPage({
               <Plus />
               Gugge
             </ButtonLink>
+            <ButtonLink href="/dashboard/organisationen/bulk-actions" variant="outline"><Layers3 /> Bulk-Actions</ButtonLink>
           </>
         }
       />
