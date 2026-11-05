@@ -1,6 +1,7 @@
 import tls from "node:tls";
 import { randomBytes } from "node:crypto";
 import nodemailer from "nodemailer";
+import { mailboxProviderId } from "@/lib/mail-center-identity";
 import { brandedHtml } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
@@ -114,7 +115,7 @@ export async function syncMailCenter(options:{full?:boolean}={}){
     const result=await client.command("UID FETCH "+uid+" (UID FLAGS BODY.PEEK[])");
     const raw=result.literals[0];if(!raw)throw new Error("Nachricht konnte nicht vollständig geladen werden.");
     const {header}=headerBody(raw);const parsed=parseMime(raw);
-    const key=folder+":"+uidvalidity+":"+uid;const existingByMessageId=header["message-id"]?await prisma.mailCenterMessage.findFirst({where:{internetMessageId:header["message-id"],direction:"OUT"},select:{providerId:true}}):null;const providerId=existingByMessageId?.providerId||key;
+    const existingByMessageId=folder.toUpperCase()!=="INBOX"&&header["message-id"]?await prisma.mailCenterMessage.findFirst({where:{internetMessageId:header["message-id"],direction:"OUT"},select:{providerId:true}}):null;const providerId=mailboxProviderId(folder,uidvalidity,uid,existingByMessageId?.providerId);
     const date=new Date(header.date||Date.now());const receivedAt=Number.isNaN(date.getTime())?new Date():date;
     const direction=folder==="INBOX"?"IN":"OUT";
     const unread=direction==="IN"&&!result.lines.some(l=>/\\Seen/i.test(l));
