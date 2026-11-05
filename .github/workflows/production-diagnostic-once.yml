@@ -1,0 +1,37 @@
+name: Production Deployment Diagnostic (temporary)
+on:
+  push:
+    paths:
+      - ".github/workflows/production-diagnostic-once.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Inspect safe server health and Docker state
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/fas-nav/app
+          echo "Current checkout: $(git rev-parse --short HEAD)"
+          echo "Disk:"; df -h / | tail -n 1
+          echo "Memory:"; free -h | head -n 3
+          echo "Containers:"; docker ps --format '{{.Names}} {{.Status}}'
+          echo "Process names:"; ps -eo comm,etime,%cpu,%mem | grep -E '(^COMMAND|docker|buildkit|node|npm)' | head -n 25
+          echo "Health status:"; curl -sS -o /dev/null -w '%{http_code}\n' --max-time 4 http://127.0.0.1:3000/api/health || true
+          REMOTE
+      - name: Cleanup key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
