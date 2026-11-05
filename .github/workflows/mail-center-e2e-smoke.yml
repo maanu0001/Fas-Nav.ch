@@ -1,4 +1,5 @@
 name: Mail Center E2E Smoke (temporary)
+# Post-release verification for mail-center inbox dedup fix
 on:
   push:
     paths:
