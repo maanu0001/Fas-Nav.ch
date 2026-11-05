@@ -115,7 +115,7 @@ export function ticketMailHtml(input: { body: string; ticketUrl: string }): stri
     )
     .join("");
 
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://fas-nav.ch").replace(/\\/$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://fas-nav.ch").replace(/\/$/, "");
   return `<!doctype html>
 <html lang="de"><body style="margin:0;background:#f5f7fa;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;">
