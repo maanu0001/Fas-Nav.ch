@@ -60,7 +60,7 @@ export async function syncMailCenter(){
     await prisma.$transaction(async tx=>{
      const conv=await tx.mailConversation.upsert({where:{providerThreadId:thread},create:{providerThreadId:thread,subject:m.subject||"(Ohne Betreff)",lastMessageAt:date,unread:direction==="IN"&&!m.isRead},update:{}});
      const existing=await tx.mailCenterMessage.findUnique({where:{providerId:m.id},select:{id:true}});
-     await tx.mailCenterMessage.upsert({where:{providerId:m.id},create:{providerId:m.id,conversationId:conv.id,internetMessageId:m.internetMessageId,sender:from,recipients:recipient,subject:m.subject||"",textBody,htmlBody:m.body?.contentType==="html"?raw:null,attachmentInfo:m.hasAttachments?{hasAttachments:true}:null,direction,receivedAt:date},update:{textBody,htmlBody:m.body?.contentType==="html"?raw:null,attachmentInfo:m.hasAttachments?{hasAttachments:true}:null}});
+     await tx.mailCenterMessage.upsert({where:{providerId:m.id},create:{providerId:m.id,conversationId:conv.id,internetMessageId:m.internetMessageId,sender:from,recipients:recipient,subject:m.subject||"",textBody,htmlBody:m.body?.contentType==="html"?raw:null,attachmentInfo:m.hasAttachments?{hasAttachments:true}:undefined,direction,receivedAt:date},update:{textBody,htmlBody:m.body?.contentType==="html"?raw:null,attachmentInfo:m.hasAttachments?{hasAttachments:true}:undefined}});
      if(!existing){await tx.mailConversation.update({where:{id:conv.id},data:{lastMessageAt:date,subject:m.subject||conv.subject,...(direction==="IN"&&!m.isRead?{unread:true}:{})}});}
     });saved++;
    }
