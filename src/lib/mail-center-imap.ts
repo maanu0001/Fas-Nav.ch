@@ -146,6 +146,6 @@ export async function sendMailboxMail(input:{to:string;cc?:string;subject:string
  const raw=Buffer.from(composed.message as Buffer);
  const transport=nodemailer.createTransport({host:c.host,port:c.smtpPort,secure:false,requireTLS:true,auth:{user:c.user,pass:c.password},tls:{servername:c.host,rejectUnauthorized:true},connectionTimeout:20000,greetingTimeout:20000,socketTimeout:30000});
  await transport.sendMail({envelope:{from:c.mailbox,to:[input.to,...(input.cc?input.cc.split(","):[])]},raw});
- try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}catch{throw new Error("SMTP hat die Nachricht angenommen, aber die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte vor erneutem Senden das Postfach prüfen.");}
+ try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}catch{return {sent:true,warning:"SMTP hat die Nachricht angenommen; die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte nicht erneut senden, ohne den Empfänger zu prüfen."};}
  return {sent:true};
 }
