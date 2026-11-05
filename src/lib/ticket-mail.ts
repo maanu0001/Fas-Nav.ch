@@ -115,11 +115,12 @@ export function ticketMailHtml(input: { body: string; ticketUrl: string }): stri
     )
     .join("");
 
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://fas-nav.ch").replace(/\\/$/, "");
   return `<!doctype html>
 <html lang="de"><body style="margin:0;background:#f5f7fa;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;">
     <tr><td style="padding:24px 24px 8px;">
-      <p style="margin:0 0 20px;font-weight:700;font-size:18px;color:#0f2c52;">Fas-Nav.ch</p>
+      <img src="${baseUrl}/brand/fas-nav-logo-transparent.png" alt="Fas-Nav.ch" width="130" style="display:block;height:auto;max-width:130px;margin:0 0 12px"><p style="margin:0 0 20px;font-size:11px;letter-spacing:.08em;color:#64748b;">DIE SCHWEIZER FASNACHT AUF EINEN BLICK</p>
       ${absaetze}
       <p style="margin:24px 0 8px;">
         <a href="${escapeHtml(input.ticketUrl)}" style="display:inline-block;background:#0f2c52;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;font-size:15px;">Ticket öffnen</a>
@@ -128,7 +129,8 @@ export function ticketMailHtml(input: { body: string; ticketUrl: string }): stri
     <tr><td style="padding:8px 24px 24px;border-top:1px solid #e5e7eb;">
       <p style="margin:16px 0 0;font-size:12px;color:#6b7280;line-height:1.5;">
         Diese Nachricht wurde automatisch versendet, weil in deinem Ticket geantwortet wurde.
-        Die Benachrichtigung lässt sich im Dashboard unter „Einstellungen“ abschalten.
+        Die Benachrichtigung lässt sich im Dashboard unter „Einstellungen“ abschalten.<br />
+        <a href="${baseUrl}" style="color:#0f2c52;font-weight:600;">fas-nav.ch besuchen</a> · Fasnacht entdecken, organisieren und gemeinsam erleben.
       </p>
     </td></tr>
   </table>
