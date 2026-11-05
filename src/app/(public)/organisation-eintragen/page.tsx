@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarPlus, Globe2, Image as ImageIcon, PencilLine, TrendingUp, Users } from "lucide-react";
+import { CalendarPlus, Globe2, Image as ImageIcon, PencilLine, TrendingUp, Users, Music2, Megaphone, ShieldCheck, Ticket, MapPinned } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { ContactForm } from "@/components/public/contact-form";
@@ -24,6 +24,11 @@ const BENEFITS = [
   { icon: ImageIcon, title: "Bilder und Galerie", body: "Zeige Impressionen deiner Fasnacht – Logo, Titelbild und eine vollständige Galerie." },
   { icon: Users, title: "Website und Social Media verlinken", body: "Führe Besucherinnen und Besucher direkt zu deinen eigenen Kanälen." },
   { icon: TrendingUp, title: "Mehr Reichweite gewinnen", body: "Profitiere von der zentralen Sichtbarkeit über Kantons- und Agendaseiten." },
+  { icon: Music2, title: "Hörproben für Guggen", body: "Lade MP3-Musikausschnitte hoch. Je nach Tarif sind 1 bis 5 Hörproben mit 30 bis 180 Sekunden möglich." },
+  { icon: Megaphone, title: "Inserate für Auftritte, Kostüme und Instrumente", body: "Erstelle Gesuche und Angebote, verwalte Entwürfe, Anfragen und archivierte Inserate im Dashboard." },
+  { icon: Ticket, title: "Flexible Kontaktmöglichkeiten", body: "Interessenten erreichen dich über Fas-Nav.ch oder ab Basic auf Wunsch direkt per E-Mail oder Telefon." },
+  { icon: MapPinned, title: "Schweizweite Auffindbarkeit", body: "Deine Organisation und Veranstaltungen sind über Suche, Kantonsübersichten und Karte auffindbar." },
+  { icon: ShieldCheck, title: "Organisation selbst verwalten", body: "Verwalte dein Profil, deine Medien, Veranstaltungen und berechtigte Teammitglieder im Dashboard." },
 ];
 
 type SearchParams = Promise<{ plan?: string; typ?: string }>;
@@ -63,6 +68,7 @@ export default async function RegisterOrganizationPage({ searchParams }: { searc
                 </li>
               ))}
             </ul>
+            <div className="mt-10 rounded-xl border border-border bg-card p-6"><h3 className="font-display text-lg font-bold">Inserate nach Tarif</h3><div className="mt-4 grid gap-3 sm:grid-cols-3">{[{name:"Gratis",count:"1",images:"3",days:"30",extra:"Kontakt über Fas-Nav"},{name:"Basic",count:"5",images:"8",days:"60",extra:"Direktkontakt möglich"},{name:"Premium",count:"15",images:"12",days:"90",extra:"Bevorzugte Platzierung"}].map(p=><div key={p.name} className="rounded-xl border border-border p-4"><p className="font-semibold text-primary-900">{p.name}</p><p className="mt-2 text-sm">{p.count} aktive Inserate</p><p className="text-sm">{p.images} Bilder pro Inserat</p><p className="text-sm">{p.days} Tage Laufzeit</p><p className="mt-2 text-xs text-muted-foreground">{p.extra}</p></div>)}</div><p className="mt-3 text-xs text-muted-foreground">Entwürfe und archivierte Inserate zählen nicht zum Limit.</p></div>
             <div className="mt-10 rounded-xl border border-border bg-secondary p-6">
               <h3 className="font-display text-base font-semibold">So läuft es ab</h3>
               <ol className="mt-4 space-y-3 text-sm text-slate-700">

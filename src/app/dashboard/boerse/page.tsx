@@ -1,3 +1,4 @@
+import { marketplaceTier } from "@/lib/marketplace-limits";
 import { getDashboardContext } from "@/lib/dashboard-context";
 import { prisma } from "@/lib/prisma";
 import { MarketplaceManager } from "@/components/marketplace/manager";
@@ -23,11 +24,12 @@ export default async function Page() {
     take: 200,
   });
 
+  const tiers = Object.fromEntries(await Promise.all(orgs.map(async o => [o.id,await marketplaceTier(o.id)] as const)));
   return (
     <main className="space-y-6">
       <h1 className="text-3xl font-bold">{ctx.staff ? "Inserate – Administration" : "Meine Inserate"}</h1>
       <p className="text-muted-foreground">Inserate verwalten, Anfragen beantworten und Angebote verlängern.</p>
-      <MarketplaceManager organizations={orgs} initial={JSON.parse(JSON.stringify(listings))} staff={ctx.staff} />
+      <MarketplaceManager organizations={orgs} initial={JSON.parse(JSON.stringify(listings))} staff={ctx.staff} tiers={tiers} />
     </main>
   );
 }
