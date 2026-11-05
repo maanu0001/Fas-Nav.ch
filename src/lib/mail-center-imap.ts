@@ -134,6 +134,17 @@ export async function syncMailCenter(options:{full?:boolean}={}){
   return {processed};
  });
 }
+/** Display the MIME HTML in a separately sandboxed iframe; never inject into dashboard DOM. */
+export async function mailboxMessageHtml(providerId:string){
+ const message=await prisma.mailCenterMessage.findUnique({where:{providerId},select:{htmlBody:true,textBody:true}});
+ if(!message)throw new Error("Nachricht nicht gefunden.");
+ if(message.htmlBody){
+  const parsed=parseMime(Buffer.from(message.htmlBody,"base64"));
+  if(parsed.html)return parsed.html;
+ }
+ const text=message.textBody.replace(/[&<>"]/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[character]||character));
+ return '<!doctype html><html><body style="font:15px/1.65 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;">'+text+'</body></html>';
+}
 export async function mailboxAttachments(providerId:string){
  const m=await prisma.mailCenterMessage.findUnique({where:{providerId},select:{htmlBody:true}});
  if(!m?.htmlBody)throw new Error("Nachricht nicht gefunden.");
