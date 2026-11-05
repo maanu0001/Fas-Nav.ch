@@ -157,7 +157,7 @@ export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;su
   const raw=Buffer.from(composed.message as Buffer);
   if(raw.length>MAX_MESSAGE)throw new Error("Nachricht überschreitet die zulässige Grösse.");
   const transport=nodemailer.createTransport({host:c.host,port:c.smtpPort,secure:false,requireTLS:true,auth:{user:c.user,pass:c.password},tls:{servername:c.host,rejectUnauthorized:true},connectionTimeout:20000,greetingTimeout:20000,socketTimeout:30000});
-  const delivered=await transport.sendMail({envelope:{from:c.mailbox,to:[...input.to.split(","),...(input.cc?input.cc.split(","):[]),...(input.bcc?input.bcc.split(","):[])].map(a=>a.trim())},raw});
+  await transport.sendMail({envelope:{from:c.mailbox,to:[...input.to.split(","),...(input.cc?input.cc.split(","):[]),...(input.bcc?input.bcc.split(","):[])].map(a=>a.trim())},raw});
   // SMTP success is definitive; database/IMAP failures must never trigger blind re-sends.
   let warning="";
   try{
@@ -171,5 +171,5 @@ export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;su
   }catch{warning="SMTP hat die Nachricht angenommen, aber das Speichern in der Konversationsliste ist fehlgeschlagen. Bitte nicht erneut senden.";}
   try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}
   catch{warning+=(warning?" ":"")+"Die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte nicht erneut senden.";}
-  return {sent:true,warning:warning||undefined,messageId:delivered.messageId};
+  return {sent:true,warning:warning||undefined,messageId};
 }
