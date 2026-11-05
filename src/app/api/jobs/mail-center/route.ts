@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { jsonError,jsonOk,handleApiError } from "@/lib/api";
-import { syncMailCenter } from "@/lib/mail-center-graph";
+import { syncMailCenter } from "@/lib/mail-center-imap";
 export const dynamic="force-dynamic";
 export async function POST(request:Request){try{
  const secret=process.env.CRON_SECRET;

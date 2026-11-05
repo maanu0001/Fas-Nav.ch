@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/dashboard-context";
 import { prisma } from "@/lib/prisma";
-import { graphConfiguration } from "@/lib/mail-center-graph";
+import { mailboxConfiguration } from "@/lib/mail-center-imap";
 import { MailCenter } from "@/components/dashboard/mail-center";
 export const dynamic="force-dynamic";
 export default async function MailCenterPage(){
