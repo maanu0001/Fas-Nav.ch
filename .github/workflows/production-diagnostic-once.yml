@@ -30,6 +30,9 @@ jobs:
           echo "Memory:"; free -h | head -n 3
           echo "Containers:"; docker ps --format '{{.Names}} {{.Status}}'
           echo "Process names:"; ps -eo comm,etime,%cpu,%mem | grep -E '(^COMMAND|docker|buildkit|node|npm)' | head -n 25
+          echo "Docker disk usage:"; timeout 20 docker system df || true
+          echo "Build activity:"; ps -eo pid,comm,etime,%cpu,%mem --sort=-%cpu | head -n 24
+          echo "Registry connectivity:"; curl -sS -o /dev/null --max-time 8 -w '%{http_code} %{time_total}\\n' https://registry-1.docker.io/v2/ || true
           echo "Health status:"; curl -sS -o /dev/null -w '%{http_code}\n' --max-time 4 http://127.0.0.1:3000/api/health || true
           REMOTE
       - name: Cleanup key
