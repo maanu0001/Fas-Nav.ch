@@ -13,7 +13,7 @@ export async function organizationPlanFeatures(organizationId:string):Promise<{t
  const sub=await prisma.subscription.findUnique({where:{organizationId},select:{status:true,endDate:true,plan:{select:{tier:true,features:{select:{enabled:true,limit:true,feature:{select:{key:true}}}}}}}}});
  const usable=sub&&isSubscriptionUsable(sub);
  const tier:MarketplaceTier=usable&&(sub.plan.tier==="PREMIUM"||sub.plan.tier==="BASIC")?sub.plan.tier:"FREE";
- const plan=usable?sub.plan:await prisma.plan.findFirst({where:{tier:"FREE" as PlanTier,isActive:true},select:{tier:true,features:{select:{enabled:true,limit:true,feature:{select:{key:true}}}}}});
+ const plan=usable&&sub?sub.plan:await prisma.plan.findFirst({where:{tier:"FREE" as PlanTier,isActive:true},select:{tier:true,features:{select:{enabled:true,limit:true,feature:{select:{key:true}}}}}});
  return {tier,features:new Map((plan?.features??[]).map(f=>[f.feature.key,{enabled:f.enabled,limit:f.limit}]))};
 }
 export async function marketplaceTier(organizationId:string):Promise<MarketplaceTier>{

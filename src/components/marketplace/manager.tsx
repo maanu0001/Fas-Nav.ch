@@ -2,12 +2,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { apiRequest,errorMessage } from "@/lib/client-api";
-import { MARKETPLACE_LIMITS,type MarketplaceTier } from "@/lib/marketplace-limits";
+
 type Inquiry={id:string;senderName:string;senderEmail:string;message:string;reply:string|null;createdAt:string};
 type Listing={id:string;title:string;description:string;category:string;listingType:string;status:string;city:string;canton:string|null;price:number|null;date:string|null;imageUrls:string[];views:number;organizationId:string;organization:{name:string};inquiries:Inquiry[];details:Record<string,unknown>|null};
 const empty={title:"",description:"",category:"AUFTRITTE",listingType:"SUCHE",city:"",canton:"",price:"",date:"",imageUrls:"",condition:"",brand:"",size:"",quantity:"",duration:"",priceType:"",contactMode:"INTERNAL",contactEmail:"",contactPhone:""};
-export function MarketplaceManager({organizations,initial,staff,tiers}:{organizations:{id:string;name:string}[];initial:Listing[];staff:boolean;tiers:Record<string,MarketplaceTier>}){const [showEditor,setShowEditor]=React.useState(false);const [filter,setFilter]=React.useState("ALL");const [attempted,setAttempted]=React.useState(false);const [uploading,setUploading]=React.useState(false);const [preview,setPreview]=React.useState(false);const [listings,setListings]=React.useState(initial),[org,setOrg]=React.useState(organizations[0]?.id??""),[form,setForm]=React.useState(empty),[editing,setEditing]=React.useState<string|null>(null),[message,setMessage]=React.useState(""),[busy,setBusy]=React.useState(false),[replies,setReplies]=React.useState<Record<string,string>>({});
- const tier=tiers[org]??"FREE";const limits=MARKETPLACE_LIMITS[tier];
+export function MarketplaceManager({organizations,initial,staff,limitsByOrg}:{organizations:{id:string;name:string}[];initial:Listing[];staff:boolean;limitsByOrg:Record<string,{tier:string;active:number;images:number;days:number;externalContact:boolean;featured:boolean}>}){const [showEditor,setShowEditor]=React.useState(false);const [filter,setFilter]=React.useState("ALL");const [attempted,setAttempted]=React.useState(false);const [uploading,setUploading]=React.useState(false);const [preview,setPreview]=React.useState(false);const [listings,setListings]=React.useState(initial),[org,setOrg]=React.useState(organizations[0]?.id??""),[form,setForm]=React.useState(empty),[editing,setEditing]=React.useState<string|null>(null),[message,setMessage]=React.useState(""),[busy,setBusy]=React.useState(false),[replies,setReplies]=React.useState<Record<string,string>>({});
+ const limits=limitsByOrg[org]??{tier:"FREE",active:1,images:3,days:30,externalContact:false,featured:false};const tier=limits.tier;
  const update=(k:keyof typeof empty,v:string)=>setForm(f=>({...f,[k]:v}));
  const errors:Record<string,string>={};
  if(!org)errors.organization="Bitte wähle eine Organisation.";
