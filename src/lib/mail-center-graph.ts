@@ -80,3 +80,17 @@ export async function sendGraphMail(input:{to:string;subject:string;text:string;
  const response=await graphRequest(path,{method:"POST",body:JSON.stringify(body),headers:{Prefer:'IdType="ImmutableId"'}});
  if(!response.ok)throw new Error("E-Mail wurde nicht gesendet (Graph "+response.status+").");
 }
+
+export async function graphAttachments(messageId:string){
+ const r=await graphRequest("/messages/"+encodeURIComponent(messageId)+"/attachments?$select=id,name,size,contentType,isInline");
+ if(!r.ok)throw new Error("Anhänge konnten nicht geladen werden.");
+ const data=await r.json() as {value:Array<{id:string;name:string;size:number;contentType?:string;isInline?:boolean}>};
+ return data.value.filter(a=>!a.isInline).map(a=>({id:a.id,name:a.name,size:a.size,contentType:a.contentType||"application/octet-stream"}));
+}
+export async function graphAttachment(messageId:string,attachmentId:string){
+ const r=await graphRequest("/messages/"+encodeURIComponent(messageId)+"/attachments/"+encodeURIComponent(attachmentId));
+ if(!r.ok)throw new Error("Anhang nicht verfügbar.");
+ const data=await r.json() as {name:string;size:number;contentBytes?:string;contentType?:string};
+ if(!data.contentBytes||data.size>10*1024*1024)throw new Error("Anhang ist zu gross oder nicht herunterladbar.");
+ return {name:data.name,content:Buffer.from(data.contentBytes,"base64"),type:data.contentType||"application/octet-stream"};
+}
