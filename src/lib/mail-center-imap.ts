@@ -122,10 +122,10 @@ export async function syncMailCenter(options:{full?:boolean}={}){
     const thread=threadKey(header);
     const recipient={to:header.to||"",cc:header.cc||"",bcc:header.bcc||""};
     await prisma.$transaction(async tx=>{
-     const conversation=await tx.mailConversation.upsert({where:{providerThreadId:thread},create:{providerThreadId:thread,subject:decodeWord(header.subject||"(Ohne Betreff)"),lastMessageAt:receivedAt,unread},update:{}});
+     const conversation=await tx.mailConversation.upsert({where:{providerThreadId:thread},create:{providerThreadId:thread,subject:decodeWord(header.subject||"(Ohne Betreff)"),lastMessageAt:receivedAt,unread,folder:direction==="IN"?"INBOX":"SENT"},update:{}});
      const exists=await tx.mailCenterMessage.findUnique({where:{providerId},select:{id:true}});
      await tx.mailCenterMessage.upsert({where:{providerId},create:{providerId,conversationId:conversation.id,internetMessageId:header["message-id"],sender:address(header.from||""),recipients:recipient,subject:decodeWord(header.subject||""),textBody:parsed.plain,htmlBody:raw.toString("base64"),attachmentInfo:parsed.attachments.length?{count:parsed.attachments.length}:undefined,direction,receivedAt},update:{}});
-     if(!exists){await tx.mailConversation.update({where:{id:conversation.id},data:{...(receivedAt>conversation.lastMessageAt?{lastMessageAt:receivedAt,subject:decodeWord(header.subject||conversation.subject)}:{}),...(unread?{unread:true}:{})}});}
+     if(!exists){await tx.mailConversation.update({where:{id:conversation.id},data:{...(receivedAt>conversation.lastMessageAt?{lastMessageAt:receivedAt,subject:decodeWord(header.subject||conversation.subject)}:{}),...(unread?{unread:true}:{}),...(direction==="IN"&&conversation.folder==="SENT"?{folder:"INBOX"}:{})}});}
     });
     await prisma.siteSetting.upsert({where:{key:cursorKey},create:{key:cursorKey,group:"mail",value:{uidvalidity,uid}},update:{value:{uidvalidity,uid}}});
     processed++;
@@ -133,6 +133,17 @@ export async function syncMailCenter(options:{full?:boolean}={}){
   }
   return {processed};
  });
+}
+/** Display the MIME HTML in a separately sandboxed iframe; never inject into dashboard DOM. */
+export async function mailboxMessageHtml(providerId:string){
+ const message=await prisma.mailCenterMessage.findUnique({where:{providerId},select:{htmlBody:true,textBody:true}});
+ if(!message)throw new Error("Nachricht nicht gefunden.");
+ if(message.htmlBody){
+  const parsed=parseMime(Buffer.from(message.htmlBody,"base64"));
+  if(parsed.html)return parsed.html;
+ }
+ const text=message.textBody.replace(/[&<>"]/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[character]||character));
+ return '<!doctype html><html><body style="font:15px/1.65 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;">'+text+'</body></html>';
 }
 export async function mailboxAttachments(providerId:string){
  const m=await prisma.mailCenterMessage.findUnique({where:{providerId},select:{htmlBody:true}});
@@ -164,7 +175,7 @@ export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;su
     const now=new Date();
     const conversationKey=replyConversationId?null:messageId;
     await prisma.$transaction(async tx=>{
-      const conversation=replyConversationId?await tx.mailConversation.findUniqueOrThrow({where:{id:replyConversationId}}):await tx.mailConversation.upsert({where:{providerThreadId:conversationKey!},create:{providerThreadId:conversationKey!,subject:input.subject,lastMessageAt:now},update:{lastMessageAt:now}});
+      const conversation=replyConversationId?await tx.mailConversation.findUniqueOrThrow({where:{id:replyConversationId}}):await tx.mailConversation.upsert({where:{providerThreadId:conversationKey!},create:{providerThreadId:conversationKey!,subject:input.subject,lastMessageAt:now,folder:"SENT"},update:{lastMessageAt:now}});
       await tx.mailCenterMessage.create({data:{providerId:"local:"+messageId,conversationId:conversation.id,internetMessageId:messageId,sender:c.mailbox,recipients:{to:input.to,cc:input.cc||"",bcc:input.bcc||""},subject:input.subject,textBody:input.text,htmlBody:raw.toString("base64"),attachmentInfo:files.length?{count:files.length}:undefined,direction:"OUT",receivedAt:now}});
       await tx.mailConversation.update({where:{id:conversation.id},data:{lastMessageAt:now}});
     });

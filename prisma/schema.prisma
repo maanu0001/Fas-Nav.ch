@@ -1349,12 +1349,14 @@ model MailConversation {
  subject String @db.Text
  status String @default("OPEN")
  unread Boolean @default(false)
+ folder String @default("INBOX")
  lastMessageAt DateTime
  createdAt DateTime @default(now())
  updatedAt DateTime @updatedAt
  messages MailCenterMessage[]
  @@index([unread,lastMessageAt])
  @@index([status,lastMessageAt])
+ @@index([folder,lastMessageAt])
  @@map("mail_conversations")
 }
 model MailCenterMessage {

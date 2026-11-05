@@ -1,44 +1,175 @@
 "use client";
+
 import * as React from "react";
-type Msg={id:string;providerId:string;sender:string;recipients:{to?:string;cc?:string;bcc?:string};subject:string;textBody:string;direction:string;receivedAt:string;attachmentInfo:unknown};
-type Conv={id:string;subject:string;status:string;unread:boolean;lastMessageAt:string;messages:Msg[]};
-type Attachment={name:string;type:string;data:string};
-export function MailCenter({initial,connected,mailbox}:{initial:Conv[];connected:boolean;mailbox:string}){
- const [list,setList]=React.useState(initial);
- const [contacts,setContacts]=React.useState<string[]>([]);
- const [selected,setSelected]=React.useState(initial[0]?.id||"");
+import { Archive, ArrowLeft, FileText, Inbox, Mail, MailOpen, Paperclip, RefreshCcw, Send, Trash2 } from "lucide-react";
+
+type Message = {
+  id:string;providerId:string;sender:string;
+  recipients:{to?:string;cc?:string;bcc?:string};
+  subject:string;textBody:string;direction:string;receivedAt:string;
+  attachmentInfo:unknown;
+};
+type Conversation = {
+  id:string;subject:string;status:string;unread:boolean;folder:string;
+  lastMessageAt:string;messages:Message[];
+};
+type Attachment = {name:string;type:string;data:string};
+type FileInfo = {id:string;name:string;size:number};
+type Folder = "INBOX"|"SENT"|"ARCHIVE"|"TRASH"|"ALL";
+const FOLDERS:{id:Folder;label:string;icon:typeof Inbox}[]=[
+  {id:"INBOX",label:"Posteingang",icon:Inbox},
+  {id:"SENT",label:"Gesendet",icon:Send},
+  {id:"ARCHIVE",label:"Archiv",icon:Archive},
+  {id:"TRASH",label:"Papierkorb",icon:Trash2},
+  {id:"ALL",label:"Alle Konversationen",icon:Mail},
+];
+function formatDate(date:string){return new Date(date).toLocaleString("de-CH",{dateStyle:"short",timeStyle:"short"});}
+function attachmentCount(value:unknown):number {
+  if(value&&typeof value==="object"&&"count" in value&&typeof value.count==="number")return value.count;
+  return 0;
+}
+export function MailCenter({initial,connected,mailbox}:{initial:Conversation[];connected:boolean;mailbox:string}){
+ const [conversations,setConversations]=React.useState(initial);
+ const [folder,setFolder]=React.useState<Folder>("INBOX");
+ const [selected,setSelected]=React.useState("");
  const [newMail,setNewMail]=React.useState(false);
+ const [replying,setReplying]=React.useState(false);
  const [to,setTo]=React.useState("");const [cc,setCc]=React.useState("");const [bcc,setBcc]=React.useState("");
  const [subject,setSubject]=React.useState("");const [body,setBody]=React.useState("");
  const [files,setFiles]=React.useState<Attachment[]>([]);
- const [busy,setBusy]=React.useState(false);const [error,setError]=React.useState("");const [notice,setNotice]=React.useState("");const [search,setSearch]=React.useState("");
- const [attachmentLinks,setAttachmentLinks]=React.useState<Record<string,Array<{id:string;name:string;size:number}>>>({});
- const [config,setConfig]=React.useState(!connected);const [isConnected,setIsConnected]=React.useState(connected);const [settings,setSettings]=React.useState({user:mailbox||"info@fas-nav.ch",password:""});
+ const [contacts,setContacts]=React.useState<string[]>([]);
  const [focused,setFocused]=React.useState<"to"|"cc"|"bcc"|null>(null);
- const active=list.find(c=>c.id===selected);
+ const [attachments,setAttachments]=React.useState<Record<string,FileInfo[]>>({});
+ const [busy,setBusy]=React.useState(false);const [error,setError]=React.useState("");const [notice,setNotice]=React.useState("");
+ const [search,setSearch]=React.useState("");
+ const [config,setConfig]=React.useState(!connected);
+ const [isConnected,setIsConnected]=React.useState(connected);
+ const [settings,setSettings]=React.useState({user:mailbox||"info@fas-nav.ch",password:""});
+ const active=conversations.find(c=>c.id===selected);
  const lastIncoming=active?.messages.filter(m=>m.direction==="IN").at(-1);
- const filtered=list.filter(c=>(c.subject+" "+c.messages.map(m=>m.sender+" "+m.textBody).join(" ")).toLowerCase().includes(search.toLowerCase()));
- async function api(data:Record<string,unknown>){const res=await fetch("/api/mail-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});const json=await res.json();if(!res.ok)throw new Error(json.error||"Aktion fehlgeschlagen.");return json;}
- async function refresh(){const res=await fetch("/api/mail-center",{cache:"no-store"});if(!res.ok)throw new Error("Aktualisieren fehlgeschlagen.");const json=await res.json();setList(json.conversations);setContacts(json.contacts||[]);return json;}
- React.useEffect(()=>{void refresh().catch(()=>{});},[]);
- async function action(data:Record<string,unknown>,after?:(result:any,refreshed:any)=>void){setBusy(true);setError("");setNotice("");try{const result=await api(data);const refreshed=await refresh();after?.(result,refreshed);setNotice(result.warning||(data.action==="send"?"E-Mail erfolgreich versendet und gespeichert.":data.action==="sync"?`${result.processed} Nachricht(en) synchronisiert.`:data.action==="test"?"IMAP-Verbindung erfolgreich.":"Änderung gespeichert."));}catch(e){setError(e instanceof Error?e.message:"Unbekannter Fehler");}finally{setBusy(false);}}
- React.useEffect(()=>{if(active?.unread)void api({action:"read",id:active.id}).then(()=>refresh()).catch(()=>{});},[selected]);
- async function addFiles(incoming:FileList|null){if(!incoming)return;try{const all=[...files];for(const file of Array.from(incoming)){if(file.size>5_000_000)throw new Error("Pro Anhang sind maximal 5 MB erlaubt.");if(all.length>=5)throw new Error("Maximal fünf Anhänge erlaubt.");const buffer=await file.arrayBuffer();const bytes=new Uint8Array(buffer);let binary="";for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));all.push({name:file.name.slice(0,160),type:file.type||"application/octet-stream",data:btoa(binary)});}if(all.reduce((sum,file)=>sum+file.data.length,0)>13_500_000)throw new Error("Anhänge insgesamt zu gross.");setFiles(all);}catch(e){setError(e instanceof Error?e.message:"Datei konnte nicht geladen werden.");}}
- function inputRecipients(field:"to"|"cc"|"bcc",value:string,setValue:(v:string)=>void,label:string){
-  const token=value.split(",").at(-1)?.trim().toLowerCase()||"";
-  const matches=focused===field&&token?contacts.filter(email=>email.includes(token)&&!value.split(",").slice(0,-1).includes(email)).slice(0,8):[];
-  return <div className="relative"><label className="mb-1 block text-xs font-semibold">{label}</label><input type="text" autoComplete="off" value={value} onFocus={()=>setFocused(field)} onBlur={()=>setTimeout(()=>setFocused(null),180)} onChange={e=>setValue(e.target.value)} placeholder={label==="An"?"empfaenger@beispiel.ch (mehrere mit Komma trennen)":"Optional, mehrere mit Komma trennen"} className="w-full rounded-lg border bg-background p-2 text-sm"/>{matches.length>0?<div className="absolute z-20 mt-1 w-full rounded-lg border bg-card shadow-lg">{matches.map(email=><div key={email} className="flex items-center gap-1 border-b p-1"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>{setValue([...value.split(",").slice(0,-1).filter(Boolean),email].join(", "));setFocused(null)}} className="min-w-0 flex-1 truncate p-2 text-left text-xs hover:bg-muted">{email}</button><button type="button" title="Vorschlag dauerhaft entfernen" onMouseDown={e=>e.preventDefault()} onClick={()=>action({action:"hide-contact",email})} className="rounded px-2 py-1 text-red-600" aria-label={email+" aus Vorschlägen entfernen"}>×</button></div>)}</div>:null}</div>;
+ const shown=conversations.filter(c=>(folder==="ALL" ? c.folder!=="TRASH" : c.folder===folder)
+   &&(c.subject+" "+c.messages.map(m=>m.sender+" "+m.recipients?.to+" "+m.textBody).join(" ")).toLowerCase().includes(search.toLowerCase()));
+ async function api(data:Record<string,unknown>){
+  const response=await fetch("/api/mail-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  const json=await response.json();
+  if(!response.ok)throw new Error(json.error||"Aktion fehlgeschlagen.");
+  return json;
  }
- async function submit(e:React.FormEvent){e.preventDefault();const recipient=newMail?to:lastIncoming?.sender||"";await action({action:"send",to:recipient,cc,bcc,subject:newMail?subject:active?.subject||"",text:body,attachments:files,...(!newMail&&lastIncoming?{replyToId:lastIncoming.providerId}:{})},(result,refreshed)=>{setBody("");setCc("");setBcc("");setFiles([]);setNewMail(false);const sent=refreshed.conversations.find((conversation:Conv)=>conversation.messages.some((message:Msg)=>message.providerId==="local:"+result.messageId||message.providerId===result.messageId));setSelected(sent?.id||active?.id||"");});}
+ async function refresh(){
+  const res=await fetch("/api/mail-center",{cache:"no-store"});
+  if(!res.ok)throw new Error("Aktualisieren fehlgeschlagen.");
+  const result=await res.json();
+  setConversations(result.conversations);
+  setContacts(result.contacts||[]);
+  return result as {conversations:Conversation[];contacts:string[]};
+ }
+ React.useEffect(()=>{void refresh().catch(()=>{});},[]);
+ React.useEffect(()=>{
+  if(!active)return;
+  for(const message of active.messages){
+   if(!attachmentCount(message.attachmentInfo)||attachments[message.id])continue;
+   fetch("/api/mail-center/attachments/"+encodeURIComponent(message.id),{cache:"no-store"})
+    .then(res=>{if(!res.ok)throw new Error();return res.json() as Promise<FileInfo[]>;})
+    .then(info=>setAttachments(prev=>({...prev,[message.id]:info}))).catch(()=>{});
+  }
+ },[selected,conversations]);
+ async function action(payload:Record<string,unknown>,onSuccess?:(result:any,data:{conversations:Conversation[]})=>void){
+  setBusy(true);setError("");setNotice("");
+  try{
+   const result=await api(payload);
+   const refreshed=await refresh();
+   onSuccess?.(result,refreshed);
+   setNotice(result.warning||(payload.action==="send"?"E-Mail versendet und unter Konversationen gespeichert.":payload.action==="sync"||payload.action==="resync"?`${result.processed} Nachrichten synchronisiert.`:"Änderung gespeichert."));
+  }catch(e){setError(e instanceof Error?e.message:"Unbekannter Fehler");}
+  finally{setBusy(false);}
+ }
+ function openConversation(c:Conversation){
+  setSelected(c.id);setNewMail(false);setReplying(false);setFiles([]);setCc("");setBcc("");
+  if(c.unread)void api({action:"read",id:c.id,unread:false}).then(()=>setConversations(prev=>prev.map(item=>item.id===c.id?{...item,unread:false}:item))).catch(()=>{});
+ }
+ async function move(target:Folder){
+  if(!active||target==="ALL")return;
+  await action({action:"folder",id:active.id,folder:target},()=>{setSelected("");setReplying(false);});
+ }
+ async function markUnread(){
+  if(!active)return;
+  await action({action:"read",id:active.id,unread:!active.unread},()=>{setSelected("");});
+ }
+ function recipientInput(field:"to"|"cc"|"bcc",value:string,setValue:(v:string)=>void,label:string){
+  const token=value.split(",").at(-1)?.trim().toLowerCase()||"";
+  const matches=focused===field&&token?contacts.filter(address=>address.includes(token)&&!value.split(",").slice(0,-1).map(v=>v.trim()).includes(address)).slice(0,8):[];
+  return <div className="relative"><label className="mb-1 block text-xs font-semibold">{label}</label>
+   <input type="text" autoComplete="off" value={value} onFocus={()=>setFocused(field)} onBlur={()=>setTimeout(()=>setFocused(null),180)} onChange={e=>setValue(e.target.value)} placeholder={label==="An"?"empfaenger@beispiel.ch":"Optional (mehrere mit Komma trennen)"} className="w-full rounded-lg border bg-background p-2 text-sm"/>
+   {matches.length>0?<div className="absolute z-30 mt-1 w-full rounded-lg border bg-card shadow-lg">{matches.map(address=><div key={address} className="flex items-center gap-1 border-b p-1"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>{setValue([...value.split(",").slice(0,-1).filter(Boolean),address].join(", "));setFocused(null);}} className="min-w-0 flex-1 truncate p-2 text-left text-xs hover:bg-muted">{address}</button><button type="button" title="Vorschlag entfernen" onMouseDown={e=>e.preventDefault()} onClick={()=>void action({action:"hide-contact",email:address})} className="rounded px-2 py-1 text-red-600">×</button></div>)}</div>:null}
+  </div>;
+ }
+ async function addFiles(input:FileList|null){
+  if(!input)return;
+  try{
+   const next=[...files];
+   for(const file of Array.from(input)){
+    if(file.size>5_000_000)throw new Error("Pro Anhang maximal 5 MB.");
+    if(next.length>=5)throw new Error("Maximal fünf Anhänge.");
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    let binary="";for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+    next.push({name:file.name.slice(0,160),type:file.type||"application/octet-stream",data:btoa(binary)});
+   }
+   if(next.reduce((size,file)=>size+file.data.length,0)>13_500_000)throw new Error("Anhänge insgesamt zu gross.");
+   setFiles(next);
+  }catch(e){setError(e instanceof Error?e.message:"Datei konnte nicht gelesen werden.");}
+ }
+ async function submit(e:React.FormEvent){
+  e.preventDefault();
+  const recipient=newMail?to:lastIncoming?.sender||"";
+  await action({action:"send",to:recipient,cc,bcc,subject:newMail?subject:active?.subject||"",text:body,attachments:files,...(!newMail&&lastIncoming?{replyToId:lastIncoming.providerId}:{})},(result,data)=>{
+   setBody("");setCc("");setBcc("");setFiles([]);setNewMail(false);setReplying(false);
+   const conv=data.conversations.find(c=>c.messages.some(m=>m.providerId==="local:"+result.messageId||m.providerId===result.messageId));
+   if(conv){setFolder(conv.folder as Folder);setSelected(conv.id);}
+  });
+ }
+ const button="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors hover:bg-muted disabled:opacity-50";
  return <div className="space-y-4">
- {notice?<p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>:null}
- {error?<p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>:null}
- <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>action({action:"sync"})} disabled={busy||!isConnected} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Synchronisieren</button><button type="button" disabled={busy||!isConnected} title="Alle Ordner vollständig neu einlesen, ohne vorhandene Nachrichten zu löschen" onClick={()=>action({action:"resync"})} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50">Alles neu einlesen</button><button type="button" onClick={()=>{setNewMail(true);setSelected("");setCc("");setBcc("");setFiles([]);}} className="rounded-lg border px-4 py-2 text-sm">Neue E-Mail</button><button type="button" onClick={()=>setConfig(!config)} className="rounded-lg border px-4 py-2 text-sm">Postfach verbinden</button><button type="button" onClick={()=>action({action:"test"})} disabled={busy||!isConnected} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50">Verbindung testen</button></div>
- {config?<form onSubmit={e=>{e.preventDefault();void action({action:"config",...settings},()=>{setConfig(false);setIsConnected(true);});}} className="grid gap-3 rounded-xl border bg-card p-5 sm:grid-cols-2"><p className="sm:col-span-2 text-sm">Eigener Mailserver: IMAP mail.fas-nav.ch:993 · SMTP mail.fas-nav.ch:587. Passwort bleibt verschlüsselt.</p>{(["user","password"] as const).map(k=><label key={k} className="text-xs font-medium">{k==="user"?"Postfach-Benutzername":"Postfachpasswort (leer = unverändert)"}<input type={k==="password"?"password":"text"} value={settings[k]} onChange={e=>setSettings(v=>({...v,[k]:e.target.value}))} className="mt-1 w-full rounded-lg border bg-background p-2.5 text-sm" required={k==="user"}/></label>)}<button disabled={busy} className="rounded-lg bg-primary p-2.5 text-sm text-white">Speichern</button></form>:null}
- <div className="grid min-h-[520px] overflow-hidden rounded-xl border bg-card md:grid-cols-[minmax(220px,34%)_1fr]"><div className="border-b md:border-b-0 md:border-r"><div className="border-b p-3"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Konversationen suchen …" className="w-full rounded-lg border bg-background p-2.5 text-sm"/></div><div className="max-h-[600px] overflow-y-auto">{filtered.map(c=><button type="button" key={c.id} onClick={()=>{setSelected(c.id);setNewMail(false);setFiles([]);setCc("");setBcc("");}} className={"block w-full border-b p-3 text-left hover:bg-muted "+(selected===c.id?"bg-muted":"")}><div className="flex items-center justify-between gap-2"><strong className="truncate text-sm">{c.subject}</strong>{c.unread?<span className="h-2 w-2 shrink-0 rounded-full bg-blue-600"/>:null}</div><p className="mt-1 truncate text-xs text-muted-foreground">{c.messages.at(-1)?.sender}</p><p className="mt-1 truncate text-xs text-muted-foreground">{c.messages.at(-1)?.textBody}</p></button>)}</div></div>
- <div className="flex flex-col"><div className="border-b p-4 font-semibold">{newMail?"Neue E-Mail":active?.subject||"Konversation auswählen"}</div>{active&&!newMail?<><div className="flex justify-end border-b p-2"><select aria-label="Status" value={active.status} onChange={e=>action({action:"status",id:active.id,status:e.target.value})} className="rounded-lg border bg-background p-1 text-xs"><option value="OPEN">Offen</option><option value="IN_PROGRESS">In Bearbeitung</option><option value="DONE">Erledigt</option></select></div><div className="max-h-[400px] flex-1 space-y-3 overflow-y-auto p-4">{active.messages.map(m=><div key={m.id} className={"max-w-[95%] rounded-xl p-3 "+(m.direction==="OUT"?"ml-auto bg-primary/10":"bg-muted")}><p className="mb-1 text-xs font-semibold">{m.direction==="OUT"?"Gesendet":"Empfangen"} · {m.sender} · {new Date(m.receivedAt).toLocaleString("de-CH")}</p><p className="text-xs text-muted-foreground">An: {m.recipients?.to}{m.recipients?.cc?" · CC: "+m.recipients.cc:""}{m.recipients?.bcc?" · BCC: "+m.recipients.bcc:""}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.textBody}</p>{m.attachmentInfo?<div className="mt-2"><button type="button" className="text-xs text-primary underline" onClick={async()=>{try{const res=await fetch("/api/mail-center/attachments/"+m.id);if(!res.ok)throw Error();const links=await res.json();setAttachmentLinks(prev=>({...prev,[m.id]:links}));}catch{setError("Anhänge konnten nicht geladen werden.");}}}>Anhänge anzeigen</button>{(attachmentLinks[m.id]||[]).map(a=><a key={a.id} className="block text-xs underline" href={"/api/mail-center/attachments/"+m.id+"?attachment="+encodeURIComponent(a.id)}>{a.name} ({Math.ceil(a.size/1024)} KB)</a>)}</div>:null}</div>)}</div></>:null}
- {(newMail||active)?<form onSubmit={submit} className="mt-auto space-y-3 border-t p-4">{newMail?<>{inputRecipients("to",to,setTo,"An")}<input required placeholder="Betreff" value={subject} maxLength={250} onChange={e=>setSubject(e.target.value)} className="w-full rounded-lg border bg-background p-2 text-sm"/></>:<p className="text-xs text-muted-foreground">Antwort an {lastIncoming?.sender||"keine eingegangene Nachricht"}</p>}{inputRecipients("cc",cc,setCc,"CC")}{inputRecipients("bcc",bcc,setBcc,"BCC")}<textarea required rows={5} value={body} onChange={e=>setBody(e.target.value)} placeholder="Nachricht schreiben …" className="w-full rounded-lg border bg-background p-3 text-sm"/><div className="space-y-2"><label className="block text-xs font-semibold">Anhänge (bis 5 Dateien, je 5 MB)</label><input type="file" multiple disabled={busy} onChange={e=>{void addFiles(e.target.files);e.target.value="";}} className="w-full text-xs"/>{files.map((file,i)=><div key={i} className="flex items-center justify-between text-xs"><span>{file.name}</span><button type="button" onClick={()=>setFiles(v=>v.filter((_,j)=>i!==j))} className="text-red-600">Entfernen</button></div>)}</div><div className="flex justify-end"><button disabled={busy||!body.trim()||(!newMail&&!lastIncoming)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?"Bitte warten …":"Als E-Mail senden"}</button></div></form>:null}
- </div></div>
- <p className="text-xs text-muted-foreground">Gesendete Nachrichten erscheinen sofort unter Konversationen. Vorschläge stammen aus bisherigen Nachrichten und können dauerhaft aus der Vorschlagsliste entfernt werden. Anhänge werden mit der vollständigen Nachricht gespeichert.</p>
+  {notice?<p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>:null}
+  {error?<p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>:null}
+  <div className="flex flex-wrap gap-2">
+   <button type="button" onClick={()=>{setNewMail(true);setSelected("");setReplying(false);setBody("");setTo("");setSubject("");setCc("");setBcc("");setFiles([]);}} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">+ Neue E-Mail</button>
+   <button type="button" onClick={()=>void action({action:"sync"})} disabled={busy||!isConnected} className={button}><RefreshCcw className="h-3.5 w-3.5"/>Synchronisieren</button>
+   <button type="button" onClick={()=>void action({action:"resync"})} disabled={busy||!isConnected} className={button}>Alles neu einlesen</button>
+   <button type="button" onClick={()=>void action({action:"test"})} disabled={busy||!isConnected} className={button}>Verbindung testen</button>
+   <button type="button" onClick={()=>setConfig(value=>!value)} className={button}>Postfach verbinden</button>
+  </div>
+  {config?<form onSubmit={event=>{event.preventDefault();void action({action:"config",...settings},()=>{setConfig(false);setIsConnected(true);});}} className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2"><p className="sm:col-span-2 text-sm">IMAP mail.fas-nav.ch:993 · SMTP mail.fas-nav.ch:587</p>{(["user","password"] as const).map(key=><label key={key} className="text-xs font-medium">{key==="user"?"Postfach-Benutzername":"Postfachpasswort (leer = unverändert)"}<input type={key==="password"?"password":"text"} value={settings[key]} required={key==="user"} onChange={e=>setSettings(prev=>({...prev,[key]:e.target.value}))} className="mt-1 w-full rounded-lg border bg-background p-2.5 text-sm"/></label>)}<button disabled={busy} className="rounded-lg bg-primary p-2.5 text-sm text-white">Speichern</button></form>:null}
+  <div className="grid min-h-[600px] overflow-hidden rounded-xl border bg-card lg:grid-cols-[174px_minmax(220px,32%)_1fr]">
+   <nav aria-label="E-Mail-Ordner" className="flex flex-wrap content-start gap-1 border-b bg-muted/30 p-2 lg:flex-col lg:border-b-0 lg:border-r">
+    {FOLDERS.map(item=>{const Icon=item.icon;const count=conversations.filter(c=>item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id).length;const unread=conversations.filter(c=>c.unread&&(item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id)).length;return <button type="button" key={item.id} onClick={()=>{setFolder(item.id);setSelected("");setNewMail(false);setReplying(false);}} className={"flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition "+(folder===item.id?"bg-primary text-white":"hover:bg-muted")}><Icon className="h-4 w-4 shrink-0"/><span className="flex-1">{item.label}</span><span className="tabular-nums opacity-70">{unread?unread+" / ":""}{count}</span></button>})}
+   </nav>
+   <section aria-label="Konversationen" className="border-b lg:border-b-0 lg:border-r">
+    <div className="border-b p-3"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Konversationen durchsuchen …" className="w-full rounded-lg border bg-background p-2.5 text-sm"/></div>
+    <div className="max-h-[680px] overflow-y-auto">{shown.map(c=><button key={c.id} type="button" onClick={()=>openConversation(c)} className={"block w-full border-b p-3 text-left transition hover:bg-muted "+(selected===c.id?"bg-muted":"")}><div className="flex items-center justify-between gap-2"><strong className={"min-w-0 truncate text-sm "+(c.unread?"font-extrabold text-primary":"font-medium")}>{c.subject}</strong>{c.unread?<span aria-label="Ungelesen" className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600"/>:null}</div><p className={"mt-1 truncate text-xs "+(c.unread?"font-bold":"text-muted-foreground")}>{c.messages.at(-1)?.sender||"Unbekannter Absender"}</p><p className="mt-1 truncate text-xs text-muted-foreground">{c.messages.at(-1)?.textBody}</p><p className="mt-1 text-[10px] text-muted-foreground">{formatDate(c.lastMessageAt)}</p></button>)}{!shown.length?<p className="p-5 text-sm text-muted-foreground">Keine Nachrichten in diesem Ordner.</p>:null}</div>
+   </section>
+   <section aria-label="Nachrichten" className="flex min-w-0 flex-col">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3"><h2 className="min-w-0 flex-1 truncate font-semibold">{newMail?"Neue E-Mail":active?.subject||"Konversation auswählen"}</h2>{active&&!newMail?<div className="flex flex-wrap gap-1">
+     <button type="button" className={button} disabled={busy} onClick={()=>void markUnread()}>{active.unread?<MailOpen className="h-3.5 w-3.5"/>:<Mail className="h-3.5 w-3.5"/>}{active.unread?"Gelesen":"Ungelesen"}</button>
+     <button type="button" className={button} disabled={busy} onClick={()=>void move("ARCHIVE")}><Archive className="h-3.5 w-3.5"/>Archivieren</button>
+     {active.folder==="TRASH"?<button type="button" className={button} disabled={busy} onClick={()=>void move("INBOX")}>Wiederherstellen</button>:<button type="button" className={button} disabled={busy} onClick={()=>void move("TRASH")}><Trash2 className="h-3.5 w-3.5"/>Löschen</button>}
+     <select value={active.folder} disabled={busy} onChange={e=>void move(e.target.value as Folder)} className="rounded-lg border bg-background px-2 py-2 text-xs" aria-label="Konversation in Ordner verschieben"><option value="INBOX">Posteingang</option><option value="SENT">Gesendet</option><option value="ARCHIVE">Archiv</option><option value="TRASH">Papierkorb</option></select>
+    </div>:null}</div>
+    {active&&!newMail?<div className="max-h-[680px] flex-1 space-y-4 overflow-y-auto p-3">{active.messages.map(m=><article key={m.id} className={"overflow-hidden rounded-xl border "+(m.direction==="OUT"?"border-primary/30":"border-border")}>
+     <header className="space-y-1 bg-muted/40 px-4 py-3"><div className="flex justify-between gap-2 text-xs"><strong>{m.direction==="OUT"?"Gesendet":"Empfangen"} · {m.sender}</strong><time className="shrink-0 text-muted-foreground">{formatDate(m.receivedAt)}</time></div><p className="break-all text-xs text-muted-foreground">An: {m.recipients?.to||"–"}{m.recipients?.cc?" · CC: "+m.recipients.cc:""}{m.recipients?.bcc?" · BCC: "+m.recipients.bcc:""}</p></header>
+     {attachmentCount(m.attachmentInfo)>0?<div className="border-b px-4 py-3"><p className="mb-2 flex items-center gap-1 text-xs font-semibold"><Paperclip className="h-3.5 w-3.5"/>Anhänge ({attachmentCount(m.attachmentInfo)})</p><div className="flex flex-wrap gap-2">{attachments[m.id]?.map(file=><a key={file.id} className="flex max-w-full items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs hover:bg-muted" href={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?attachment="+encodeURIComponent(file.id)} download><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.name}</span><span className="text-muted-foreground">{Math.ceil(file.size/1024)} KB</span></a>)||<p className="text-xs text-muted-foreground">Anhänge werden geladen …</p>}</div></div>:null}
+     <iframe title={"E-Mail-Inhalt: "+m.subject} sandbox="" loading="lazy" src={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?format=html"} className="h-[320px] min-h-[220px] w-full resize-y bg-white" referrerPolicy="no-referrer"/>
+    </article>)}</div>:null}
+    {active&&!newMail&&!replying&&active.folder!=="TRASH"?<div className="border-t p-3"><button type="button" className={button} onClick={()=>{setReplying(true);setBody("");setFiles([]);}}>Antworten</button></div>:null}
+    {(newMail||replying&&active)?<form onSubmit={submit} className="mt-auto space-y-3 border-t p-4">
+     {newMail?<>{recipientInput("to",to,setTo,"An")}<label className="block text-xs font-semibold">Betreff<input required maxLength={250} value={subject} onChange={e=>setSubject(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2 text-sm"/></label></>:<p className="text-xs text-muted-foreground">Antwort an {lastIncoming?.sender||"keine eingegangene Nachricht"}</p>}
+     {recipientInput("cc",cc,setCc,"CC")}{recipientInput("bcc",bcc,setBcc,"BCC")}
+     <label className="block text-xs font-semibold">Nachricht<textarea required rows={5} value={body} onChange={e=>setBody(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-3 text-sm" placeholder="Nachricht verfassen …"/></label>
+     <label className="block text-xs font-semibold">Anhänge (bis 5 Dateien, je 5 MB)<input type="file" multiple disabled={busy} onChange={e=>{void addFiles(e.target.files);e.target.value="";}} className="mt-2 w-full text-xs"/></label>
+     {files.length?<div className="flex flex-wrap gap-2">{files.map((file,index)=><button type="button" key={index} onClick={()=>setFiles(prev=>prev.filter((_,i)=>i!==index))} className="rounded-lg border px-3 py-2 text-xs"><Paperclip className="mr-1 inline h-3.5 w-3.5"/>{file.name} ×</button>)}</div>:null}
+     <div className="flex justify-end gap-2"><button type="button" className={button} onClick={()=>{setNewMail(false);setReplying(false);}}>Abbrechen</button><button type="submit" disabled={busy||!body.trim()||(!newMail&&!lastIncoming)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?"Bitte warten …":"Senden"}</button></div>
+    </form>:null}
+   </section>
+  </div>
+  <p className="text-xs text-muted-foreground">Die Ordner und Gelesen-Markierungen werden im Fas-Nav Mail Center gespeichert; die IMAP-Ordner anderer Mailprogramme bleiben unverändert. Formatierte E-Mails werden isoliert angezeigt, damit fremde Mail-Inhalte keinen Dashboard-Code ausführen können.</p>
  </div>;
 }

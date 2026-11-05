@@ -31,6 +31,7 @@ const SECTIONS = [
   { id: "kontakt", label: "Kontakt" },
   { id: "anreise", label: "Anreise" },
   { id: "social", label: "Social Media" },
+  { id: "youtube", label: "YouTube-Video" },
   { id: "seo", label: "Suchmaschinen" },
 ] as const;
 
@@ -830,6 +831,49 @@ export function OrganizationEditor({
                   Link hinzufügen
                 </Button>
               ) : null}
+            </div>
+          ) : null}
+
+          {section === "youtube" ? (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-display text-lg font-semibold">YouTube-Video einbetten</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Für alle Tarife verfügbar. Füge einen YouTube-Videolink ein; auf deiner öffentlichen Seite wird das Video automatisch eingebettet.
+                </p>
+              </div>
+              <Field label="YouTube-Videolink" htmlFor="organization-youtube">
+                <Input
+                  id="organization-youtube"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={state.socialLinks.find(link => link.platform === "YOUTUBE")?.url || ""}
+                  onChange={e => {
+                    const url = e.target.value;
+                    setState(prev => {
+                      const existing = prev.socialLinks.findIndex(link => link.platform === "YOUTUBE");
+                      if (existing >= 0) return {...prev, socialLinks: prev.socialLinks.map((link, index) => index === existing ? {...link, url} : link)};
+                      return {...prev, socialLinks: [...prev.socialLinks, {platform: "YOUTUBE", url, label: "YouTube"}]};
+                    });
+                  }}
+                  maxLength={500}
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground">Unterstützt YouTube-Videos, Shorts und youtu.be-Links. Der Link wird zusammen mit deinen anderen Social-Media-Angaben gespeichert.</p>
+              {(() => {
+                const value = state.socialLinks.find(link => link.platform === "YOUTUBE")?.url;
+                if (!value) return null;
+                let embed: string | null = null;
+                try {
+                  const url = new URL(value);
+                  const host = url.hostname.toLowerCase();
+                  const id = ["youtube.com","www.youtube.com","m.youtube.com"].includes(host)
+                    ? (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/") ? url.pathname.split("/")[2] : url.searchParams.get("v"))
+                    : ["youtu.be","www.youtu.be"].includes(host) ? url.pathname.split("/")[1] : null;
+                  if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) embed = "https://www.youtube-nocookie.com/embed/" + id;
+                } catch {}
+                return embed ? <div className="aspect-video overflow-hidden rounded-xl border bg-black"><iframe src={embed} title="YouTube-Vorschau" loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="h-full w-full" /></div> : <p className="text-sm text-amber-700">Bitte einen gültigen YouTube-Videolink eingeben.</p>;
+              })()}
             </div>
           ) : null}
 
