@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+  push:
+    branches: [main, claude/fas-nav-fasnacht-platform-byiki1]
+    paths:
+      - ".github/workflows/mail-center-sync.yml"
 concurrency:
   group: mail-center-sync
   cancel-in-progress: false
@@ -14,29 +18,61 @@ jobs:
     timeout-minutes: 8
     environment: production
     steps:
-      - name: Check secrets
-        id: check
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$CRON_SECRET" ]; then echo "ready=no" >> "$GITHUB_OUTPUT"; else echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
-      - name: Configure SSH
-        if: steps.check.outputs.ready == 'yes'
+      - name: SSH-Zugang vorbereiten
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
         run: |
+          set -euo pipefail
+          if [ -z "$SSH_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ] || [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
+            echo "::error::Deployment-SSH-Secrets fehlen."
+            exit 1
+          fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-      - name: Synchronize mailbox
-        if: steps.check.outputs.ready == 'yes'
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: Postfach über den produktiven Server synchronisieren
         env:
           SSH_HOST: ${{ secrets.SERVER_HOST }}
           SSH_USER: ${{ secrets.SERVER_USER }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
-          response=$(printf '%s\n' "$CRON_SECRET" | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes "$SSH_USER@$SSH_HOST" 'read -r secret; curl -sS --max-time 240 -X POST -H "Authorization: Bearer $secret" -w "\n%{http_code}" http://127.0.0.1:3000/api/jobs/mail-center')
-          code=$(printf '%s' "$response" | tail -n1)
-          if [ "$code" != "200" ]; then echo "Mailbox sync failed (HTTP $code)"; exit 1; fi
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes -p 22 "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          sync_mail() {
+            cd /opt/fas-nav/app
+            umask 077
+            test -f .env || { echo "Server-.env fehlt."; exit 1; }
+            # Der Zugang wird ausschliesslich auf dem Server erzeugt und gespeichert.
+            # Kein Secret wird an GitHub zurückgegeben oder ins Repository geschrieben.
+            secret="$(sed -n 's/^CRON_SECRET=//p' .env | tail -n 1 | tr -d '\r')"
+            secret="${secret#\"}"
+            secret="${secret%\"}"
+            if [ -z "$secret" ]; then
+              secret="$(openssl rand -hex 32)"
+              sed -i '/^CRON_SECRET=/d' .env
+              printf '\nCRON_SECRET=%s\n' "$secret" >> .env
+              echo "CRON_SECRET auf dem Produktionsserver eingerichtet."
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate app >/dev/null
+            fi
+            # Secret über stdin an curl, nie über CLI-Argumente oder Logs.
+            # Nach einer Erstkonfiguration kurz auf den App-Healthcheck warten.
+            for attempt in $(seq 1 20); do
+              if curl -fsS --max-time 3 http://127.0.0.1:3000/api/health >/dev/null; then break; fi
+              sleep 3
+            done
+            response="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 240 -X POST -w '\n%{http_code}' http://127.0.0.1:3000/api/jobs/mail-center)"
+            code="$(printf '%s\n' "$response" | tail -n 1)"
+            if [ "$code" != "200" ]; then
+              echo "Mail-Center-Synchronisierung fehlgeschlagen (HTTP $code)." >&2
+              exit 1
+            fi
+            echo "Mail-Center-Synchronisierung erfolgreich: $(printf '%s\n' "$response" | head -n 1 | cut -c 1-180)"
+          }
+          sync_mail < /dev/null
+          REMOTE
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

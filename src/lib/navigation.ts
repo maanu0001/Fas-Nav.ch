@@ -104,7 +104,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
         { href: "/dashboard/boerse", label: "Meine Inserate", icon: "tag" },
         {
           href: organizationId ? organizationGalleryPath(organizationId) : "/dashboard/galerie",
-          label: "Galerie",
+          label: "Medien",
           icon: "image",
         },
         { href: "/dashboard/qr-code", label: "QR-Code", icon: "layout" },

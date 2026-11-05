@@ -32,6 +32,18 @@ import { formatDate, formatDateRange } from "@/lib/dates";
 import { orgHasFeature, type PublicOrganization } from "@/lib/queries/organization";
 import type { EventCardData } from "@/components/public/event-card";
 
+function youtubeEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    let id = "";
+    if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(host)) {
+      id = u.pathname.startsWith("/shorts/") || u.pathname.startsWith("/embed/") ? u.pathname.split("/")[2] : u.searchParams.get("v") || "";
+    } else if (["youtu.be", "www.youtu.be"].includes(host)) id = u.pathname.slice(1).split("/")[0];
+    return /^[a-zA-Z0-9_-]{11}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+  } catch { return null; }
+}
+
 function Prose({ text }: { text: string }) {
   // Freitext wird bereits serverseitig von HTML befreit; Absätze bleiben erhalten.
   return (
@@ -107,6 +119,8 @@ export function OrganizationProfile({
   related: OrganizationCardData[];
 }) {
   const isCarnival = org.type === "CARNIVAL";
+  const video = org.socialLinks.find(link => link.platform === "YOUTUBE");
+  const videoEmbed = video ? youtubeEmbed(video.url) : null;
   const showGallery = orgHasFeature(org, FEATURE_KEYS.GALLERY) && org.media.length > 0;
   const showSponsors = orgHasFeature(org, FEATURE_KEYS.SPONSORS) && org.sponsors.length > 0;
   const audioTier = org.subscription && !["EXPIRED", "CANCELLED", "SUSPENDED"].includes(org.subscription.status) && (!org.subscription.endDate || org.subscription.endDate.getTime() >= Date.now()) ? org.subscription.plan.key.toLowerCase() : "free";
@@ -247,6 +261,13 @@ export function OrganizationProfile({
               </Panel>
             ) : null}
 
+            {videoEmbed ? (
+              <Panel title="YouTube-Video" id="video">
+                <div className="aspect-video overflow-hidden rounded-xl border border-border bg-black">
+                  <iframe src={videoEmbed} title={`YouTube-Video: ${org.name}`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="h-full w-full" />
+                </div>
+              </Panel>
+            ) : null}
             {visibleAudio.length > 0 ? (
               <Panel title="Hörproben" id="hoerproben">
                 <div className="space-y-3">

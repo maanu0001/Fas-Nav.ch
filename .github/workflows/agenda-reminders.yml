@@ -1,112 +1,62 @@
 name: Agenda-Erinnerungen
-
-# Täglicher Erinnerungslauf für Organisationen ohne kommende Veranstaltungen.
-#
-# Es wird bewusst keine zweite Infrastruktur aufgebaut: Der Lauf nutzt denselben
-# SSH-Zugang wie das Deployment und ruft die Anwendung auf dem Server auf. Die
-# Anwendung hört nur auf 127.0.0.1, der Endpunkt ist also von aussen gar nicht
-# erreichbar – der Aufruf erfolgt deshalb auf dem Server selbst.
-#
-# Benötigte Secrets:
-#   SERVER_HOST, SERVER_USER, SERVER_SSH_KEY, PRODUCTION_SSH_KNOWN_HOSTS
-#     – bereits für das Deployment vorhanden.
-#   CRON_SECRET
-#     – neu. Muss identisch in der .env auf dem Server stehen, damit die
-#       Anwendung den Aufruf annimmt. Erzeugen zum Beispiel mit:
-#         openssl rand -hex 32
-#       Fehlt das Secret, endet der Lauf mit einem Hinweis statt mit einem
-#       Fehler – die Erinnerung lässt sich dann weiterhin im Dashboard unter
-#       Einstellungen von Hand auslösen.
-
 on:
   schedule:
-    # Täglich um 06:15 UTC. Bewusst nicht zur vollen Stunde, damit der Lauf
-    # nicht mit der Lastspitze anderer Zeitpläne zusammenfällt.
     - cron: "15 6 * * *"
   workflow_dispatch:
-
 concurrency:
   group: agenda-reminders
   cancel-in-progress: false
-
 permissions:
   contents: read
-
 jobs:
   erinnern:
-    name: Erinnerungslauf ausführen
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
-
     steps:
-      - name: Voraussetzungen prüfen
-        id: pruefung
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          set -euo pipefail
-          if [ -z "${CRON_SECRET:-}" ]; then
-            echo "::notice::Secret CRON_SECRET ist nicht gesetzt – der Lauf wird uebersprungen."
-            echo "bereit=nein" >> "$GITHUB_OUTPUT"
-          else
-            echo "bereit=ja" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: SSH-Zugang vorbereiten
-        if: steps.pruefung.outputs.bereit == 'ja'
+      - name: SSH vorbereiten
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
         run: |
           set -euo pipefail
-
-          if [ -z "${SSH_KEY:-}" ] || [ -z "${SSH_KNOWN_HOSTS:-}" ]; then
-            echo "::error::Secrets SERVER_SSH_KEY und PRODUCTION_SSH_KNOWN_HOSTS werden benoetigt."
+          if [ -z "$SSH_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ] || [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
+            echo "::error::Deployment-SSH-Secrets fehlen."
             exit 1
           fi
-
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-
-      - name: Erinnerungslauf auslösen
-        if: steps.pruefung.outputs.bereit == 'ja'
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: Agenda-Erinnerungen auf dem produktiven Server ausführen
         env:
           SSH_HOST: ${{ secrets.SERVER_HOST }}
           SSH_USER: ${{ secrets.SERVER_USER }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
-
-          if [ -z "${SSH_HOST:-}" ] || [ -z "${SSH_USER:-}" ]; then
-            echo "::error::Secrets SERVER_HOST und SERVER_USER werden benoetigt."
-            exit 1
-          fi
-
-          # Das Merkwort geht über die Standardeingabe, damit es nicht in der
-          # Prozessliste des Servers auftaucht.
-          antwort=$(printf '%s' "$CRON_SECRET" | ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
-            -o BatchMode=yes -p 22 \
-            "$SSH_USER@$SSH_HOST" \
-            'read -r merkwort; curl -sS --max-time 300 -X POST \
-               -H "Authorization: Bearer $merkwort" \
-               -w "\n%{http_code}" \
-               http://127.0.0.1:3000/api/jobs/agenda-reminders')
-
-          status=$(printf '%s' "$antwort" | tail -n1)
-          rumpf=$(printf '%s' "$antwort" | sed '$d')
-
-          echo "Antwort: $rumpf"
-
-          if [ "$status" != "200" ]; then
-            echo "::error::Der Erinnerungslauf antwortete mit HTTP $status."
-            exit 1
-          fi
-
-          echo "==> Erinnerungslauf abgeschlossen"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes -p 22 "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          run_reminders() {
+            cd /opt/fas-nav/app
+            test -f .env || { echo "Server-.env fehlt."; exit 1; }
+            secret="$(sed -n 's/^CRON_SECRET=//p' .env | tail -n 1 | tr -d '\r')"
+            secret="${secret#\"}"
+            secret="${secret%\"}"
+            if [ -z "$secret" ]; then
+              echo "CRON_SECRET auf dem Server fehlt – bitte zuerst den Mail-Center-Synchronisierungsjob starten." >&2
+              exit 1
+            fi
+            response="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 300 -X POST -w '\n%{http_code}' http://127.0.0.1:3000/api/jobs/agenda-reminders)"
+            status="$(printf '%s\n' "$response" | tail -n 1)"
+            if [ "$status" != "200" ]; then
+              echo "Erinnerungslauf fehlgeschlagen (HTTP $status)." >&2
+              exit 1
+            fi
+            echo "Erinnerungslauf abgeschlossen: $(printf '%s\n' "$response" | head -n 1 | cut -c 1-240)"
+          }
+          run_reminders < /dev/null
+          REMOTE
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

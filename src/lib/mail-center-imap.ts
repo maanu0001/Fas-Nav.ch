@@ -1,12 +1,14 @@
 import tls from "node:tls";
 import { randomBytes } from "node:crypto";
 import nodemailer from "nodemailer";
+import { brandedHtml } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 
 const KEY="mailcenter.imap";
 const HOST="mail.fas-nav.ch";
 const MAX_MESSAGE=20*1024*1024;
+export type OutgoingAttachment = { name: string; type: string; data: string };
 type Config={host:string;port:number;user:string;password:string;mailbox:string;smtpPort:number};
 type Saved={host?:string;port?:number;user?:string;password?:string;mailbox?:string;smtpPort?:number};
 export async function mailboxConfiguration(){
@@ -97,7 +99,7 @@ function address(value:string){return decodeWord(value.match(/<([^>]+)>/)?.[1]||
 function threadKey(h:Record<string,string>){const refs=(h.references||"").match(/<[^>]+>/g);return refs?.[0]||h["in-reply-to"]?.match(/<[^>]+>/)?.[0]||h["message-id"]?.match(/<[^>]+>/)?.[0]||"subject:"+((h.subject||"").replace(/^(re|fw|fwd):\s*/gi,"").toLowerCase());}
 async function folders(client:Imap){const result=await client.command('LIST "" "*"');const names=result.lines.filter(l=>l.startsWith("* LIST")).map(l=>l.match(/"([^"]+)"$/)?.[1]||l.split(" ").at(-1)?.replace(/^"|"$/g,"")||"");const sent=names.find(n=>/^(sent|sent items|gesendet|sent messages)$/i.test(n))||"Sent";return ["INBOX",sent];}
 export async function testMailboxConnection(){return withImap(async client=>{await client.command('SELECT "INBOX"');return {ok:true};});}
-export async function syncMailCenter(){
+export async function syncMailCenter(options:{full?:boolean}={}){
  return withImap(async client=>{
   let processed=0;for(const folder of await folders(client)){
    const selection=await client.command("EXAMINE "+quote(folder));
@@ -105,14 +107,14 @@ export async function syncMailCenter(){
    const cursorKey="mailcenter.imap.cursor."+folder;
    const old=await prisma.siteSetting.findUnique({where:{key:cursorKey}});
    const oldCursor=(old?.value||{}) as {uidvalidity?:string;uid?:number};
-   const start=oldCursor.uidvalidity===uidvalidity?Math.max(1,(oldCursor.uid||0)+1):1;
+   const start=options.full?1:oldCursor.uidvalidity===uidvalidity?Math.max(1,(oldCursor.uid||0)+1):1;
    const search=await client.command("UID SEARCH UID "+start+":*");
    const uids=search.lines.filter(l=>l.startsWith("* SEARCH")).flatMap(l=>l.slice(8).trim().split(/\s+/).map(Number).filter(n=>n>=start));
    for(const uid of uids){
     const result=await client.command("UID FETCH "+uid+" (UID FLAGS BODY.PEEK[])");
     const raw=result.literals[0];if(!raw)throw new Error("Nachricht konnte nicht vollständig geladen werden.");
     const {header}=headerBody(raw);const parsed=parseMime(raw);
-    const key=folder+":"+uidvalidity+":"+uid;const providerId=key;
+    const key=folder+":"+uidvalidity+":"+uid;const existingByMessageId=header["message-id"]?await prisma.mailCenterMessage.findFirst({where:{internetMessageId:header["message-id"],direction:"OUT"},select:{providerId:true}}):null;const providerId=existingByMessageId?.providerId||key;
     const date=new Date(header.date||Date.now());const receivedAt=Number.isNaN(date.getTime())?new Date():date;
     const direction=folder==="INBOX"?"IN":"OUT";
     const unread=direction==="IN"&&!result.lines.some(l=>/\\Seen/i.test(l));
@@ -136,16 +138,37 @@ export async function mailboxAttachments(providerId:string){
  if(!m?.htmlBody)throw new Error("Nachricht nicht gefunden.");
  return parseMime(Buffer.from(m.htmlBody,"base64")).attachments;
 }
-export async function sendMailboxMail(input:{to:string;cc?:string;subject:string;text:string;replyToId?:string}){
- const c=await config();let replyHeaders:Record<string,string>={};
- if(input.replyToId){const source=await prisma.mailCenterMessage.findUnique({where:{providerId:input.replyToId}});if(!source?.htmlBody||source.direction!=="IN")throw new Error("Antwortnachricht nicht gefunden.");replyHeaders=headerBody(Buffer.from(source.htmlBody,"base64")).header;}
- const messageId="<"+randomBytes(16).toString("hex")+"@fas-nav.ch>";
- const options={from:c.mailbox,to:input.to,cc:input.cc||undefined,subject:input.subject,text:input.text,messageId,...(replyHeaders["message-id"]?{inReplyTo:replyHeaders["message-id"],references:[replyHeaders.references,replyHeaders["message-id"]].filter(Boolean).join(" ")}:{})};
- const generator=nodemailer.createTransport({streamTransport:true,buffer:true});
- const composed=await generator.sendMail(options);
- const raw=Buffer.from(composed.message as Buffer);
- const transport=nodemailer.createTransport({host:c.host,port:c.smtpPort,secure:false,requireTLS:true,auth:{user:c.user,pass:c.password},tls:{servername:c.host,rejectUnauthorized:true},connectionTimeout:20000,greetingTimeout:20000,socketTimeout:30000});
- await transport.sendMail({envelope:{from:c.mailbox,to:[input.to,...(input.cc?input.cc.split(","):[])]},raw});
- try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}catch{return {sent:true,warning:"SMTP hat die Nachricht angenommen; die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte nicht erneut senden, ohne den Empfänger zu prüfen."};}
- return {sent:true};
+export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;subject:string;text:string;html?:string;replyToId?:string;attachments?:OutgoingAttachment[]}){
+  const c=await config();let replyHeaders:Record<string,string>={};
+  let replyConversationId:string|undefined;
+  if(input.replyToId){
+    const source=await prisma.mailCenterMessage.findUnique({where:{providerId:input.replyToId}});
+    if(!source?.htmlBody||source.direction!=="IN")throw new Error("Antwortnachricht nicht gefunden.");
+    replyHeaders=headerBody(Buffer.from(source.htmlBody,"base64")).header;
+    replyConversationId=source.conversationId;
+  }
+  const files=(input.attachments||[]).map(a=>({filename:a.name,content:Buffer.from(a.data,"base64"),contentType:a.type||"application/octet-stream"}));
+  if(files.some(f=>f.content.length>5_000_000)||files.reduce((sum,f)=>sum+f.content.length,0)>10_000_000)throw new Error("Anhänge sind zu gross.");
+  const messageId="<"+randomBytes(16).toString("hex")+"@fas-nav.ch>";
+  const options={from:c.mailbox,to:input.to,cc:input.cc||undefined,bcc:input.bcc||undefined,subject:input.subject,text:input.text,html:input.html||brandedHtml(input.subject,input.text),attachments:files,messageId,...(replyHeaders["message-id"]?{inReplyTo:replyHeaders["message-id"],references:[replyHeaders.references,replyHeaders["message-id"]].filter(Boolean).join(" ")}:{})};
+  const generator=nodemailer.createTransport({streamTransport:true,buffer:true});
+  const composed=await generator.sendMail(options);
+  const raw=Buffer.from(composed.message as Buffer);
+  if(raw.length>MAX_MESSAGE)throw new Error("Nachricht überschreitet die zulässige Grösse.");
+  const transport=nodemailer.createTransport({host:c.host,port:c.smtpPort,secure:false,requireTLS:true,auth:{user:c.user,pass:c.password},tls:{servername:c.host,rejectUnauthorized:true},connectionTimeout:20000,greetingTimeout:20000,socketTimeout:30000});
+  const delivered=await transport.sendMail({envelope:{from:c.mailbox,to:[...input.to.split(","),...(input.cc?input.cc.split(","):[]),...(input.bcc?input.bcc.split(","):[])].map(a=>a.trim())},raw});
+  // SMTP success is definitive; database/IMAP failures must never trigger blind re-sends.
+  let warning="";
+  try{
+    const now=new Date();
+    const conversationKey=replyConversationId?null:messageId;
+    await prisma.$transaction(async tx=>{
+      const conversation=replyConversationId?await tx.mailConversation.findUniqueOrThrow({where:{id:replyConversationId}}):await tx.mailConversation.upsert({where:{providerThreadId:conversationKey!},create:{providerThreadId:conversationKey!,subject:input.subject,lastMessageAt:now},update:{lastMessageAt:now}});
+      await tx.mailCenterMessage.create({data:{providerId:"local:"+messageId,conversationId:conversation.id,internetMessageId:messageId,sender:c.mailbox,recipients:{to:input.to,cc:input.cc||"",bcc:input.bcc||""},subject:input.subject,textBody:input.text,htmlBody:raw.toString("base64"),attachmentInfo:files.length?{count:files.length}:undefined,direction:"OUT",receivedAt:now}});
+      await tx.mailConversation.update({where:{id:conversation.id},data:{lastMessageAt:now}});
+    });
+  }catch{warning="SMTP hat die Nachricht angenommen, aber das Speichern in der Konversationsliste ist fehlgeschlagen. Bitte nicht erneut senden.";}
+  try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}
+  catch{warning+=(warning?" ":"")+"Die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte nicht erneut senden.";}
+  return {sent:true,warning:warning||undefined,messageId:delivered.messageId};
 }

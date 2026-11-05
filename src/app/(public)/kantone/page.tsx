@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Map } from "lucide-react";
 
 import { CantonCrest } from "@/components/public/canton-crest";
 import { cantonOverview } from "@/lib/queries/public";
@@ -36,6 +37,7 @@ export default async function CantonsPage() {
             Die Schweizer Fasnacht ist regional geprägt. Wähle deinen Kanton und entdecke, was in
             deiner Region läuft.
           </p>
+          <Link href="/karte" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"><Map className="h-4 w-4" />Interaktive Karte entdecken</Link>
         </div>
       </div>
 

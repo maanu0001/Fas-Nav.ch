@@ -43,8 +43,12 @@ describe("Verschlüsselung von Zugangsdaten", () => {
 
   it("erkennt Veränderungen am gespeicherten Wert", () => {
     const abgelegt = encryptSecret("original");
-    // Letztes Zeichen der Nutzdaten kippen.
-    const verfaelscht = abgelegt.slice(0, -2) + (abgelegt.endsWith("A") ? "B" : "A") + "=";
+    // Ein tatsächliches Byte im Authentifizierungs-Tag verändern (kein Base64-Padding).
+    const parts = abgelegt.split(":");
+    const tag = Buffer.from(parts[3], "base64");
+    tag[0] ^= 1;
+    parts[3] = tag.toString("base64");
+    const verfaelscht = parts.join(":");
     assert.equal(decryptSecret(verfaelscht), null);
   });
 

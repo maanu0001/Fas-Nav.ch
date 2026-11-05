@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
 
+import { MediaAdminDelete } from "@/components/dashboard/media-admin-actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
@@ -44,16 +45,18 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
       : {}),
   };
 
-  const [media, totals] = await Promise.all([
+  const [media, totals, audio] = await Promise.all([
     prisma.media.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ type: "asc" }, { createdAt: "desc" }],
       take: 120,
       select: {
         id: true,
         url: true,
         thumbnailUrl: true,
         filename: true,
+        alt: true,
+        caption: true,
         type: true,
         size: true,
         width: true,
@@ -63,17 +66,18 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
       },
     }),
     prisma.media.aggregate({ _count: true, _sum: { size: true } }),
+    prisma.audioSample.findMany({orderBy:{createdAt:"desc"},take:120,select:{id:true,title:true,url:true,durationSeconds:true,createdAt:true,organizationId:true,organization:{select:{name:true}}}}),
   ]);
 
   return (
     <>
       <PageHeader
         title="Medien"
-        description="Alle hochgeladenen Bilder der Plattform."
+        description="Alle Plattform-Uploads nach Kategorie: Bilder, Dokumente und Hörproben. Mit Verwaltungs- und Löschfunktionen."
       />
 
       <StatGrid>
-        <StatCard label="Dateien" value={totals._count} icon="image" />
+        <StatCard label="Dateien" value={totals._count+audio.length} icon="image" />
         <StatCard
           label="Speicherverbrauch"
           value={formatBytes(Number(totals._sum.size ?? 0))}
