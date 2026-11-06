@@ -18,7 +18,7 @@ export function BoardingManagement({compact=false,onClose,onSent}:{compact?:bool
   const data=await res.json();setOrganizations(data.organizations);setInvitations(data.invitations);setTemplates(await temp.json());
  }
  React.useEffect(()=>{void load().catch(e=>setError(e.message));},[]);
- const filtered=organizations.filter(o=>o.name.toLowerCase().includes(filter.toLowerCase())).slice(0,100);
+ const filtered=organizations.filter(o=>o.name.toLowerCase().includes(filter.toLowerCase()));
  const org=organizations.find(o=>o.id===organizationId);
  const template=templates.find(t=>t.id==="boarding_invite");
  const values:Record<string,string>={contactName:contactName||"zusammen",organizationName:org?.name||"Ihre Organisation",invitationUrl:"https://fas-nav.ch/boarding/[persönlicher-link]"};
@@ -43,7 +43,7 @@ export function BoardingManagement({compact=false,onClose,onSent}:{compact?:bool
   <div className="flex items-start gap-3">{onClose?<button type="button" className="rounded-xl border p-2" onClick={onClose} aria-label="Zurück zu Mails"><ArrowLeft className="h-5 w-5"/></button>:null}<div className="flex-1"><h2 className="font-display text-xl font-bold">Boarding Mail</h2><p className="text-sm text-muted-foreground">Organisation persönlich einladen. Zugang wird erst nach deiner Freigabe erteilt.</p></div><Link href="/dashboard/e-mails" className="text-xs font-semibold text-primary underline">Template bearbeiten</Link></div>
   {error?<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>:null}{notice?<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>:null}
   <div className="grid gap-5 lg:grid-cols-2"><form onSubmit={create} className="space-y-3">
-   <label className="block text-sm font-semibold">Organisation suchen<input value={filter} onChange={e=>setFilter(e.target.value)} className="mt-1 block w-full rounded-xl border bg-background px-3 py-3 font-normal" placeholder="Name der Organisation"/></label>
+   <label className="block text-sm font-semibold sm:hidden">Organisation suchen<input value={filter} onChange={e=>setFilter(e.target.value)} className="mt-1 block w-full rounded-xl border bg-background px-3 py-3 font-normal" placeholder="Name der Organisation"/></label>
    <label className="block text-sm font-semibold">Organisation auswählen<select required value={organizationId} onChange={e=>setOrganizationId(e.target.value)} className="mt-1 block w-full rounded-xl border bg-background px-3 py-3 font-normal"><option value="">Bitte auswählen</option>{filtered.map(o=><option key={o.id} value={o.id}>{o.name} · {o.type==="GUGGE"?"Gugge":"Fasnacht"}</option>)}</select></label>
    <label className="block text-sm font-semibold">E-Mail-Adresse<input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="kontakt@organisation.ch" className="mt-1 block w-full rounded-xl border bg-background px-3 py-3 font-normal"/></label>
    <label className="block text-sm font-semibold">Kontaktperson (optional)<input value={contactName} onChange={e=>setContactName(e.target.value)} maxLength={100} className="mt-1 block w-full rounded-xl border bg-background px-3 py-3 font-normal"/></label>
