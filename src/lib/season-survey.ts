@@ -6,7 +6,7 @@ export function hashToken(token:string){return createHash("sha256").update(token
 export async function deliverSurvey(surveyId:string,reminder=false){
  const survey=await prisma.seasonSurvey.findUniqueOrThrow({where:{id:surveyId}});
  if(survey.status!=="ACTIVE")throw new Error("Nur aktive Umfragen können versendet werden.");
- const invitations=await prisma.surveyInvitation.findMany({where:{surveyId,answeredAt:null,optedOutAt:null,...(reminder?{sentAt:{lte:new Date(Date.now()-7*86400000)},reminderSentAt:null}:{sentAt:null})},take:100});
+ const invitations=await prisma.surveyInvitation.findMany({where:{surveyId,isTest:false,answeredAt:null,optedOutAt:null,...(reminder?{sentAt:{lte:new Date(Date.now()-7*86400000)},reminderSentAt:null}:{sentAt:null})},take:100});
  let sent=0,failed=0;
  for(const inv of invitations){
   // Tokens are not stored in plaintext. Generate a new link for each delivery.

@@ -152,7 +152,7 @@ export async function mailboxMessageHtml(providerId:string){
  if(!message)throw new Error("Nachricht nicht gefunden.");
  if(message.htmlBody){
   const parsed=parseMime(Buffer.from(message.htmlBody,"base64"));
-  if(parsed.html)return parsed.html;
+  if(parsed.html){const fontStyle="<style>body,body p,body div,body td,body span,body li,body a{font-family:Arial,Helvetica,sans-serif !important}</style>";return /<head[^>]*>/i.test(parsed.html)?parsed.html.replace(/<head[^>]*>/i,match=>match+fontStyle):fontStyle+parsed.html;}
  }
  const text=message.textBody.replace(/[&<>"]/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[character]||character));
  return '<!doctype html><html><body style="font:15px/1.65 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;">'+text+'</body></html>';

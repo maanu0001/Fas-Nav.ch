@@ -294,6 +294,7 @@ model User {
   createdBy      User?     @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdUsers   User[]    @relation("UserCreatedBy")
 
+  boardingInvitations BoardingInvitation[]
   memberships         Membership[]
   ticketsCreated      Ticket[]             @relation("TicketAuthor")
   ticketsAssigned     Ticket[]             @relation("TicketAssignee")
@@ -559,6 +560,7 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  boardingInvitations BoardingInvitation[]
   surveyInvitations SurveyInvitation[]
   audioSamples AudioSample[]
   marketplaceListings MarketplaceListing[]
@@ -1303,9 +1305,10 @@ model SurveyInvitation {
  id String @id @default(cuid())
  surveyId String
  survey SeasonSurvey @relation(fields:[surveyId],references:[id],onDelete:Cascade)
- organizationId String
- organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ organizationId String?
+ organization Organization? @relation(fields:[organizationId],references:[id],onDelete:Cascade)
  email String
+ isTest Boolean @default(false)
  tokenHash String @unique
  sentAt DateTime?
  reminderSentAt DateTime?
@@ -1376,4 +1379,26 @@ model MailCenterMessage {
  createdAt DateTime @default(now())
  @@index([conversationId,receivedAt])
  @@map("mail_center_messages")
+}
+
+model BoardingInvitation {
+ id String @id @default(cuid())
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ email String
+ contactName String?
+ tokenHash String @unique
+ status String @default("SENT")
+ userId String?
+ user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+ expiresAt DateTime
+ sentAt DateTime @default(now())
+ acceptedAt DateTime?
+ reviewedAt DateTime?
+ reviewedById String?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([organizationId,status])
+ @@index([status,createdAt])
+ @@map("boarding_invitations")
 }
