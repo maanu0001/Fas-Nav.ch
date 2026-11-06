@@ -7,26 +7,8 @@ import { PUBLIC_EVENT_SELECT } from "@/lib/queries/public";
 import type { OrganizationType } from "@prisma/client";
 
 const MEDIA_SELECT = { url: true, alt: true, width: true, height: true } as const;
-
-/**
- * Vollständiges öffentliches Profil einer Organisation.
- * Liefert null, wenn die Seite nicht veröffentlicht ist – Draft-Inhalte
- * bleiben damit auch bei bekanntem Slug unsichtbar.
- */
-/**
- * Profil für die öffentliche Seite.
- *
- * In `cache()` verpackt: generateMetadata und die Seite selbst rufen dieselbe
- * Funktion mit denselben Argumenten auf. Ohne die Bündelung entstünden je
- * Seitenaufruf zwei identische Datenbankabfragen.
- */
-export const getPublicOrganization = cache(async function getPublicOrganization(
-  slug: string,
-  type: OrganizationType,
-) {
-  const org = await prisma.organization.findFirst({
-    where: { slug, type, status: "PUBLISHED" },
-    select: {
+// Shared profile projection for public pages and authenticated draft previews.
+const organizationProfileSelect = {
       id: true,
       name: true,
       slug: true,
@@ -133,11 +115,37 @@ export const getPublicOrganization = cache(async function getPublicOrganization(
           },
         },
       },
-    },
+    } as const;
+
+
+/**
+ * Vollständiges öffentliches Profil einer Organisation.
+ * Liefert null, wenn die Seite nicht veröffentlicht ist – Draft-Inhalte
+ * bleiben damit auch bei bekanntem Slug unsichtbar.
+ */
+/**
+ * Profil für die öffentliche Seite.
+ *
+ * In `cache()` verpackt: generateMetadata und die Seite selbst rufen dieselbe
+ * Funktion mit denselben Argumenten auf. Ohne die Bündelung entstünden je
+ * Seitenaufruf zwei identische Datenbankabfragen.
+ */
+export const getPublicOrganization = cache(async function getPublicOrganization(
+  slug: string,
+  type: OrganizationType,
+) {
+  const org = await prisma.organization.findFirst({
+    where: { slug, type, status: "PUBLISHED" },
+    select: organizationProfileSelect,,
   });
 
   return org;
 });
+
+/** Never call without first checking organization access on the dashboard route. */
+export async function getOrganizationForPreview(id: string) {
+  return prisma.organization.findUnique({ where: { id }, select: organizationProfileSelect });
+}
 
 export type PublicOrganization = NonNullable<Awaited<ReturnType<typeof getPublicOrganization>>>;
 
