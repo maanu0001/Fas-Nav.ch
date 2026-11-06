@@ -27,7 +27,7 @@ export default async function StatisticsPage({searchParams}:{searchParams:Promis
   const context = await getDashboardContext();
 
   if (context.staff) { const {tage,von,bis}=await searchParams; const days=[7,30,90].includes(Number(tage))?Number(tage):30;
-  const valid=/^\\d{4}-\\d{2}-\\d{2}$/;
+  const valid=/^\d{4}-\d{2}-\d{2}$/;
   const custom=Boolean(von&&bis&&valid.test(von)&&valid.test(bis)&&von<=bis&&bis<=new Date().toISOString().slice(0,10));
   return <PlatformAnalytics role={context.user.role as Role} days={days} lifetime={tage==="all"} from={custom?von:undefined} to={custom?bis:undefined}/>; }
   return <OrganizationStatistics context={context} />;
