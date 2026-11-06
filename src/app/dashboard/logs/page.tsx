@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { ScrollText } from "lucide-react";
+import { Activity, CalendarDays, Clock3, ScrollText, ShieldCheck, UserRound } from "lucide-react";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 import { Table, TableWrapper, Td, Th, Thead, Tr } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/states";
@@ -24,8 +26,12 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
   await requirePermissionPage("viewAuditLog");
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? 1) || 1);
+  const days = [7,30,90].includes(Number(params.tage)) ? Number(params.tage) : 30;
+  const since = new Date(Date.now() - days*86400000);
 
   const where: Prisma.AuditLogWhereInput = {
+    createdAt: { gte: since },
+    ...(params.action ? { action: params.action } : {}),
     ...(params.entity ? { entity: params.entity } : {}),
     ...(params.q
       ? {
@@ -38,7 +44,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
       : {}),
   };
 
-  const [logs, total, entities] = await Promise.all([
+  const [logs, total, entities, actions, totalInPeriod, actors] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -57,7 +63,10 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
       },
     }),
     prisma.auditLog.count({ where }),
-    prisma.auditLog.groupBy({ by: ["entity"], _count: { entity: true } }),
+    prisma.auditLog.groupBy({ by: ["entity"], where:{createdAt:{gte:since}}, _count: { entity: true } }),
+    prisma.auditLog.groupBy({ by:["action"],where:{createdAt:{gte:since}},_count:{_all:true},orderBy:{_count:{action:"desc"}},take:40}),
+    prisma.auditLog.count({where:{createdAt:{gte:since}}}),
+    prisma.auditLog.groupBy({by:["userLabel"],where:{createdAt:{gte:since},userLabel:{not:null}},_count:{_all:true},orderBy:{_count:{userLabel:"desc"}},take:1}),
   ]);
 
   function buildHref(p: number) {
@@ -73,12 +82,15 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
     <>
       <PageHeader
         title="Audit-Log"
-        description={`${total} protokollierte administrative Aktionen.`}
+        description="Administrative Aktivitäten nachvollziehen, nach Zeitraum und Aktion filtern und Änderungen vergleichen."
       />
 
+      <div className="mb-5 grid gap-3 sm:grid-cols-3"><Card className="p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Activity className="h-4 w-4"/> Aktionen im Zeitraum</div><p className="mt-2 text-3xl font-bold tabular-nums">{totalInPeriod}</p></Card><Card className="p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4"/> Objekttypen</div><p className="mt-2 text-3xl font-bold tabular-nums">{entities.length}</p></Card><Card className="p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><UserRound className="h-4 w-4"/> Häufigster Akteur</div><p className="mt-2 truncate text-lg font-bold">{actors[0]?.userLabel??"–"}</p></Card></div>
+      <div className="mb-5 flex flex-wrap items-center gap-2"><CalendarDays className="h-4 w-4 text-muted-foreground"/>{[7,30,90].map(d=><Link key={d} href={`/dashboard/logs?${new URLSearchParams({...params,tage:String(d),page:"1"}).toString()}`} className={`rounded-lg border px-3 py-2 text-sm ${days===d?"bg-primary text-primary-foreground":"bg-card hover:bg-muted"}`}>{d} Tage</Link>)}<span className="ml-auto text-sm text-muted-foreground">{total} Treffer</span></div>
       <DashboardFilters
         searchPlaceholder="Aktion, Objekt oder Benutzer …"
         filters={[
+          {name:"action",label:"Aktion",options:actions.map(a=>({value:a.action,label:`${a.action} (${a._count._all})`}))},
           {
             name: "entity",
             label: "Objekttyp",
@@ -92,6 +104,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 
       {logs.length ? (
         <>
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-4 w-4"/> Neueste Aktionen zuerst · Änderungen mit Details ausklappbar · Zeitangaben in Schweizer Darstellung</div>
           <TableWrapper>
             <Table>
               <Thead>
@@ -109,21 +122,19 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
                     <Td className="whitespace-nowrap text-xs text-muted-foreground">
                       {formatDateTime(log.createdAt)}
                     </Td>
-                    <Td className="whitespace-nowrap font-mono text-xs font-medium text-primary-800">
-                      {log.action}
-                    </Td>
+                    <Td><span className={`inline-block rounded-lg border px-2.5 py-1 font-mono text-xs font-semibold ${/delete|remove|revoke|ban|suspend/i.test(log.action)?"border-rose-200 bg-rose-50 text-rose-700":/create|approve|publish|activate/i.test(log.action)?"border-emerald-200 bg-emerald-50 text-emerald-700":"border-primary-200 bg-primary-50 text-primary-800"}`}>{log.action}</span></Td>
                     <Td>
                       <span className="text-sm">{log.entityLabel ?? "–"}</span>
                       <p className="text-xs text-muted-foreground">{log.entity}</p>
                     </Td>
                     <Td className="break-all text-xs text-muted-foreground">
-                      {log.userLabel ?? "System"}
+                      <span className="font-medium text-foreground">{log.userLabel ?? "System"}</span>{log.ip?<p className="mt-1 text-[11px] text-muted-foreground">IP: {log.ip}</p>:null}
                     </Td>
                     <Td>
                       {log.before || log.after ? (
                         <details className="text-xs">
-                          <summary className="cursor-pointer text-primary-700">Anzeigen</summary>
-                          <pre className="mt-2 max-w-md overflow-x-auto rounded bg-muted p-2 text-[0.7rem] leading-relaxed">
+                          <summary className="cursor-pointer font-semibold text-primary-700">Änderungen ansehen</summary>
+                          <pre className="mt-2 max-h-96 max-w-xl overflow-auto rounded-xl border bg-muted p-3 text-[0.7rem] leading-relaxed">
                             {JSON.stringify({ vorher: log.before, nachher: log.after }, null, 2)}
                           </pre>
                         </details>
