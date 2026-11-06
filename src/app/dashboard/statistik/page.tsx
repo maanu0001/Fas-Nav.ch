@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PlatformAnalytics } from "@/components/dashboard/platform-analytics";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 
@@ -22,10 +23,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Statistik" };
 
-export default async function StatisticsPage() {
+export default async function StatisticsPage({searchParams}:{searchParams:Promise<{tage?:string}>}) {
   const context = await getDashboardContext();
 
-  if (context.staff) return <PlatformStatistics role={context.user.role as Role} />;
+  if (context.staff) { const {tage}=await searchParams; const days=[7,30,90].includes(Number(tage))?Number(tage):30; return <PlatformAnalytics role={context.user.role as Role} days={days}/>; }
   return <OrganizationStatistics context={context} />;
 }
 
