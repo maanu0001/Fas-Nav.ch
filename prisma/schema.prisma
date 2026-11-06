@@ -1404,3 +1404,19 @@ model BoardingInvitation {
  @@index([status,createdAt])
  @@map("boarding_invitations")
 }
+
+model AcquisitionOpen {
+ id String @id @default(cuid())
+ token String @unique
+ messageId String @unique
+ openCount Int @default(0)
+ lastOpenedAt DateTime?
+ createdAt DateTime @default(now())
+ @@map("acquisition_opens")
+}
+
+model DeletedMailThread {
+ threadKey String @id
+ deletedAt DateTime @default(now())
+ @@map("deleted_mail_threads")
+}

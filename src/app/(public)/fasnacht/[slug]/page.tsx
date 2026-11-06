@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getOwnedDraftBySlug } from "@/lib/queries/owned-draft";
 
 import { OrganizationProfile } from "@/components/public/organization-profile";
 import { ViewTracker } from "@/components/public/view-tracker";
@@ -18,7 +19,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const org = await getPublicOrganization(slug, "CARNIVAL");
+  const org = await getPublicOrganization(slug, "CARNIVAL") ?? await getOwnedDraftBySlug(slug, "CARNIVAL");
   if (!org) return buildMetadata({ title: "Fasnacht nicht gefunden", path: `/fasnacht/${slug}`, noIndex: true });
 
   return buildMetadata({
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Ein sehr dünnes Profil bleibt öffentlich erreichbar und intern
     // verlinkt, gehört aber nicht in den Suchindex. Dieselbe Funktion
     // entscheidet über die Aufnahme in die Sitemap.
-    noIndex: !isIndexableOrganization(org),
+    noIndex: org.status !== "PUBLISHED" || !isIndexableOrganization(org),
     image: org.ogImage?.url ?? org.header?.url ?? org.logo?.url,
     type: "profile",
     keywords: [
@@ -80,8 +81,9 @@ export default async function FasnachtPage({ params }: Props) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(jsonLd)} />
-      <ViewTracker target="ORGANIZATION" organizationId={org.id} path={`/fasnacht/${org.slug}`} />
+      {org.status==="PUBLISHED"?<script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(jsonLd)} />:null}
+      {org.status!=="PUBLISHED"?<div className="border-b border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">Geschützte Vorschau – diese Organisation ist noch nicht öffentlich.</div>:null}
+      {org.status==="PUBLISHED"?<ViewTracker target="ORGANIZATION" organizationId={org.id} path={`/fasnacht/${org.slug}`} />:null}
       <OrganizationProfile organization={org} events={events} related={related} />
     </>
   );
