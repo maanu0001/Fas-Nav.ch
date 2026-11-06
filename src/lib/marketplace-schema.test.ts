@@ -13,7 +13,7 @@ describe("Inserate speichern",()=>{
   };
   const parsed=listingSchema.parse(input);
   assert.equal(parsed.imageUrls[0],"/uploads/2026/11/beispiel-bild.webp");
-  assert.equal(parsed.details?.contact?.mode,"INTERNAL");
+  assert.deepEqual(parsed.details?.contact,{mode:"INTERNAL",email:"",phone:""});
  });
  it("verweigert ungültige Formulardaten eindeutig",()=>{
   assert.equal(listingSchema.safeParse({organizationId:"x",title:"Hi"}).success,false);
