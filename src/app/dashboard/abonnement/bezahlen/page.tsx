@@ -57,8 +57,8 @@ export default async function CheckoutPage() {
       </div>
       <p className="mt-5 text-sm text-muted-foreground">Unsicher, welcher Tarif passt? <Link href="/dashboard/tickets/neu" className="font-semibold text-primary-700 underline">Beratung beim Team anfragen</Link>. Die Buchung erledigst du anschliessend selbst online.</p>
       <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        <p className="font-semibold">TWINT ist verfügbar.</p>
-        <p className="mt-1 text-emerald-800">Im sicheren Stripe Checkout werden TWINT und weitere für das Gerät verfügbare Zahlungsmethoden automatisch angezeigt. Wiederkehrende Zahlungen werden über das gewählte Zahlungsmittel abgewickelt. Bestehende manuelle Rechnungen bleiben weiterhin möglich.</p>
+        <p className="font-semibold">Sichere Online-Zahlung über Stripe</p>
+        <p className="mt-1 text-emerald-800">Stripe zeigt beim Checkout die für wiederkehrende Zahlungen tatsächlich verfügbaren Zahlungsmethoden an. Welche davon angeboten werden (etwa Karten oder TWINT), hängt von den aktivierten Zahlungsarten und Stripe-Voraussetzungen ab. Manuelle Rechnungen können Admins weiterhin unabhängig davon erstellen.</p>
       </div>
     </>
   );
