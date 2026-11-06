@@ -3,6 +3,7 @@ import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMail, type MailMessage } from "@/lib/mail";
 import { STAFF_ROLES } from "@/lib/rbac";
+import { getNotificationPreferences } from "@/lib/notification-preferences";
 
 /** Empfänger, wie ihn die Vorlage einer Zusatzmail braucht. */
 export type NotifyRecipient = {
@@ -55,6 +56,8 @@ export async function notify(input: NotifyInput): Promise<void> {
     });
 
     if (!input.email && !input.mail) return;
+    const preferences = await getNotificationPreferences(input.userId);
+    if (!preferences[input.type]) return;
 
     const user = await prisma.user.findUnique({
       where: { id: input.userId },
