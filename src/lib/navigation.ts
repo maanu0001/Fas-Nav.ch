@@ -117,6 +117,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
       items: [
         { href: "/dashboard/abonnement", label: "Abonnement", icon: "badge" },
         { href: "/dashboard/tickets", label: "Tickets", icon: "ticket" },
+        { href: "/dashboard/funktion-vorschlagen", label: "Funktion vorschlagen", icon: "lightbulb" },
         { href: "/dashboard/einstellungen", label: "Einstellungen", icon: "settings" },
       ],
     },
