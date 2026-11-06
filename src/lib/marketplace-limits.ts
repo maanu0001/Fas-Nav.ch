@@ -64,19 +64,23 @@ export async function marketplaceTier(organizationId: string): Promise<Marketpla
 
 export async function marketplaceLimits(organizationId: string) {
   const { tier, features } = await organizationPlanFeatures(organizationId);
-  const number = (key: string) => {
+  // The plan feature table may lack newly introduced marketplace keys.
+  // In that case use the documented tier defaults rather than silently
+  // blocking every listing with an effective limit of zero.
+  const defaults = MARKETPLACE_LIMITS[tier];
+  const number = (key: string, fallback: number) => {
     const entry = features.get(key);
-    return entry ? (entry.enabled ? Math.max(0, entry.limit ?? 0) : 0) : 0;
+    return entry ? (entry.enabled ? Math.max(0, entry.limit ?? fallback) : 0) : fallback;
   };
-  const enabled = (key: string) => features.get(key)?.enabled ?? false;
+  const enabled = (key: string, fallback: boolean) => features.get(key)?.enabled ?? fallback;
 
   return {
     tier,
-    active: number("marketplace_active"),
-    images: number("marketplace_images"),
-    days: number("marketplace_days"),
-    externalContact: enabled("marketplace_external_contact"),
-    featured: enabled("marketplace_featured"),
+    active: number("marketplace_active", defaults.active),
+    images: number("marketplace_images", defaults.images),
+    days: number("marketplace_days", defaults.days),
+    externalContact: enabled("marketplace_external_contact", defaults.externalContact),
+    featured: enabled("marketplace_featured", defaults.featured),
   };
 }
 
