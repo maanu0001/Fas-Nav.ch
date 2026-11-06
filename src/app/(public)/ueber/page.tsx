@@ -51,7 +51,7 @@ export default function AboutPage() {
               Fas-Nav.ch möchte ihnen einen gemeinsamen digitalen Ort geben.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/fasnachten" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-primary-950 transition hover:bg-white/90">
+              <Link href="/fasnachten" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#09162a] transition hover:bg-white/90">
                 Fas-Nav entdecken <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link href="/kontakt" className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
@@ -165,7 +165,7 @@ export default function AboutPage() {
           <p className="mt-5 text-base leading-8 text-white/75">Fas-Nav.ch soll mit den Menschen wachsen, für die es geschaffen wurde. Ideen, Rückmeldungen und Verbesserungsvorschläge sind deshalb jederzeit willkommen. Denn die besten Entwicklungen entstehen dort, wo die Plattform tatsächlich genutzt wird.</p>
           <p className="mt-5 font-display text-xl font-bold text-white">Danke, dass du Teil davon bist.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/fasnachten" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-primary-950 transition hover:bg-white/90">Fas-Nav entdecken <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+            <Link href="/fasnachten" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#09162a] transition hover:bg-white/90">Fas-Nav entdecken <ArrowRight className="h-4 w-4" aria-hidden /></Link>
             <Link href="/kontakt" className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Kontakt aufnehmen</Link>
           </div>
         </div>
