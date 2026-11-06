@@ -3,7 +3,7 @@ import { isSubscriptionUsable } from "@/lib/subscription";
 
 export type MarketplaceTier = "FREE" | "BASIC" | "PREMIUM";
 export const MARKETPLACE_LIMITS = {
-  FREE: { active: 1, images: 3, days: 30, externalContact: false, featured: false },
+  FREE: { active: 1, images: 3, days: 30, externalContact: true, featured: false },
   BASIC: { active: 5, images: 8, days: 60, externalContact: true, featured: false },
   PREMIUM: { active: 15, images: 12, days: 90, externalContact: true, featured: true },
 } as const;
@@ -79,7 +79,7 @@ export async function marketplaceLimits(organizationId: string) {
     active: number("marketplace_active", defaults.active),
     images: number("marketplace_images", defaults.images),
     days: number("marketplace_days", defaults.days),
-    externalContact: enabled("marketplace_external_contact", defaults.externalContact),
+    externalContact: true, // All contact methods are available in every plan
     featured: enabled("marketplace_featured", defaults.featured),
   };
 }
