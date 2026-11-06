@@ -17,9 +17,19 @@ export async function GET(request:Request,{params}:Params){try{await requireAdmi
  }
  const attachmentId=requested.searchParams.get("attachment");
  const files=await mailboxAttachments(m.providerId);
- if(!attachmentId)return jsonOk(files.map((a,i)=>({id:String(i),name:a.name,size:a.content.length})));
+ if(!attachmentId)return jsonOk(files.map((a,i)=>({id:String(i),name:a.name,size:a.content.length,type:a.type})));
  const index=Number(attachmentId);if(!Number.isSafeInteger(index)||index<0||index>=files.length)return jsonError("Anhang nicht gefunden.",404);
  const a=files[index];
  const filename=a.name.replace(/[\r\n"\\]/g,"_").slice(0,160)||"anhang";
- return new Response(new Uint8Array(a.content),{headers:{"Content-Type":"application/octet-stream","Content-Disposition":'attachment; filename="'+filename+'"',"X-Content-Type-Options":"nosniff","Cache-Control":"private, no-store"}});
+ const preview=requested.searchParams.get("preview")==="1";
+ const safeType=(a.type||"").toLowerCase().split(";")[0].trim();
+ const allowed=new Set(["application/pdf","image/jpeg","image/png","image/webp","image/gif","text/plain"]);
+ const inline=preview&&allowed.has(safeType)&&a.content.length<=12*1024*1024;
+ return new Response(new Uint8Array(a.content),{headers:{
+ "Content-Type":inline?safeType:"application/octet-stream",
+ "Content-Disposition":(inline?"inline":"attachment")+'; filename="'+filename+'"',
+ "Content-Security-Policy":"sandbox; default-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+ "X-Content-Type-Options":"nosniff",
+ "Cache-Control":"private, no-store"
+ }});
  }catch(e){return handleApiError(e);}}
