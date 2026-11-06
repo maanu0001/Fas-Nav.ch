@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="682" viewBox="0 0 2048 682"><defs>
+ <radialGradient id="bg"><stop stop-color="#06436b"/><stop offset=".54" stop-color="#012d50"/><stop offset="1" stop-color="#00182d"/></radialGradient>
+ <linearGradient id="cyan" x1="0" x2="1"><stop stop-color="#14b9f5"/><stop offset="1" stop-color="#64d8ff"/></linearGradient>
+ <linearGradient id="silver"><stop stop-color="#fff"/><stop offset="1" stop-color="#a6b8cb"/></linearGradient>
+ <linearGradient id="arc"><stop stop-color="#67d6ff"/><stop offset=".5" stop-color="#1695d5"/><stop offset="1" stop-color="#1281bb"/></linearGradient>
+ <clipPath id="face"><path d="M0 66 Q0 0 140 0 Q280 0 280 66 L280 160 Q276 233 140 294 Q4 233 0 160Z"/></clipPath>
+ </defs><rect width="2048" height="682" fill="url(#bg)"/><path d="M-50 340Q260 -140 940 -88" fill="none" stroke="url(#cyan)" stroke-width="60" opacity=".75"/><path d="M1680 685Q1873 453 2110 478" fill="none" stroke="#e72a40" stroke-width="100"/><path d="M1915 96Q1986 55 2106 46" fill="none" stroke="#ffbb12" stroke-width="23" stroke-linecap="round"/><g transform="translate(505 161) scale(.88)"><g transform="translate(0 0)">
+ <g opacity=".35"><circle cx="140" cy="144" r="173" fill="none" stroke="#1472a5" stroke-width="3"/></g>
+ <path d="M-92 85C-31 -22 57 -27 115 10" fill="none" stroke="#3cd1ff" stroke-width="10" stroke-linecap="round"/>
+ <path d="M250 -28C350 -2 357 112 292 137" fill="none" stroke="#ffb90d" stroke-width="10" stroke-linecap="round"/>
+ <path d="M-19 208C18 251 77 256 108 222" fill="none" stroke="#22c9fa" stroke-width="9" stroke-linecap="round"/>
+ <path d="M278 213C349 244 370 278 342 315" fill="none" stroke="#ef3344" stroke-width="10" stroke-linecap="round"/>
+ <g clip-path="url(#face)">
+  <path fill="#037cae" d="M0 0H280V294H0z"/>
+  <path fill="#12afe1" d="M0 0H142L126 84L0 116z"/>
+  <path fill="#ffbb17" d="M0 90L140 74L115 176L0 195z"/>
+  <path fill="#e92d3b" d="M142 0H280V119L140 78z"/>
+  <path fill="#0192c4" d="M140 75L280 112V183L160 163z"/>
+  <path fill="#031c30" d="M0 177Q58 162 116 169L143 187Q200 157 280 175V205H0z"/>
+  <path fill="#cf2331" d="M0 197L140 226V294H0z"/>
+  <path fill="#ffb917" d="M140 222L280 188V294H140z"/>
+  <path fill="none" stroke="#8ddefc" stroke-width="3" d="M0 67Q132 -10 280 66"/>
+ </g>
+ <path d="M41 132Q84 91 126 132Q84 162 41 132ZM153 132Q196 91 238 132Q196 162 153 132Z" fill="#001a31" stroke="#fff" stroke-width="5"/>
+ <path d="M140 136L117 215L140 232L163 215Z" fill="#566679" stroke="#c3cdd6" stroke-width="3"/>
+ <path d="M92 239Q141 273 188 239" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+</g></g><path d="M874 183v194" stroke="#b9d5e6" stroke-width="4"/><text x="935" y="303" font-family="Arial,Helvetica,sans-serif" font-size="122" font-weight="900" font-style="italic" letter-spacing="-6" fill="url(#silver)">Fas-Nav.ch</text><text x="1050" y="358" letter-spacing="12" font-size="26" fill="#bdcbd9">SCHWEIZER FASNACHT</text><path d="M0 532L160 472L285 532L420 477L535 530L605 508L704 559L792 532L861 564L912 525L950 534L975 516L1004 553L1072 486L1102 501L1154 433L1183 481L1230 512L1283 458L1316 480L1386 469L1440 525L1530 477L1625 515L1693 491L1784 534L1910 486L2048 527V682H0Z" fill="#086495" opacity=".86"/>
+<path d="M0 561L143 526L290 591L438 544L535 593L687 568L794 607L904 567L981 585L1044 544L1073 547L1107 518L1129 535L1163 490L1196 527L1222 532L1260 495L1300 537L1382 524L1443 569L1555 530L1652 556L1783 530L1870 579L2048 540V682H0Z" fill="#001e36"/>
+<path d="M755 596L818 563L849 566L870 541L891 559L928 543L943 522L962 522L981 549L1004 548L1033 513L1053 529L1082 481L1104 492L1138 452L1170 456L1189 482L1231 494L1242 430L1254 433L1265 380L1276 433L1288 430L1296 495L1330 479L1353 500L1382 504L1397 529L1430 512L1462 535" fill="none" stroke="#b0e1ff" stroke-width="3.5" stroke-linejoin="round" opacity=".9"/><circle cx="169" cy="290" r="8" fill="#f32e42"/><circle cx="1934" cy="368" r="9" fill="#36d1fa"/><circle cx="906" cy="111" r="7" fill="#f32e42"/><path d="M1762 304v38m-19-19h38" stroke="#ffb800" stroke-width="5"/></svg>
