@@ -26,6 +26,7 @@ export async function PATCH(request:Request,{params}:Params){
      if(current.count!==1)throw new Error("Diese Einladung wurde bereits bearbeitet.");
      const existing=await tx.membership.findUnique({where:{userId_organizationId:{userId:invitation.userId!,organizationId:invitation.organizationId}}});
      if(!existing)await tx.membership.create({data:{userId:invitation.userId!,organizationId:invitation.organizationId,role:"OWNER"}});
+     else if(existing.role!=="OWNER")await tx.membership.update({where:{id:existing.id},data:{role:"OWNER"}});
      await syncClaimStatus(tx,invitation.organizationId);
     });
     await notify({userId:invitation.userId,organizationId:invitation.organizationId,type:"SYSTEM",title:"Deine Organisation wurde freigegeben",body:"Du kannst "+invitation.organization.name+" ab sofort verwalten.",link:"/dashboard/onboarding"});
