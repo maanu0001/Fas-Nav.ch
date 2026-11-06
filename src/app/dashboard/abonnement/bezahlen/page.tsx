@@ -50,7 +50,7 @@ export default async function CheckoutPage() {
               <ul className="my-5 flex-1 space-y-2">
                 {plan.features.slice(0, 8).map((item) => <li key={item.id} className="flex gap-2 text-sm text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{item.feature.name}</li>)}
               </ul>
-              <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || current} />
+              <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />
             </Card>
           );
         })}
