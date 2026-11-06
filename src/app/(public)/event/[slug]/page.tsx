@@ -153,7 +153,7 @@ export default async function EventPage({ params }: Props) {
       />
 
       <div className="relative h-48 w-full overflow-hidden bg-brand sm:h-64">
-        <MediaImage media={event.image} alt={event.title} sizes="100vw" priority />
+        <MediaImage media={event.image} fallback="event" alt={event.title} sizes="100vw" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-strong/85 via-brand-strong/35 to-transparent" />
       </div>
 

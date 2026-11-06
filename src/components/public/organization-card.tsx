@@ -26,7 +26,7 @@ export function OrganizationCard({ organization: org, className }: { organizatio
   return (
     <article className={cn("group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-subtle transition-all hover:-translate-y-0.5 hover:shadow-card", className)}>
       <div className="relative aspect-[16/9] overflow-hidden bg-muted">
-        <MediaImage media={org.header} alt={`${org.name} – Titelbild`} className="transition-transform duration-500 group-hover:scale-[1.03]" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+        <MediaImage media={org.header} fallback="organization" alt={`${org.name} – Titelbild`} className="transition-transform duration-500 group-hover:scale-[1.03]" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
         {org.isFeatured ? <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground shadow-subtle"><Sparkles className="h-3 w-3" aria-hidden />Empfohlen</span> : null}
         <FavoriteButton item={favorite} className="absolute right-3 top-3" />
       </div>

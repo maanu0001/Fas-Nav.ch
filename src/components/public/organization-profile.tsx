@@ -149,6 +149,7 @@ export function OrganizationProfile({
       <div className="relative h-52 w-full overflow-hidden bg-brand sm:h-72 lg:h-80">
         <MediaImage
           media={org.header}
+          fallback="organization"
           alt={`${org.name} – Titelbild`}
           sizes="100vw"
           priority
