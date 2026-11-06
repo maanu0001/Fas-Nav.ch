@@ -10,7 +10,7 @@ export function NotificationPreferencesForm({ initial, role }: { initial: Notifi
   const { toast } = useToast();
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setSaving(true);
-    try { await apiRequest("/api/account/notification-preferences", { method: "PATCH", body: state }); toast("E-Mail-Benachrichtigungen gespeichert.", "success"); }
+    try { await apiRequest("/api/account/notification-preferences", { method: "PATCH", body: Object.fromEntries(notificationTypesForRole(role).map(type => [type, state[type]])) }); toast("E-Mail-Benachrichtigungen gespeichert.", "success"); }
     catch (err) { toast(errorMessage(err), "error"); }
     finally { setSaving(false); }
   }
