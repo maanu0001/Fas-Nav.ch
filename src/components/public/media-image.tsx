@@ -32,7 +32,7 @@ export function MediaImage({
   fallback?: "organization" | "event";
 }) {
   if (!media?.url && fallback) {
-    return <Image src={fallback === "organization" ? "/brand/default-organization-banner.webp" : "/brand/default-event-banner.webp"} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-cover",className)} />;
+    return <Image src={fallback === "organization" ? "/brand/default-organization-banner.svg" : "/brand/default-event-banner.svg"} alt={alt} fill sizes={sizes} priority={priority} unoptimized className={cn("object-cover",className)} />;
   }
   if (!media?.url) {
     return (
@@ -81,7 +81,7 @@ export function LogoImage({
   if (!media?.url) {
     return (
       <div className={cn("relative shrink-0 overflow-hidden rounded-xl border border-border bg-card",className)} style={{width:size,height:size}}>
-        <Image src="/brand/default-organization-logo.webp" alt={`Logo ${name}`} fill sizes={`${size}px`} className="object-contain" />
+        <Image src="/brand/default-organization-logo.svg" alt={`Logo ${name}`} fill sizes={`${size}px`} unoptimized className="object-contain" />
       </div>
     );
   }
