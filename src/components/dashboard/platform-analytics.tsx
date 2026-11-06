@@ -82,7 +82,7 @@ export async function PlatformAnalytics({role,days,from,to,lifetime=false}:{role
       LEFT JOIN (SELECT date_trunc(${granularity},"createdAt") AS d,count(*)::bigint AS accounts FROM "users" WHERE "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1) a ON a.d=date_bucket.day
       LEFT JOIN (SELECT date_trunc(${granularity},"createdAt") AS d,count(*)::bigint AS organizations FROM "organizations" WHERE "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1) o ON o.d=date_bucket.day
       LEFT JOIN (SELECT date_trunc(${granularity},"createdAt") AS d,count(*)::bigint AS event_views FROM "page_views" WHERE "createdAt">=${start} AND "createdAt"<${end} AND interaction='VIEW' AND "eventId" IS NOT NULL GROUP BY 1) ev ON ev.d=date_bucket.day
-      ORDER BY date_bucket.day ASC,
+      ORDER BY date_bucket.day ASC`,
     prisma.pageView.groupBy({by:["organizationId"],where:{interaction:"VIEW",organizationId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{organizationId:"desc"}},take:8}),
     prisma.pageView.groupBy({by:["eventId"],where:{interaction:"VIEW",eventId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{eventId:"desc"}},take:8}),
     prisma.searchQuery.groupBy({by:["term"],where:{createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{term:"desc"}},take:8}),
