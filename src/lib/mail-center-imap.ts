@@ -120,6 +120,8 @@ async function performMailCenterSync(options:{full?:boolean}={}){
     const direction=folder==="INBOX"?"IN":"OUT";
     const unread=direction==="IN"&&!result.lines.some(l=>/\\Seen/i.test(l));
     const thread=threadKey(header);
+    const suppressed=await prisma.deletedMailThread.findUnique({where:{threadKey:thread},select:{threadKey:true}});
+    if(suppressed){await prisma.siteSetting.upsert({where:{key:cursorKey},create:{key:cursorKey,group:"mail",value:{uidvalidity,uid}},update:{value:{uidvalidity,uid}}});continue;}
     const recipient={to:header.to||"",cc:header.cc||"",bcc:header.bcc||""};
     await prisma.$transaction(async tx=>{
      const conversation=await tx.mailConversation.upsert({where:{providerThreadId:thread},create:{providerThreadId:thread,subject:decodeWord(header.subject||"(Ohne Betreff)"),lastMessageAt:receivedAt,unread,folder:direction==="IN"?"INBOX":"SENT"},update:{}});
@@ -162,7 +164,7 @@ export async function mailboxAttachments(providerId:string){
  if(!m?.htmlBody)throw new Error("Nachricht nicht gefunden.");
  return parseMime(Buffer.from(m.htmlBody,"base64")).attachments;
 }
-export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;subject:string;text:string;html?:string;replyToId?:string;attachments?:OutgoingAttachment[]}){
+export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;subject:string;text:string;html?:string;replyToId?:string;attachments?:OutgoingAttachment[];acquisitionToken?:string}){
   const c=await config();let replyHeaders:Record<string,string>={};
   let replyConversationId:string|undefined;
   if(input.replyToId){
@@ -187,12 +189,33 @@ export async function sendMailboxMail(input:{to:string;cc?:string;bcc?:string;su
     const now=new Date();
     const conversationKey=replyConversationId?null:messageId;
     await prisma.$transaction(async tx=>{
-      const conversation=replyConversationId?await tx.mailConversation.findUniqueOrThrow({where:{id:replyConversationId}}):await tx.mailConversation.upsert({where:{providerThreadId:conversationKey!},create:{providerThreadId:conversationKey!,subject:input.subject,lastMessageAt:now,folder:"SENT"},update:{lastMessageAt:now}});
+      const conversation=replyConversationId?await tx.mailConversation.findUniqueOrThrow({where:{id:replyConversationId}}):await tx.mailConversation.upsert({where:{providerThreadId:conversationKey!},create:{providerThreadId:conversationKey!,subject:input.subject,lastMessageAt:now,folder:input.acquisitionToken?"AQUISE":"SENT"},update:{lastMessageAt:now}});
       await tx.mailCenterMessage.create({data:{providerId:"local:"+messageId,conversationId:conversation.id,internetMessageId:messageId,sender:c.mailbox,recipients:{to:input.to,cc:input.cc||"",bcc:input.bcc||""},subject:input.subject,textBody:input.text,htmlBody:raw.toString("base64"),attachmentInfo:files.length?{count:files.length}:undefined,direction:"OUT",receivedAt:now}});
-      await tx.mailConversation.update({where:{id:conversation.id},data:{lastMessageAt:now}});
+      await tx.mailConversation.update({where:{id:conversation.id},data:{lastMessageAt:now,...(input.acquisitionToken?{folder:"AQUISE"}:{})}});
+      if(input.acquisitionToken) await tx.acquisitionOpen.create({data:{token:input.acquisitionToken,messageId}});
     });
   }catch{warning="SMTP hat die Nachricht angenommen, aber das Speichern in der Konversationsliste ist fehlgeschlagen. Bitte nicht erneut senden.";}
   try{await withImap(async client=>{const available=await folders(client);await client.append(available[1],raw);});}
   catch{warning+=(warning?" ":"")+"Die Kopie in «Gesendet» konnte nicht gespeichert werden. Bitte nicht erneut senden.";}
   return {sent:true,warning:warning||undefined,messageId};
+}
+
+/** Remove mailbox copies in Inbox and Sent before database purging. */
+export async function deleteMailboxThreadMessages(messageIds:string[]) {
+ const ids=[...new Set(messageIds.filter(id=>/^<[^\r\n<>]{1,250}>$/.test(id)))];
+ if(!ids.length)return;
+ await withImap(async client=>{
+   for(const folder of await folders(client)){
+     await client.command("SELECT "+quote(folder));
+     const uids=new Set<number>();
+     for(const id of ids){
+       const response=await client.command("UID SEARCH HEADER Message-ID "+quote(id));
+       for(const line of response.lines.filter(x=>x.startsWith("* SEARCH")))
+         for(const uid of line.slice(8).trim().split(/\s+/).map(Number))if(Number.isSafeInteger(uid)&&uid>0)uids.add(uid);
+     }
+     if(!uids.size)continue;
+     await client.command("UID STORE "+[...uids].join(",")+" +FLAGS.SILENT (\\Deleted)");
+     await client.command("EXPUNGE");
+   }
+ });
 }
