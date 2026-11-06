@@ -12,8 +12,12 @@ export async function PATCH(request:Request,{params}:P){try{const {id}=await par
  if(!limits.externalContact&&listingContactMode(item.details)!=="INTERNAL")return jsonError("Bitte stelle den Kontaktweg auf Fas-Nav um oder wechsle zu Basic.",403);
  }
  const updated=await prisma.marketplaceListing.update({where:{id},data:{status,publishedAt:status==="ACTIVE"?now:item.publishedAt,expiresAt:status==="ACTIVE"?new Date(now.getTime()+limits.days*86400000):item.expiresAt}});return jsonOk(updated);}
- const data=listingSchema.parse({...body,organizationId:item.organizationId});const limits=await marketplaceLimits(item.organizationId);
- if(data.imageUrls.length>limits.images)return jsonError("Dein Tarif erlaubt maximal "+limits.images+" Bilder pro Inserat.",403);
- if(!limits.externalContact&&listingContactMode(data.details)!=="INTERNAL")return jsonError("Direkte Kontaktangaben sind ab Basic verfügbar.",403);
+ const data=listingSchema.parse({...body,organizationId:item.organizationId});
+ // Draft edits are private and may be saved before publication checks.
+ if(item.status==="ACTIVE"||item.status==="RESERVED"){
+  const limits=await marketplaceLimits(item.organizationId);
+  if(data.imageUrls.length>limits.images)return jsonError("Dein Tarif erlaubt maximal "+limits.images+" Bilder pro Inserat.",403);
+  if(!limits.externalContact&&listingContactMode(data.details)!=="INTERNAL")return jsonError("Direkte Kontaktangaben sind ab Basic verfügbar.",403);
+ }
  const {date,organizationId,...rest}=data;return jsonOk(await prisma.marketplaceListing.update({where:{id},data:{...rest,date:date?new Date(date):null}}));}catch(e){return handleApiError(e);}}
 export async function DELETE(_r:Request,{params}:P){try{const {id}=await params;const item=await prisma.marketplaceListing.findUniqueOrThrow({where:{id}});await orgAccess(item.organizationId);await prisma.marketplaceListing.delete({where:{id}});return jsonOk({ok:true});}catch(e){return handleApiError(e);}}
