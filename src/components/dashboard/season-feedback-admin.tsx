@@ -14,7 +14,7 @@ export function SeasonFeedbackAdmin({initial}:{initial:Survey[]}){
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState(""),[result,setResult]=React.useState("");
  const locked=Boolean(editing&&surveys.find(s=>s.id===editing)?.status!=="DRAFT");
  async function refresh(){setSurveys(await apiRequest<Survey[]>("/api/admin/saisonfeedback"));}
- function startEdit(s:Survey){setEditing(s.id);setTitle(s.title);setSeason(s.season);setAudience(s.audience);setQuestions(s.questions);window.scrollTo({top:0,behavior:"smooth"});}
+ function startEdit(s:Survey){setEditing(s.id);setTitle(s.title);setSeason(s.season);setAudience(s.audience);setQuestions(s.status==="DRAFT"?s.questions.map(q=>q.id==="used"||q.id==="valuable"?{...q,options:Array.from(new Set([...(q.options||[]),"Inserate"]))}:q):s.questions);window.scrollTo({top:0,behavior:"smooth"});}
  async function save(){
   setBusy(true);setError("");setResult("");
   try{

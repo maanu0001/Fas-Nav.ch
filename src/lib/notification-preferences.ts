@@ -16,6 +16,11 @@ export const NOTIFICATION_CATEGORIES = {
 } as const satisfies Record<NotificationType, string>;
 
 export type NotificationPreferences = Record<NotificationType, boolean>;
+/** Only expose events belonging to the organization account, never staff-only operations. */
+export const ORGANIZATION_NOTIFICATION_CATEGORIES: NotificationType[] = ["TICKET_REPLY","TICKET_STATUS","SUBSCRIPTION_EXPIRING","SUBSCRIPTION_EXPIRED","PAYMENT_DUE","PAYMENT_RECEIVED","EVENT_PUBLISHED","ORGANIZATION_VERIFIED","ORGANIZATION_PUBLISHED"];
+export function notificationTypesForRole(role: string): NotificationType[] {
+  return role === "ADMIN" || role === "TEAM" ? Object.keys(NOTIFICATION_CATEGORIES) as NotificationType[] : ORGANIZATION_NOTIFICATION_CATEGORIES;
+}
 const key = (userId: string) => "notifications.email." + userId;
 export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
   const row = await prisma.siteSetting.findUnique({ where: { key: key(userId) }, select: { value: true } });
