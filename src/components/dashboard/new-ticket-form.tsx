@@ -87,7 +87,7 @@ export function NewTicketForm({
             id="subject"
             name="subject"
             required
-            maxLength={160}
+            maxLength={suggestion ? 141 : 160}
             placeholder={suggestion ? "Welche neue Funktion wünschst du dir?" : "Kurze Zusammenfassung deines Anliegens"}
           />
         </Field>
