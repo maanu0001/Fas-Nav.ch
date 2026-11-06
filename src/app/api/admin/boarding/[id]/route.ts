@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin,roleForOrganizationType } from "@/lib/rbac";
+import { requireAdmin } from "@/lib/rbac";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
 import { getEmailTemplate,renderEmailTemplate } from "@/lib/email-templates";
 import { sendMailboxMail } from "@/lib/mail-center-imap";
@@ -26,7 +26,6 @@ export async function PATCH(request:Request,{params}:Params){
      if(current.count!==1)throw new Error("Diese Einladung wurde bereits bearbeitet.");
      const existing=await tx.membership.findUnique({where:{userId_organizationId:{userId:invitation.userId!,organizationId:invitation.organizationId}}});
      if(!existing)await tx.membership.create({data:{userId:invitation.userId!,organizationId:invitation.organizationId,role:"OWNER"}});
-     await tx.user.update({where:{id:invitation.userId!},data:{role:roleForOrganizationType(invitation.organization.type)}});
      await syncClaimStatus(tx,invitation.organizationId);
     });
     await notify({userId:invitation.userId,organizationId:invitation.organizationId,type:"SYSTEM",title:"Deine Organisation wurde freigegeben",body:"Du kannst "+invitation.organization.name+" ab sofort verwalten.",link:"/dashboard/onboarding"});
