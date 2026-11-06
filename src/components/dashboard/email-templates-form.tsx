@@ -10,7 +10,7 @@ import { apiRequest, errorMessage } from "@/lib/client-api";
 import type { EmailTemplateView } from "@/lib/email-template-config";
 
 const TEST_VALUES: Record<string,string>={
- recipientName:"Testempfänger",ticketNumber:"1234",ticketTitle:"Testticket",senderName:"Fas-Nav Team",messagePreview:"Dies ist ein Testinhalt für die Vorschau.",ticketUrl:"https://fas-nav.ch/dashboard/tickets",contactName:"Max Muster",contactEmail:"max@example.ch",subject:"Testanfrage",message:"Dies ist eine Testnachricht.",dashboardUrl:"https://fas-nav.ch/dashboard",organizationName:"Beispiel Fasnacht",eventTitle:"Beispiel Veranstaltung",eventUrl:"https://fas-nav.ch/agenda",todoTitle:"Test-Aufgabe",todoDescription:"Dies ist eine automatisch erzeugte Test-Aufgabe.",newsTitle:"Test-Neuigkeit",newsBody:"Dies ist ein Testinhalt für die Vorlage.",
+ websiteUrl:"https://fas-nav.ch",recipientName:"Testempfänger",ticketNumber:"1234",ticketTitle:"Testticket",senderName:"Fas-Nav Team",messagePreview:"Dies ist ein Testinhalt für die Vorschau.",ticketUrl:"https://fas-nav.ch/dashboard/tickets",contactName:"Max Muster",contactEmail:"max@example.ch",subject:"Testanfrage",message:"Dies ist eine Testnachricht.",dashboardUrl:"https://fas-nav.ch/dashboard",organizationName:"Beispiel Fasnacht",eventTitle:"Beispiel Veranstaltung",eventUrl:"https://fas-nav.ch/agenda",todoTitle:"Test-Aufgabe",todoDescription:"Dies ist eine automatisch erzeugte Test-Aufgabe.",newsTitle:"Test-Neuigkeit",newsBody:"Dies ist ein Testinhalt für die Vorlage.",
 };
 function renderTest(value:string){return value.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g,(_,key:string)=>TEST_VALUES[key]??`[${key}]`)}
 
