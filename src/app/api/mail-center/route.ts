@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
+import { brandedHtml } from "@/lib/mail";
 import { getEmailTemplate, renderEmailTemplate } from "@/lib/email-templates";
 import { handleApiError,jsonError,jsonOk } from "@/lib/api";
 import { requireAdmin } from "@/lib/rbac";
@@ -11,7 +12,6 @@ export const dynamic="force-dynamic";
 const configSchema=z.object({user:z.string().email().refine(v=>v.toLowerCase()==="info@fas-nav.ch"),password:z.string().max(1000).optional()});
 const emailList=z.string().max(2000).refine(v=>!v||v.split(",").every(x=>z.string().email().safeParse(x.trim()).success),"Ungültige E-Mail-Adresse");
 const sendSchema=z.object({to:emailList.refine(v=>!!v.trim(),"Empfänger fehlt"),cc:emailList.optional(),bcc:emailList.optional(),subject:z.string().min(1).max(250),text:z.string().min(1).max(50000),replyToId:z.string().max(500).optional(),attachments:z.array(z.object({name:z.string().min(1).max(160).refine(v=>!/[\r\n]/.test(v)),type:z.string().max(120),data:z.string().max(7_000_000).regex(/^[A-Za-z0-9+/]*={0,2}$/)})).max(5).optional()});
-function escapeHtmlEmail(text:string){return '<!doctype html><html><body style="font:15px/1.65 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;">'+text.replace(/[&<>"]/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x]||x))+'</body></html>';}
 const ADDRESS_BLOCKLIST="mailcenter.hidden-addresses";
 function recipientAddresses(messages:{sender:string;recipients:unknown}[],hidden:string[]){const addresses=new Set<string>();for(const m of messages){const r=(m.recipients||{}) as {to?:string;cc?:string;bcc?:string};for(const source of [m.sender,r.to,r.cc,r.bcc])for(const value of (source||"").split(",")){const address=value.trim().toLowerCase();if(z.string().email().safeParse(address).success&&address!=="info@fas-nav.ch"&&!hidden.includes(address))addresses.add(address);}}return Array.from(addresses).sort();}
 export async function GET(request:Request){try{await requireAdmin();const email=(new URL(request.url).searchParams.get("email")||"").trim().toLowerCase();if(email&&!z.string().email().safeParse(email).success)return jsonError("Ungültige E-Mail-Adresse.",400);const matchedIds=email?await prisma.$queryRaw<{conversationId:string}[]>`SELECT DISTINCT "conversationId" FROM "mail_center_messages" WHERE lower("sender")=${email} OR lower("recipients"->>\'to\') LIKE ${"%"+email+"%"} OR lower("recipients"->>\'cc\') LIKE ${"%"+email+"%"} OR lower("recipients"->>\'bcc\') LIKE ${"%"+email+"%"}`:null;const [config,conversations,hiddenRow,contactMessages]=await Promise.all([mailboxConfiguration(),prisma.mailConversation.findMany({where:matchedIds?{id:{in:matchedIds.map(x=>x.conversationId)}}:{},orderBy:{lastMessageAt:"desc"},...(!matchedIds?{take:100}:{}),include:{messages:{orderBy:{receivedAt:"asc"},select:{id:true,providerId:true,sender:true,recipients:true,subject:true,textBody:true,direction:true,receivedAt:true,attachmentInfo:true,internetMessageId:true}}}}),prisma.siteSetting.findUnique({where:{key:ADDRESS_BLOCKLIST}}),prisma.mailCenterMessage.findMany({orderBy:{receivedAt:"desc"},take:2000,select:{sender:true,recipients:true}})]);const hidden=Array.isArray(hiddenRow?.value)?hiddenRow.value.filter((x):x is string=>typeof x==="string"):[];const tracking=await prisma.acquisitionOpen.findMany({where:{messageId:{in:conversations.flatMap(c=>c.messages.map(m=>m.internetMessageId).filter((id):id is string=>!!id))}},select:{messageId:true,openCount:true,lastOpenedAt:true}});
@@ -30,7 +30,7 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
   const token=randomBytes(32).toString("hex");
   const base=(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch").replace(/\/$/,"");
   const pixel=`<img src="${base}/api/mail-center/open/${token}.png" width="1" height="1" alt="" style="display:block;width:1px;height:1px" />`;
-  const result=await sendMailboxMail({to:input.to,subject:rendered.subject,text:rendered.text,html:escapeHtmlEmail(rendered.text).replace("</body>",pixel+"</body>"),acquisitionToken:token});
+  const result=await sendMailboxMail({to:input.to,subject:rendered.subject,text:rendered.text,html:brandedHtml(rendered.subject,rendered.text).replace("</body>",pixel+"</body>"),acquisitionToken:token});
   await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.acquisition.send",entity:"MailCenterMessage",after:{recipient:input.to,type:input.type}});
   return jsonOk(result);
  }
