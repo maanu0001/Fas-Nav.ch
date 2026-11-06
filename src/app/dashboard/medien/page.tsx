@@ -35,9 +35,9 @@ export default async function MediaLibraryPage({searchParams}:{searchParams:Sear
  const q=(params.q||"").trim().slice(0,120);
  const isAdmin=context.user.role==="ADMIN";
  const mediaWhere:Prisma.MediaWhereInput={
-  ...(category==="FASNACHT"?{organization:{is:{type:"CARNIVAL"}},type:{not:"EVENT"}}:{}),
-  ...(category==="GUGGE"?{organization:{is:{type:"GUGGE"}},type:{not:"EVENT"}}:{}),
-  ...(category==="AGENDA"?{OR:[{type:"EVENT"},{eventImages:{some:{}}}]}:{}),
+  ...(category==="FASNACHT"?{organization:{is:{type:"CARNIVAL"}},type:{notIn:["EVENT","DOCUMENT"]}}:{}),
+  ...(category==="GUGGE"?{organization:{is:{type:"GUGGE"}},type:{notIn:["EVENT","DOCUMENT"]}}:{}),
+  ...(category==="AGENDA"?{eventImages:{some:{}}}:{}),
   ...(q?{AND:[{OR:[{filename:{contains:q,mode:"insensitive"}},{organization:{is:{name:{contains:q,mode:"insensitive"}}}}]}]}:{}),
  };
  const filesCategory=["FASNACHT","GUGGE","AGENDA"].includes(category);
@@ -46,13 +46,13 @@ export default async function MediaLibraryPage({searchParams}:{searchParams:Sear
   category==="GUGGE"?prisma.audioSample.findMany({where:q?{OR:[{title:{contains:q,mode:"insensitive"}},{organization:{name:{contains:q,mode:"insensitive"}}}]}:{},orderBy:{createdAt:"desc"},take:100,select:{id:true,title:true,url:true,durationSeconds:true,createdAt:true,organizationId:true,organization:{select:{name:true}}}}):Promise.resolve([]),
   category==="INSERATE"?prisma.marketplaceListing.findMany({where:{imageUrls:{isEmpty:false},...(q?{OR:[{title:{contains:q,mode:"insensitive"}},{organization:{name:{contains:q,mode:"insensitive"}}}]}:{})},orderBy:{createdAt:"desc"},take:100,select:{id:true,title:true,imageUrls:true,createdAt:true,organization:{select:{name:true}}}}):Promise.resolve([]),
   category==="MAILS"&&isAdmin?prisma.mailCenterMessage.findMany({where:{attachmentInfo:{not:{equals:null}},...(q?{OR:[{subject:{contains:q,mode:"insensitive"}},{sender:{contains:q,mode:"insensitive"}}]}:{})},orderBy:{receivedAt:"desc"},take:80,select:{id:true,conversationId:true,subject:true,sender:true,direction:true,receivedAt:true,attachmentInfo:true}}):Promise.resolve([]),
-  prisma.media.count({where:{organization:{is:{type:"CARNIVAL"}},type:{not:"EVENT"}}}),
+  prisma.media.count({where:{organization:{is:{type:"CARNIVAL"}},type:{notIn:["EVENT","DOCUMENT"]}}}),
   prisma.audioSample.count(),
-  prisma.media.count({where:{OR:[{type:"EVENT"},{eventImages:{some:{}}}]}}),
+  prisma.media.count({where:{eventImages:{some:{}}}}),
   prisma.marketplaceListing.count({where:{imageUrls:{isEmpty:false}}}),
   isAdmin?prisma.mailCenterMessage.count({where:{attachmentInfo:{not:{equals:null}}}}):Promise.resolve(0),
  ]);
- const guggeCount=await prisma.media.count({where:{organization:{is:{type:"GUGGE"}},type:{not:"EVENT"}}});
+ const guggeCount=await prisma.media.count({where:{organization:{is:{type:"GUGGE"}},type:{notIn:["EVENT","DOCUMENT"]}}});
  const counts:Record<Category,number>={FASNACHT:mediaCount,GUGGE:guggeCount+audioCount,AGENDA:eventsCount,TICKETS:0,INSERATE:listingsCount,MAILS:mailCount};
  const countShown=media.length+audio.length+listings.length+mailMessages.length;
  return <>

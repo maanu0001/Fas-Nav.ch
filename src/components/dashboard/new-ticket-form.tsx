@@ -15,9 +15,11 @@ import { apiRequest, errorMessage, fieldErrors } from "@/lib/client-api";
 export function NewTicketForm({
   organizations,
   defaultOrganizationId,
+  suggestion = false,
 }: {
   organizations: { id: string; name: string }[];
   defaultOrganizationId?: string;
+  suggestion?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -36,8 +38,8 @@ export function NewTicketForm({
       const ticket = await apiRequest<{ id: string }>("/api/tickets", {
         method: "POST",
         body: {
-          subject: data.get("subject"),
-          category: data.get("category"),
+          subject: suggestion ? "Funktionsvorschlag: " + String(data.get("subject")) : data.get("subject"),
+          category: suggestion ? "GENERAL" : data.get("category"),
           priority: data.get("priority"),
           message: data.get("message"),
           organizationId: data.get("organizationId") || null,
@@ -85,12 +87,12 @@ export function NewTicketForm({
             id="subject"
             name="subject"
             required
-            maxLength={160}
-            placeholder="Kurze Zusammenfassung deines Anliegens"
+            maxLength={suggestion ? 141 : 160}
+            placeholder={suggestion ? "Welche neue Funktion wünschst du dir?" : "Kurze Zusammenfassung deines Anliegens"}
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        {!suggestion ? <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Kategorie" htmlFor="category" error={errors.category}>
             <Select id="category" name="category" defaultValue="GENERAL">
               {Object.entries(TICKET_CATEGORY_LABELS)
@@ -112,21 +114,21 @@ export function NewTicketForm({
               ))}
             </Select>
           </Field>
-        </div>
+        </div> : <input type="hidden" name="priority" value="NORMAL" />}
 
         <Field
           label="Nachricht"
           htmlFor="message"
           required
           error={errors.message}
-          hint="Beschreibe dein Anliegen möglichst konkret – das hilft uns beim schnellen Antworten."
+          hint={suggestion ? "Beschreibe den Nutzen und wie die Funktion aussehen könnte." : "Beschreibe dein Anliegen möglichst konkret – das hilft uns beim schnellen Antworten."}
         >
           <Textarea id="message" name="message" rows={7} required maxLength={5000} />
         </Field>
 
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? <Spinner /> : <Send />}
-          {pending ? "Wird gesendet …" : "Ticket erstellen"}
+          {pending ? "Wird gesendet …" : suggestion ? "Funktionsvorschlag absenden" : "Ticket erstellen"}
         </Button>
       </form>
     </Card>

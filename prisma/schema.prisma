@@ -1394,6 +1394,8 @@ model BoardingInvitation {
  expiresAt DateTime
  sentAt DateTime @default(now())
  acceptedAt DateTime?
+ openedAt DateTime?
+ openCount Int @default(0)
  reviewedAt DateTime?
  reviewedById String?
  createdAt DateTime @default(now())
