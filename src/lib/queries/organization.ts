@@ -136,7 +136,7 @@ export const getPublicOrganization = cache(async function getPublicOrganization(
 ) {
   const org = await prisma.organization.findFirst({
     where: { slug, type, status: "PUBLISHED" },
-    select: organizationProfileSelect,,
+    select: organizationProfileSelect,
   });
 
   return org;
