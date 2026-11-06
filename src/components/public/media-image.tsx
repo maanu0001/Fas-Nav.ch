@@ -21,6 +21,7 @@ export function MediaImage({
   sizes = "(max-width: 768px) 100vw, 33vw",
   priority = false,
   fallbackLabel,
+  fallback,
 }: {
   media: MediaLike;
   alt: string;
@@ -28,7 +29,11 @@ export function MediaImage({
   sizes?: string;
   priority?: boolean;
   fallbackLabel?: string;
+  fallback?: "organization" | "event";
 }) {
+  if (!media?.url && fallback) {
+    return <Image src={fallback === "organization" ? "/brand/default-organization-banner.webp" : "/brand/default-event-banner.webp"} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-cover",className)} />;
+  }
   if (!media?.url) {
     return (
       <div
@@ -75,18 +80,8 @@ export function LogoImage({
 }) {
   if (!media?.url) {
     return (
-      <div
-        className={cn(
-          // "relative" wie im Zweig mit Bild: Das Kürzel liegt auf Karten
-          // bewusst über dem Kopfbereich. Ohne eigene Positionierung würde es
-          // vom dortigen Platzhalter verdeckt.
-          "relative flex shrink-0 items-center justify-center rounded-xl border border-border bg-card font-display font-bold text-primary-700",
-          className,
-        )}
-        style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}
-        aria-hidden
-      >
-        {organizationInitials(name)}
+      <div className={cn("relative shrink-0 overflow-hidden rounded-xl border border-border bg-card",className)} style={{width:size,height:size}}>
+        <Image src="/brand/default-organization-logo.webp" alt={`Logo ${name}`} fill sizes={`${size}px`} className="object-contain" />
       </div>
     );
   }
