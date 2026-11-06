@@ -30,7 +30,8 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
   const token=randomBytes(32).toString("hex");
   const base=(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch").replace(/\/$/,"");
   const pixel=`<img src="${base}/api/mail-center/open/${token}.png" width="1" height="1" alt="" style="display:block;width:1px;height:1px" />`;
-  const branded=brandedHtml(rendered.subject,rendered.text);
+  const privacyNotice=`<p style="margin:12px 18px;text-align:center;color:#6b7280;font-size:10px;line-height:1.5">Diese Nachricht enthält eine technische Messung von E-Mail- und Linkaufrufen. <a href="https://fas-nav.ch/datenschutz" style="color:#374151">Datenschutzhinweise</a></p>`;
+  const branded=brandedHtml(rendered.subject,rendered.text).replace("</body>",privacyNotice+"</body>");
   const tracked=branded.replace(/href="(https:\/\/(?:www\.)?fas-nav\.ch[^"]*)"/gi,(_match:string,url:string)=>`href="${base}/api/mail-center/link/${token}?to=${encodeURIComponent(url)}"`);
   const result=await sendMailboxMail({to:input.to,subject:rendered.subject,text:rendered.text,html:tracked.replace("</body>",pixel+"</body>"),acquisitionToken:token});
   await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.acquisition.send",entity:"MailCenterMessage",after:{recipient:input.to,type:input.type}});
