@@ -2,6 +2,7 @@ import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { hashToken } from "@/lib/season-survey";
 import { sendMail } from "@/lib/mail";
+import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/rbac";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
@@ -31,16 +32,21 @@ export async function PATCH(request:Request,{params}:Params){
  if(body.action==="activate"){await prisma.seasonSurvey.update({where:{id},data:{status:"ACTIVE"}});return jsonOk({ok:true});}
  if(body.action==="close"){await prisma.seasonSurvey.update({where:{id},data:{status:"CLOSED"}});return jsonOk({ok:true});}
  if(body.action==="send"||body.action==="remind")return jsonOk(await deliverSurvey(id,body.action==="remind"));
- if(body.action==="edit"){if(survey.status!=="DRAFT")return jsonError("Nur Entwürfe können bearbeitet werden. Bereits versendete Fragebögen bleiben unverändert.",400);
+ if(body.action==="edit"){
  const parsed=z.object({title:z.string().min(3).max(120),season:z.string().min(4).max(20),audience:z.enum(["ALL","GUGGE","CARNIVAL"]),questions:z.array(z.object({id:z.string(),label:z.string(),type:z.enum(["rating","nps","single","multi","text"]),options:z.array(z.string()).optional()})).min(1).max(25)}).parse(body);
+ if(survey.status!=="DRAFT"&&JSON.stringify(parsed.questions)!==JSON.stringify(survey.questions))return jsonError("Fragen bereits versendeter Umfragen können nicht verändert werden. Titel und Saison bleiben bearbeitbar.",409);
  await prisma.seasonSurvey.update({where:{id},data:parsed});return jsonOk({ok:true});}
  return jsonError("Unbekannte Aktion.",400);
  }catch(e){return handleApiError(e);}
 }
 
-export async function DELETE(_request:Request,{params}:Params){
- try{await requireAdmin();const {id}=await params;const survey=await prisma.seasonSurvey.findUniqueOrThrow({where:{id},include:{_count:{select:{invitations:true}}}});
- if(survey.status!=="DRAFT"||survey._count.invitations>0)return jsonError("Nur Umfrageentwürfe ohne Einladungen dürfen gelöscht werden, damit bestehende Antworten erhalten bleiben.",409);
- await prisma.seasonSurvey.delete({where:{id}});return jsonOk({deleted:true});
+export async function DELETE(request:Request,{params}:Params){
+ try{
+  const actor=await requireAdmin();const {id}=await params;
+  if(new URL(request.url).searchParams.get("confirm")!=="DELETE")return jsonError("Löschung muss ausdrücklich bestätigt werden.",400);
+  const survey=await prisma.seasonSurvey.findUniqueOrThrow({where:{id},include:{_count:{select:{invitations:true}}}});
+  await prisma.seasonSurvey.delete({where:{id}});
+  await logAudit({userId:actor.id,userLabel:actor.email,action:"seasonFeedback.deleted",entity:"SeasonSurvey",entityId:id,entityLabel:survey.title,before:{status:survey.status,invitations:survey._count.invitations}});
+  return jsonOk({deleted:true});
  }catch(e){return handleApiError(e);}
 }
