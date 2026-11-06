@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AcquisitionComposer } from "@/components/dashboard/acquisition-composer";
+import { BoardingManagement } from "@/components/dashboard/boarding-management";
 import { Archive, ArrowLeft, FileText, Inbox, Mail, MailOpen, Paperclip, Send, Trash2 } from "lucide-react";
 
 type Message = {
@@ -38,6 +39,7 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
  const [selected,setSelected]=React.useState(initialSelected||"");
  const [newMail,setNewMail]=React.useState(false);
  const [newAcquisition,setNewAcquisition]=React.useState(false);
+ const [newBoarding,setNewBoarding]=React.useState(false);
  const [replying,setReplying]=React.useState(false);
  const [to,setTo]=React.useState("");const [cc,setCc]=React.useState("");const [bcc,setBcc]=React.useState("");
  const [subject,setSubject]=React.useState("");const [body,setBody]=React.useState("");
@@ -160,10 +162,12 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   <div className="flex flex-wrap items-center justify-between gap-3">
    <button type="button" onClick={()=>{setNewMail(true);setSelected("");setReplying(false);setBody("");setTo("");setSubject("");setCc("");setBcc("");setFiles([]);}} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm">+ Neue E-Mail</button>
    <button type="button" onClick={()=>{setNewAcquisition(true);setNewMail(false);setSelected("");}} className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold hover:bg-muted">+ Neue Akquise</button>
+   <button type="button" onClick={()=>{setNewBoarding(true);setNewAcquisition(false);setNewMail(false);setSelected("");}} className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold hover:bg-muted">Boarding Mail</button>
    <Link href="/dashboard/e-mails" className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition hover:bg-muted">E-Mail Templates bearbeiten</Link>
   </div>
   {newAcquisition?<AcquisitionComposer onClose={()=>setNewAcquisition(false)} onSent={async()=>{await refresh();}}/>:null}
-  <div className={newAcquisition?"hidden":""}>
+  {newBoarding?<BoardingManagement compact onClose={()=>setNewBoarding(false)} onSent={async()=>{await refresh();}}/>:null}
+  <div className={newAcquisition||newBoarding?"hidden":""}>
   <div className="grid min-h-[600px] min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:grid-cols-[174px_minmax(220px,32%)_1fr]">
    <nav aria-label="E-Mail-Ordner" className={"flex flex-wrap content-start gap-1 border-b bg-muted/30 p-3 lg:flex-col lg:border-b-0 lg:border-r "+((selected||newMail)?"hidden lg:flex":"")}>
     {FOLDERS.map(item=>{const Icon=item.icon;const count=conversations.filter(c=>item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id).length;const unread=conversations.filter(c=>c.unread&&(item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id)).length;return <button type="button" key={item.id} onClick={()=>{setFolder(item.id);setSelected("");setNewMail(false);setReplying(false);}} className={"flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition "+(folder===item.id?"bg-primary text-white":"hover:bg-muted")}><Icon className="h-4 w-4 shrink-0"/><span className="flex-1">{item.label}</span><span className="tabular-nums opacity-70">{unread?unread+" / ":""}{count}</span></button>})}
