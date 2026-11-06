@@ -53,9 +53,9 @@ export async function PlatformAnalytics({role,days}:{role:Role;days:number}){
     prisma.event.count({where:{createdAt:{gte:start}}}),
     prisma.subscription.count({where:{status:"ACTIVE"}}),
     prisma.$queryRaw<Daily[]>`SELECT day::timestamp as day, COALESCE(v.views,0)::bigint as views, COALESCE(s.searches,0)::bigint as searches
-      FROM generate_series(${start}::date, ${now}::date, interval '1 day') AS day
-      LEFT JOIN (SELECT date_trunc('day',"createdAt") AS d, count(*)::bigint AS views FROM "PageView" WHERE "createdAt">=${start} AND interaction='VIEW' GROUP BY 1) v ON v.d=day
-      LEFT JOIN (SELECT date_trunc('day',"createdAt") AS d, count(*)::bigint AS searches FROM "SearchQuery" WHERE "createdAt">=${start} GROUP BY 1) s ON s.d=day
+      FROM generate_series(${start}::date, ${now}::date, interval '1 day') AS dates(day)
+      LEFT JOIN (SELECT date_trunc('day',"createdAt") AS d, count(*)::bigint AS views FROM "page_views" WHERE "createdAt">=${start} AND interaction='VIEW' GROUP BY 1) v ON v.d=day
+      LEFT JOIN (SELECT date_trunc('day',"createdAt") AS d, count(*)::bigint AS searches FROM "search_queries" WHERE "createdAt">=${start} GROUP BY 1) s ON s.d=day
       ORDER BY day ASC`,
     prisma.pageView.groupBy({by:["organizationId"],where:{interaction:"VIEW",organizationId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{organizationId:"desc"}},take:8}),
     prisma.pageView.groupBy({by:["eventId"],where:{interaction:"VIEW",eventId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{eventId:"desc"}},take:8}),
