@@ -43,7 +43,11 @@ export function MarketplaceManager({organizations,initial,staff,limitsByOrg}:{or
    const body={organizationId:org,title:form.title.trim(),description:form.description.trim(),category:form.category,listingType:form.listingType,city:form.city.trim(),canton:form.canton.trim()||null,price:form.price===""?null:Number(form.price),date:form.date?new Date(form.date+"T12:00:00").toISOString():null,imageUrls:images,details:{...details,contact}};
    const saved=await apiRequest<Listing>(editing?"/api/boerse/"+editing:"/api/boerse",{method:editing?"PATCH":"POST",body});
    // Keep the saved record visible even if the subsequent list refresh fails.
-   setListings(previous=>[saved,...previous.filter(item=>item.id!==saved.id)]);
+   setListings(previous=>[{
+    ...saved,
+    organization:{name:organizations.find(item=>item.id===org)?.name||"Organisation"},
+    inquiries:previous.find(item=>item.id===saved.id)?.inquiries||[],
+   },...previous.filter(item=>item.id!==saved.id)]);
    setFilter("ALL");
    setMessage(saved.status==="ACTIVE"?"Inserat erfolgreich aktualisiert und veröffentlicht.":"Inserat als Entwurf gespeichert. Du kannst es unten über «Veröffentlichen» sichtbar machen.");
    setEditing(null);setForm(empty);setAttempted(false);setShowEditor(false);
