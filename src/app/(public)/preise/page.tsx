@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { stripeConfigured } from "@/lib/stripe";
 import { Check, Minus } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/button";
@@ -46,6 +49,9 @@ export default async function PricingPage() {
   ]);
 
   const allFeatures = vergleichszeilen;
+  const session=await auth();
+  const hasOrg=Boolean(session?.user?.id && await prisma.membership.findFirst({where:{userId:session.user.id},select:{userId:true}}));
+  const onlineAvailable=stripeConfigured();
 
   return (
     <>
@@ -68,6 +74,7 @@ export default async function PricingPage() {
       </div>
 
       <div className="container py-14">
+        <div className="mb-8 rounded-xl border border-primary-200 bg-primary-50 p-5 text-sm text-primary-900"><strong>Tarife direkt online buchen:</strong> Organisationen mit Account können ihren Tarif im Dashboard selbst auswählen und über Stripe bezahlen. Noch keinen Account? <Link href="/organisation-eintragen" className="font-semibold underline">Organisation anmelden</Link> – das Team richtet den Zugang ein; danach erfolgt die Buchung online. <Link href="/kontakt" className="font-semibold underline">Beratung ist weiterhin möglich.</Link>{!onlineAvailable?<p className="mt-2 font-semibold text-amber-800">Die Online-Zahlungsanbindung ist auf diesem Server derzeit nicht vollständig eingerichtet.</p>:null}</div>
         {plans.length === 0 ? (
           <EmptyState
             title="Aktuell sind keine Tarife veröffentlicht"
@@ -144,13 +151,13 @@ export default async function PricingPage() {
                   </ul>
 
                   <ButtonLink
-                    href={plan.ctaUrl ?? defaultCtaUrl(plan.key)}
+                    href={Number(plan.priceChf)>0?(hasOrg?`/dashboard/abonnement/bezahlen?plan=${plan.id}`:defaultCtaUrl(plan.key)):(hasOrg?"/dashboard/abonnement":defaultCtaUrl(plan.key))}
                     variant={plan.isRecommended ? "accent" : "primary"}
                     block
                     size="lg"
                     className="mt-7"
                   >
-                    {plan.ctaText ?? defaultCtaText(Number(plan.priceChf))}
+                    {Number(plan.priceChf)>0?(hasOrg?"Jetzt online buchen":"Organisation anmelden"):"Kostenlos starten"}
                   </ButtonLink>
                 </div>
               ))}

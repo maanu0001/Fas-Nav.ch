@@ -72,3 +72,13 @@ export function stripeId(value: unknown): string | null {
   }
   return null;
 }
+
+/** Retrieve a Stripe object for webhook reconciliation when events arrive out of order. */
+export async function stripeGet<T>(path:string):Promise<T>{
+  const response=await fetch(`${STRIPE_API}${path}`,{
+    method:"GET",headers:{Authorization:`Bearer ${secretKey()}`},cache:"no-store"
+  });
+  const data=await response.json() as T & {error?:{message?:string}};
+  if(!response.ok)throw new Error(data.error?.message||`Stripe API Fehler (${response.status}).`);
+  return data;
+}

@@ -55,8 +55,8 @@ export default async function SubscriptionPage() {
       {!subscription ? (
         <EmptyState
           title="Noch kein Abonnement hinterlegt"
-          description="Für deine Organisation ist aktuell kein Tarif erfasst. Melde dich beim Fas-Nav-Team, um dein Abonnement einzurichten."
-          action={<ButtonLink href="/dashboard/tickets/neu">Team kontaktieren</ButtonLink>}
+          description="Für deine Organisation ist noch kein Tarif erfasst. Wähle ihn direkt online – unser Team hilft bei Beratungsfragen."
+          action={<ButtonLink href="/dashboard/abonnement/bezahlen">Tarif online buchen</ButtonLink>}
         />
       ) : (
         <>
@@ -127,10 +127,7 @@ export default async function SubscriptionPage() {
 
               <p className="mt-6 text-sm text-muted-foreground">
                 Möchtest du deinen Tarif wechseln?{" "}
-                <Link href="/dashboard/tickets/neu" className="font-medium text-primary-700 underline">
-                  Schreib uns ein Ticket
-                </Link>{" "}
-                – wir passen dein Abonnement gerne an.
+                <Link href="/dashboard/abonnement/bezahlen" className="font-medium text-primary-700 underline">Tarif online verwalten</Link>. Bei Beratungsfragen steht dir das Fas-Nav-Team weiterhin zur Verfügung.
               </p>
             </Card>
 

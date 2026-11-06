@@ -90,7 +90,7 @@ export default async function RegisterOrganizationPage({ searchParams }: { searc
             <div className="mt-10 rounded-xl border border-border bg-secondary p-6">
               <h3 className="font-display text-base font-semibold">So läuft es ab</h3>
               <ol className="mt-4 space-y-3 text-sm text-slate-700">
-                {["Du sendest uns das Formular mit den Angaben zu deiner Organisation.", "Wir erstellen dein Konto und richten die Grunddaten deiner Seite ein.", "Du erhältst deine Zugangsdaten und führst das geführte Onboarding durch.", "Sobald du bereit bist, veröffentlichst du deine Seite mit einem Klick."].map((step, index) => (
+                {["Du sendest uns das Formular mit den Angaben zu deiner Organisation.", "Wir erstellen dein Konto und richten die Grunddaten deiner Seite ein.", "Du erhältst deine Boarding-Mail, erstellst dein Login und richtest die Organisation ein.", "Im Dashboard wählst und buchst du deinen Tarif selbstständig online. Anschliessend kannst du die Seite veröffentlichen."].map((step, index) => (
                   <li key={step} className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{index + 1}</span>{step}</li>
                 ))}
               </ol>
@@ -100,14 +100,14 @@ export default async function RegisterOrganizationPage({ searchParams }: { searc
           <div className="lg:col-span-2">
             <Card className="p-6 sm:p-7">
               <h2 className="font-display text-lg font-bold">Jetzt eintragen</h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">Sende uns die Angaben zu deiner Organisation – wir melden uns mit den nächsten Schritten.</p>
+              <p className="mt-1.5 text-sm text-muted-foreground">Die einmalige Erfassung und Boarding-Mail übernimmt das Fas-Nav-Team. Deinen Tarif buchst du anschliessend selbst online im Dashboard.</p>
               <div className="mt-6">
                 <ContactForm
                   organizationEntry
                   plans={plans}
                   defaultPlanKey={selectedPlan?.key ?? ""}
                   subjectPlaceholder="Eintrag Verein/Fasnacht"
-                  intro="Gib uns kurz die wichtigsten Angaben. Name der Organisation, Telefonnummer und gewünschter Tarif können direkt separat erfasst werden."
+                  intro="Nenne uns die wichtigsten Angaben für deine Organisation und das Boarding. Ein gewählter Tarif ist noch keine Bestellung; die eigentliche Buchung erfolgt nach der Registrierung online."
                 />
               </div>
             </Card>

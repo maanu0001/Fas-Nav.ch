@@ -1406,6 +1406,8 @@ model BoardingInvitation {
 }
 
 model AcquisitionOpen {
+ clickCount Int @default(0)
+ lastClickedAt DateTime?
  id String @id @default(cuid())
  token String @unique
  messageId String @unique
