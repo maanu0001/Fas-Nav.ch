@@ -32,7 +32,7 @@ export default async function Page() {
   return (
     <main className="space-y-6">
       <PageHeader title={ctx.staff ? "Inserate – Administration" : "Meine Inserate"} description="Inserate verwalten, Anfragen beantworten und Angebote verlängern." />
-      <MarketplaceManager organizations={orgs} initial={JSON.parse(JSON.stringify(listings))} staff={ctx.staff} limitsByOrg={limitsByOrg} />
+      <MarketplaceManager organizations={orgs} initial={JSON.parse(JSON.stringify(listings))} staff={ctx.staff} limitsByOrg={limitsByOrg} ownOnly={ctx.user.role === "ADMIN"} />
       {ctx.user.role === "ADMIN" ? <AdminMarketplaceBrowser organizations={orgs} limitsByOrg={limitsByOrg} /> : null}
     </main>
   );
