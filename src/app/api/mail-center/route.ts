@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getEmailTemplate, renderEmailTemplate } from "@/lib/email-templates";
 import { handleApiError,jsonError,jsonOk } from "@/lib/api";
 import { requireAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +17,17 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
  if(body.action==="test"){if(!checkRateLimit("mail-test:"+actor.id,5,60000).ok)return jsonError("Bitte kurz warten.",429);return jsonOk(await testMailboxConnection());}
  if(body.action==="sync"){if(!checkRateLimit("mail-sync:"+actor.id,60,60000).ok)return jsonError("Bitte kurz warten.",429);return jsonOk(await syncMailCenter());}
  if(body.action==="resync"){if(!checkRateLimit("mail-full-sync:"+actor.id,2,3600000).ok)return jsonError("Bitte mit vollständigem Abgleich warten.",429);return jsonOk(await syncMailCenter({full:true}));}
+ if(body.action==="acquisition"){
+  if(!checkRateLimit("mail-acquisition:"+actor.id,8,3600000).ok)return jsonError("Akquise-Versandlimit erreicht. Bitte später erneut versuchen.",429);
+  const input=z.object({to:z.string().email().max(254),type:z.enum(["CARNIVAL","GUGGE"]),organizationName:z.string().trim().max(120).optional()}).parse(body);
+  if(input.to.toLowerCase()==="info@fas-nav.ch")return jsonError("Bitte eine externe Empfängeradresse verwenden.",400);
+  const template=await getEmailTemplate(input.type==="CARNIVAL"?"acquisition_carnival":"acquisition_gugge");
+  if(!template.enabled)return jsonError("Die Akquise-Vorlage ist deaktiviert.",400);
+  const rendered=renderEmailTemplate(template,{organizationName:input.organizationName||"Ihre Organisation",websiteUrl:"https://fas-nav.ch"});
+  const result=await sendMailboxMail({to:input.to,subject:rendered.subject,text:rendered.text});
+  await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.acquisition.send",entity:"MailCenterMessage",after:{recipient:input.to,type:input.type}});
+  return jsonOk(result);
+ }
  if(body.action==="send"){if(!checkRateLimit("mail-send:"+actor.id,20,60000).ok)return jsonError("Zu viele Nachrichten.",429);const data=sendSchema.parse(body);if(data.replyToId){const source=await prisma.mailCenterMessage.findUnique({where:{providerId:data.replyToId}});if(!source||source.direction!=="IN")return jsonError("Die Antwort gehört zu keiner eingegangenen Nachricht.",400);if(source.sender.toLowerCase()!==data.to.toLowerCase())return jsonError("Empfänger stimmt nicht mit der Nachricht überein.",400);}
  const result=await sendMailboxMail(data);await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.send",entity:"MailCenterMessage",after:{reply:Boolean(data.replyToId)}});return jsonOk(result);}
  if(body.action==="hide-contact"){const email=z.string().email().parse(body.email).toLowerCase();const current=await prisma.siteSetting.findUnique({where:{key:ADDRESS_BLOCKLIST}});const previous=Array.isArray(current?.value)?current.value.filter((v):v is string=>typeof v==="string"):[];const next=Array.from(new Set([...previous,email]));await prisma.siteSetting.upsert({where:{key:ADDRESS_BLOCKLIST},create:{key:ADDRESS_BLOCKLIST,group:"mail",value:next},update:{value:next}});await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.contact.hide",entity:"SiteSetting"});return jsonOk({ok:true});}
