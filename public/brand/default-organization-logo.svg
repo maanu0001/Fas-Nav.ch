@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254"><defs>
+ <radialGradient id="bg"><stop stop-color="#06436b"/><stop offset=".54" stop-color="#012d50"/><stop offset="1" stop-color="#00182d"/></radialGradient>
+ <linearGradient id="cyan" x1="0" x2="1"><stop stop-color="#14b9f5"/><stop offset="1" stop-color="#64d8ff"/></linearGradient>
+ <linearGradient id="silver"><stop stop-color="#fff"/><stop offset="1" stop-color="#a6b8cb"/></linearGradient>
+ <linearGradient id="arc"><stop stop-color="#67d6ff"/><stop offset=".5" stop-color="#1695d5"/><stop offset="1" stop-color="#1281bb"/></linearGradient>
+ <clipPath id="face"><path d="M0 66 Q0 0 140 0 Q280 0 280 66 L280 160 Q276 233 140 294 Q4 233 0 160Z"/></clipPath>
+ </defs><rect width="1254" height="1254" fill="url(#bg)"/><circle cx="627" cy="604" r="492" fill="none" stroke="url(#arc)" stroke-width="10" opacity=".95"/><g fill="#ffb800"><circle cx="250" cy="114" r="9"/><rect x="93" y="220" width="37" height="17" rx="6" transform="rotate(32 93 220)"/></g><g fill="#f42f43"><circle cx="112" cy="728" r="9"/><circle cx="1010" cy="279" r="8"/></g><g fill="#37cdff"><rect x="942" y="92" width="44" height="17" rx="8" transform="rotate(-45 942 92)"/><rect x="170" y="905" width="39" height="16" rx="7" transform="rotate(-45 170 905)"/></g><g fill="#fff"><circle cx="905" cy="989" r="7"/></g><g stroke="#ffb800" stroke-width="5" stroke-linecap="round"><path d="M310 468v40m-20-20h40"/></g><g transform="translate(488 250) scale(1)"><g transform="translate(0 0)">
+ <g opacity=".35"><circle cx="140" cy="144" r="173" fill="none" stroke="#1472a5" stroke-width="3"/></g>
+ <path d="M-92 85C-31 -22 57 -27 115 10" fill="none" stroke="#3cd1ff" stroke-width="10" stroke-linecap="round"/>
+ <path d="M250 -28C350 -2 357 112 292 137" fill="none" stroke="#ffb90d" stroke-width="10" stroke-linecap="round"/>
+ <path d="M-19 208C18 251 77 256 108 222" fill="none" stroke="#22c9fa" stroke-width="9" stroke-linecap="round"/>
+ <path d="M278 213C349 244 370 278 342 315" fill="none" stroke="#ef3344" stroke-width="10" stroke-linecap="round"/>
+ <g clip-path="url(#face)">
+  <path fill="#037cae" d="M0 0H280V294H0z"/>
+  <path fill="#12afe1" d="M0 0H142L126 84L0 116z"/>
+  <path fill="#ffbb17" d="M0 90L140 74L115 176L0 195z"/>
+  <path fill="#e92d3b" d="M142 0H280V119L140 78z"/>
+  <path fill="#0192c4" d="M140 75L280 112V183L160 163z"/>
+  <path fill="#031c30" d="M0 177Q58 162 116 169L143 187Q200 157 280 175V205H0z"/>
+  <path fill="#cf2331" d="M0 197L140 226V294H0z"/>
+  <path fill="#ffb917" d="M140 222L280 188V294H140z"/>
+  <path fill="none" stroke="#8ddefc" stroke-width="3" d="M0 67Q132 -10 280 66"/>
+ </g>
+ <path d="M41 132Q84 91 126 132Q84 162 41 132ZM153 132Q196 91 238 132Q196 162 153 132Z" fill="#001a31" stroke="#fff" stroke-width="5"/>
+ <path d="M140 136L117 215L140 232L163 215Z" fill="#566679" stroke="#c3cdd6" stroke-width="3"/>
+ <path d="M92 239Q141 273 188 239" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+</g></g><text x="627" y="817" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="113" font-weight="900" font-style="italic" letter-spacing="-7" fill="url(#silver)">Fas-Nav.ch</text><path d="M267 856h70m630 0h-55" stroke="#a9c7db" stroke-width="4" stroke-linecap="round"/><text x="627" y="869" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" letter-spacing="10" font-size="29" fill="#bdc9d5">SCHWEIZER FASNACHT</text></svg>
