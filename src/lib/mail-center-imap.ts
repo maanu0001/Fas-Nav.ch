@@ -205,6 +205,8 @@ export async function deleteMailboxThreadMessages(messageIds:string[]) {
  const ids=[...new Set(messageIds.filter(id=>/^<[^\r\n<>]{1,250}>$/.test(id)))];
  if(!ids.length)return;
  await withImap(async client=>{
+   const capabilities=await client.command("CAPABILITY");
+   if(!capabilities.lines.some(line=>/\\bUIDPLUS\\b/i.test(line)))throw new Error("Der Mailserver unterstützt kein sicheres gezieltes Entfernen (UIDPLUS).");
    for(const folder of await folders(client)){
      await client.command("SELECT "+quote(folder));
      const uids=new Set<number>();
@@ -215,7 +217,7 @@ export async function deleteMailboxThreadMessages(messageIds:string[]) {
      }
      if(!uids.size)continue;
      await client.command("UID STORE "+[...uids].join(",")+" +FLAGS.SILENT (\\Deleted)");
-     await client.command("EXPUNGE");
+     await client.command("UID EXPUNGE "+[...uids].join(","));
    }
  });
 }
