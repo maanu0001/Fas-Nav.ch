@@ -7,7 +7,7 @@ export const dynamic="force-dynamic";
 type Params={params:Promise<{token:string}>};
 export async function GET(_request:Request,{params}:Params){
  try{const {token}=await params;const invite=await prisma.surveyInvitation.findUnique({where:{tokenHash:hashToken(token)},include:{survey:true}});
- if(!invite||invite.survey.status!=="ACTIVE")return jsonError("Link ungültig oder Umfrage abgeschlossen.",404);
+ if(!invite||(invite.survey.status!=="ACTIVE"&&!(invite.isTest&&invite.survey.status==="DRAFT")))return jsonError("Link ungültig oder Umfrage abgeschlossen.",404);
  return jsonOk({title:invite.survey.title,season:invite.survey.season,questions:invite.survey.questions,answered:!!invite.answeredAt,optedOut:!!invite.optedOutAt});}catch(e){return handleApiError(e);}
 }
 export async function POST(request:Request,{params}:Params){
