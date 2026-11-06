@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { startOfToday } from "@/lib/dates";
 import { PUBLIC_EVENT_SELECT } from "@/lib/queries/public";
-import type { OrganizationType } from "@prisma/client";
+import type { OrganizationType, Prisma } from "@prisma/client";
 
 const MEDIA_SELECT = { url: true, alt: true, width: true, height: true } as const;
 // Shared profile projection for public pages and authenticated draft previews.
@@ -115,7 +115,7 @@ const organizationProfileSelect = {
           },
         },
       },
-    } as const;
+    } satisfies Prisma.OrganizationSelect;
 
 
 /**
