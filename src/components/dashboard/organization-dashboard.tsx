@@ -78,7 +78,7 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
             <ButtonLink href="/dashboard/seite" variant="primary">
               Seite bearbeiten
             </ButtonLink>
-            <ButtonLink href={publicHref} target="_blank" rel="noopener noreferrer" variant="outline">
+            <ButtonLink href={org.status === "PUBLISHED" ? publicHref : `/dashboard/vorschau/${org.id}`} target="_blank" rel="noopener noreferrer" variant="outline">
               Vorschau
               <ExternalLink />
             </ButtonLink>
@@ -143,7 +143,7 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
               icon: "calendar",
             },
             {
-              href: publicHref,
+              href: org.status === "PUBLISHED" ? publicHref : `/dashboard/vorschau/${org.id}`,
               label: "Vorschau öffnen",
               description: "So sehen es Besucher",
               icon: "image",
