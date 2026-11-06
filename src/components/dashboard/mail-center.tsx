@@ -8,7 +8,7 @@ import { BoardingManagement } from "@/components/dashboard/boarding-management";
 import { Archive, ArrowLeft, FileText, Inbox, Mail, MailOpen, Paperclip, Send, Trash2 } from "lucide-react";
 
 type Message = {
-  id:string;providerId:string;sender:string;
+  id:string;providerId:string;internetMessageId?:string|null;sender:string;
   recipients:{to?:string;cc?:string;bcc?:string};
   subject:string;textBody:string;direction:string;receivedAt:string;
   attachmentInfo:unknown;
@@ -19,10 +19,12 @@ type Conversation = {
 };
 type Attachment = {name:string;type:string;data:string};
 type FileInfo = {id:string;name:string;size:number;type?:string};
-type Folder = "INBOX"|"SENT"|"ARCHIVE"|"TRASH"|"ALL";
+type Folder = "INBOX"|"SENT"|"ARCHIVE"|"TRASH"|"AQUISE"|"ALL";
+type OpenStat={messageId:string;openCount:number;lastOpenedAt:string|null};
 const FOLDERS:{id:Folder;label:string;icon:typeof Inbox}[]=[
   {id:"INBOX",label:"Posteingang",icon:Inbox},
   {id:"SENT",label:"Gesendet",icon:Send},
+  {id:"AQUISE",label:"Akquise",icon:MailOpen},
   {id:"ARCHIVE",label:"Archiv",icon:Archive},
   {id:"TRASH",label:"Papierkorb",icon:Trash2},
   {id:"ALL",label:"Alle Konversationen",icon:Mail},
@@ -49,11 +51,15 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
  const [attachments,setAttachments]=React.useState<Record<string,FileInfo[]>>({});
  const [busy,setBusy]=React.useState(false);const [error,setError]=React.useState("");const [notice,setNotice]=React.useState("");
  const [search,setSearch]=React.useState("");
+ const [emailInput,setEmailInput]=React.useState("");
+ const [emailFilter,setEmailFilter]=React.useState("");
+ const [tracking,setTracking]=React.useState<OpenStat[]>([]);
+ const [previewFile,setPreviewFile]=React.useState<{messageId:string;file:FileInfo}|null>(null);
  const polling=React.useRef(false);
  const [syncWarning,setSyncWarning]=React.useState("");
  const active=conversations.find(c=>c.id===selected);
  const lastIncoming=active?.messages.filter(m=>m.direction==="IN").at(-1);
- const shown=conversations.filter(c=>(folder==="ALL" ? c.folder!=="TRASH" : c.folder===folder)
+ const shown=conversations.filter(c=>(emailFilter?true:folder==="ALL" ? c.folder!=="TRASH" : c.folder===folder)
    &&(c.subject+" "+c.messages.map(m=>m.sender+" "+m.recipients?.to+" "+m.textBody).join(" ")).toLowerCase().includes(search.toLowerCase()));
  async function api(data:Record<string,unknown>){
   const response=await fetch("/api/mail-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
@@ -62,12 +68,12 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   return json;
  }
  async function refresh(){
-  const res=await fetch("/api/mail-center",{cache:"no-store"});
+  const res=await fetch("/api/mail-center"+(emailFilter?"?email="+encodeURIComponent(emailFilter):""),{cache:"no-store"});
   if(!res.ok)throw new Error("Aktualisieren fehlgeschlagen.");
   const result=await res.json();
   setConversations(prev=>initialSelected&&!result.conversations.some((c:Conversation)=>c.id===initialSelected)?[...prev.filter(c=>c.id===initialSelected),...result.conversations]:result.conversations);
-  setContacts(result.contacts||[]);
-  return result as {conversations:Conversation[];contacts:string[]};
+  setContacts(result.contacts||[]);setTracking(result.tracking||[]);
+  return result as {conversations:Conversation[];contacts:string[];tracking:OpenStat[]};
  }
  React.useEffect(()=>{
   let alive=true;
@@ -89,7 +95,7 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   const visible=()=>{if(document.visibilityState==="visible")void poll();};
   document.addEventListener("visibilitychange",visible);
   return ()=>{alive=false;window.clearInterval(interval);document.removeEventListener("visibilitychange",visible);};
- },[connected]);
+ },[connected,emailFilter]);
  React.useEffect(()=>{
   if(!active)return;
   for(const message of active.messages){
@@ -110,13 +116,18 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   finally{setBusy(false);}
  }
  function openConversation(c:Conversation){
-  setSelected(c.id);setNewMail(false);setReplying(false);setFiles([]);setCc("");setBcc("");
+  setSelected(c.id);setPreviewFile(null);setNewMail(false);setReplying(false);setFiles([]);setCc("");setBcc("");
   if(window.matchMedia("(max-width: 1023px)").matches)router.push("/dashboard/mails/"+encodeURIComponent(c.id));
   if(c.unread)void api({action:"read",id:c.id,unread:false}).then(()=>setConversations(prev=>prev.map(item=>item.id===c.id?{...item,unread:false}:item))).catch(()=>{});
  }
  async function move(target:Folder){
   if(!active||target==="ALL")return;
   await action({action:"folder",id:active.id,folder:target},()=>{setSelected("");setReplying(false);});
+ }
+ async function permanentDelete(){
+  if(!active||active.folder!=="TRASH")return;
+  if(!window.confirm("Diese Konversation endgültig aus Papierkorb und Mailbox löschen? Das kann nicht rückgängig gemacht werden."))return;
+  await action({action:"delete-permanent",id:active.id},()=>{setSelected("");setPreviewFile(null);});
  }
  async function markUnread(){
   if(!active)return;
@@ -173,20 +184,21 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
     {FOLDERS.map(item=>{const Icon=item.icon;const count=conversations.filter(c=>item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id).length;const unread=conversations.filter(c=>c.unread&&(item.id==="ALL"?c.folder!=="TRASH":c.folder===item.id)).length;return <button type="button" key={item.id} onClick={()=>{setFolder(item.id);setSelected("");setNewMail(false);setReplying(false);}} className={"flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition "+(folder===item.id?"bg-primary text-white":"hover:bg-muted")}><Icon className="h-4 w-4 shrink-0"/><span className="flex-1">{item.label}</span><span className="tabular-nums opacity-70">{unread?unread+" / ":""}{count}</span></button>})}
    </nav>
    <section aria-label="Konversationen" className={"min-w-0 border-b lg:border-b-0 lg:border-r "+((selected||newMail)?"hidden lg:block":"")}>
-    <div className="border-b p-3"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Konversationen durchsuchen …" className="w-full rounded-lg border bg-background p-2.5 text-sm"/></div>
+    <div className="space-y-2 border-b p-3"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Konversationen durchsuchen …" className="w-full rounded-lg border bg-background p-2.5 text-sm"/><form onSubmit={e=>{e.preventDefault();setEmailFilter(emailInput.trim().toLowerCase());setSelected("");}} className="flex gap-1"><input type="email" list="mail-addresses" placeholder="Nach E-Mail-Adresse filtern" value={emailInput} onChange={e=>setEmailInput(e.target.value)} className="min-w-0 w-full rounded-lg border bg-background p-2 text-xs"/><datalist id="mail-addresses">{contacts.map(v=><option key={v} value={v}/>)}</datalist><button type="submit" className="rounded-lg border px-2 text-xs font-semibold">Filter</button>{emailFilter?<button type="button" onClick={()=>{setEmailInput("");setEmailFilter("");}} className="rounded-lg border px-2 text-xs" aria-label="E-Mail-Filter entfernen">×</button>:null}</form>{emailFilter?<p className="text-xs text-primary">Alle Ordner · {emailFilter}</p>:null}</div>
     <div className="max-h-[680px] overflow-y-auto">{shown.map(c=><button key={c.id} type="button" onClick={()=>openConversation(c)} className={"block w-full border-b p-3 text-left transition hover:bg-muted "+(selected===c.id?"bg-muted":"")}><div className="flex items-center justify-between gap-2"><strong className={"min-w-0 truncate text-sm "+(c.unread?"font-extrabold text-primary":"font-medium")}>{c.subject}</strong>{c.unread?<span aria-label="Ungelesen" className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600"/>:null}</div><p className={"mt-1 truncate text-xs "+(c.unread?"font-bold":"text-muted-foreground")}>{c.messages.at(-1)?.sender||"Unbekannter Absender"}</p><p className="mt-1 truncate text-xs text-muted-foreground">{c.messages.at(-1)?.textBody}</p><p className="mt-1 text-[10px] text-muted-foreground">{formatDate(c.lastMessageAt)}</p></button>)}{!shown.length?<p className="p-5 text-sm text-muted-foreground">Keine Nachrichten in diesem Ordner.</p>:null}</div>
    </section>
    <section aria-label="Nachrichten" className={"min-w-0 flex-col "+((selected||newMail)?"flex":"hidden lg:flex")}>
     <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3 sm:p-4"><button type="button" onClick={()=>{setSelected("");setNewMail(false);setReplying(false);router.push("/dashboard/mails");}} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-background lg:hidden" aria-label="Zurück zur Mailübersicht"><ArrowLeft className="h-5 w-5"/></button><h2 className="min-w-0 flex-1 truncate font-semibold">{newMail?"Neue E-Mail":active?.subject||"Konversation auswählen"}</h2>{active&&!newMail?<div className="flex flex-wrap gap-1">
      <button type="button" className={button} disabled={busy} onClick={()=>void markUnread()}>{active.unread?<MailOpen className="h-3.5 w-3.5"/>:<Mail className="h-3.5 w-3.5"/>}{active.unread?"Gelesen":"Ungelesen"}</button>
      <button type="button" className={button} disabled={busy} onClick={()=>void move("ARCHIVE")}><Archive className="h-3.5 w-3.5"/>Archivieren</button>
-     {active.folder==="TRASH"?<button type="button" className={button} disabled={busy} onClick={()=>void move("INBOX")}>Wiederherstellen</button>:<button type="button" className={button} disabled={busy} onClick={()=>void move("TRASH")}><Trash2 className="h-3.5 w-3.5"/>Löschen</button>}
-     <select value={active.folder} disabled={busy} onChange={e=>void move(e.target.value as Folder)} className="rounded-lg border bg-background px-2 py-2 text-xs" aria-label="Konversation in Ordner verschieben"><option value="INBOX">Posteingang</option><option value="SENT">Gesendet</option><option value="ARCHIVE">Archiv</option><option value="TRASH">Papierkorb</option></select>
+     {active.folder==="TRASH"?<><button type="button" className={button} disabled={busy} onClick={()=>void move("INBOX")}>Wiederherstellen</button><button type="button" className={button+" text-red-700"} disabled={busy} onClick={()=>void permanentDelete()}><Trash2 className="h-3.5 w-3.5"/>Endgültig löschen</button></>:<button type="button" className={button} disabled={busy} onClick={()=>void move("TRASH")}><Trash2 className="h-3.5 w-3.5"/>Löschen</button>}
+     <select value={active.folder} disabled={busy} onChange={e=>void move(e.target.value as Folder)} className="rounded-lg border bg-background px-2 py-2 text-xs" aria-label="Konversation in Ordner verschieben"><option value="INBOX">Posteingang</option><option value="SENT">Gesendet</option><option value="AQUISE">Akquise</option><option value="ARCHIVE">Archiv</option><option value="TRASH">Papierkorb</option></select>
     </div>:null}</div>
     {active&&!newMail?<div className="min-w-0 flex-1 space-y-4 overflow-visible p-3 sm:p-4 lg:max-h-[75vh] lg:overflow-y-auto">{active.messages.map(m=><article key={m.id} className={"overflow-hidden rounded-xl border "+(m.direction==="OUT"?"border-primary/30":"border-border")}>
      <header className="space-y-1 bg-muted/40 px-4 py-3"><div className="flex justify-between gap-2 text-xs"><strong>{m.direction==="OUT"?"Gesendet":"Empfangen"} · {m.sender}</strong><time className="shrink-0 text-muted-foreground">{formatDate(m.receivedAt)}</time></div><p className="break-all text-xs text-muted-foreground">An: {m.recipients?.to||"–"}{m.recipients?.cc?" · CC: "+m.recipients.cc:""}{m.recipients?.bcc?" · BCC: "+m.recipients.bcc:""}</p></header>
-     {attachmentCount(m.attachmentInfo)>0?<div className="border-b px-4 py-3"><p className="mb-2 flex items-center gap-1 text-xs font-semibold"><Paperclip className="h-3.5 w-3.5"/>Anhänge ({attachmentCount(m.attachmentInfo)})</p><div className="flex flex-wrap gap-2">{attachments[m.id]?.map(file=><React.Fragment key={file.id}><a className="flex max-w-full items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs hover:bg-muted" href={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?attachment="+encodeURIComponent(file.id)} download><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.name}</span><span className="text-muted-foreground">{Math.ceil(file.size/1024)} KB</span></a>{file.type&&["application/pdf","image/jpeg","image/png","image/webp","image/gif","text/plain"].includes(file.type.toLowerCase())?<a href={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?attachment="+encodeURIComponent(file.id)+"&preview=1"} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-primary/25 px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">Vorschau öffnen</a>:null}</React.Fragment>)||<p className="text-xs text-muted-foreground">Anhänge werden geladen …</p>}</div></div>:null}
+     {attachmentCount(m.attachmentInfo)>0?<div className="border-b px-4 py-3"><p className="mb-2 flex items-center gap-1 text-xs font-semibold"><Paperclip className="h-3.5 w-3.5"/>Anhänge ({attachmentCount(m.attachmentInfo)})</p><div className="flex flex-wrap gap-2">{attachments[m.id]?.map(file=><React.Fragment key={file.id}><a className="flex max-w-full items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs hover:bg-muted" href={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?attachment="+encodeURIComponent(file.id)} download><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.name}</span><span className="text-muted-foreground">{Math.ceil(file.size/1024)} KB</span></a>{file.type&&["application/pdf","image/jpeg","image/png","image/webp","image/gif","text/plain"].includes(file.type.toLowerCase())?<button type="button" onClick={()=>setPreviewFile(current=>current?.messageId===m.id&&current.file.id===file.id?null:{messageId:m.id,file})} className="rounded-lg border border-primary/25 px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">Vorschau {previewFile?.messageId===m.id&&previewFile.file.id===file.id?"schliessen":"anzeigen"}</button>:null}</React.Fragment>)||<p className="text-xs text-muted-foreground">Anhänge werden geladen …</p>}</div>{previewFile?.messageId===m.id?<div className="mt-3 overflow-hidden rounded-xl border bg-background"><div className="flex items-center justify-between gap-3 border-b px-3 py-2 text-xs font-semibold"><span className="truncate">{previewFile.file.name}</span><button type="button" onClick={()=>setPreviewFile(null)} aria-label="Vorschau schliessen">×</button></div><iframe title={"Anhangvorschau: "+previewFile.file.name} sandbox="" src={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?attachment="+encodeURIComponent(previewFile.file.id)+"&preview=1"} className="h-[420px] w-full bg-white" referrerPolicy="no-referrer"/></div>:null}</div>:null}
      <iframe title={"E-Mail-Inhalt: "+m.subject} sandbox="" loading="lazy" src={"/api/mail-center/attachments/"+encodeURIComponent(m.id)+"?format=html"} className="h-[400px] min-h-[250px] w-full rounded-b-xl bg-white sm:h-[460px]" referrerPolicy="no-referrer"/>
+     {tracking.find(t=>t.messageId===m.internetMessageId)?<div className="border-t bg-primary-50 px-4 py-3 text-xs text-primary-900"><MailOpen className="mr-1 inline h-3.5 w-3.5"/>Akquise-Öffnungen: <strong>{tracking.find(t=>t.messageId===m.internetMessageId)?.openCount??0}×</strong> · Zuletzt: {tracking.find(t=>t.messageId===m.internetMessageId)?.lastOpenedAt?formatDate(tracking.find(t=>t.messageId===m.internetMessageId)!.lastOpenedAt!):"noch nicht registriert"}<p className="mt-1 text-[11px] opacity-70">Näherungswert: Bilderblocker und automatische Mail-Scans können die Zählung beeinflussen.</p></div>:null}
     </article>)}</div>:null}
     {active&&!newMail&&!replying&&active.folder!=="TRASH"?<div className="border-t p-3"><button type="button" className={button} onClick={()=>{setReplying(true);setBody("");setFiles([]);}}>Antworten</button></div>:null}
     {(newMail||replying&&active)?<form onSubmit={submit} className="mt-auto space-y-4 border-t bg-muted/20 p-3 sm:p-5">
