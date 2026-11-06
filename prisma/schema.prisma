@@ -1305,9 +1305,10 @@ model SurveyInvitation {
  id String @id @default(cuid())
  surveyId String
  survey SeasonSurvey @relation(fields:[surveyId],references:[id],onDelete:Cascade)
- organizationId String
- organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ organizationId String?
+ organization Organization? @relation(fields:[organizationId],references:[id],onDelete:Cascade)
  email String
+ isTest Boolean @default(false)
  tokenHash String @unique
  sentAt DateTime?
  reminderSentAt DateTime?
