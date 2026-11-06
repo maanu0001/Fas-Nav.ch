@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       title: `Neues Ticket #${ticket.number}`,
       body: `${user.name ?? user.email}: ${ticket.subject}`,
       link: `/dashboard/tickets/${ticket.id}`,
+      email: true,
     });
 
     return jsonOk(ticket, 201);
