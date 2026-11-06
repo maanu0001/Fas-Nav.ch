@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { apiRequest,errorMessage } from "@/lib/client-api";
+import { apiRequest,errorMessage,fieldErrors } from "@/lib/client-api";
 
 type Inquiry={id:string;senderName:string;senderEmail:string;message:string;reply:string|null;createdAt:string};
 type Listing={id:string;title:string;description:string;category:string;listingType:string;status:string;city:string;canton:string|null;price:number|null;date:string|null;imageUrls:string[];views:number;organizationId:string;organization:{name:string};inquiries:Inquiry[];details:Record<string,unknown>|null};
@@ -53,7 +53,8 @@ export function MarketplaceManager({organizations,initial,staff,limitsByOrg}:{or
    setEditing(null);setForm(empty);setAttempted(false);setShowEditor(false);
    try{await refresh();}catch{setMessage("Inserat wurde gespeichert. Die Liste konnte nicht aktualisiert werden; lade die Seite bei Bedarf neu.");}
   }catch(e){
-   setMessage("Speichern fehlgeschlagen: "+errorMessage(e));
+   const fields=Object.values(fieldErrors(e));
+   setMessage("Speichern fehlgeschlagen: "+errorMessage(e)+(fields.length?" "+fields.join(" · "):""));
   }finally{setBusy(false);}
  }
  async function act(id:string,action:string){setBusy(true);try{if(action==="delete"){if(!window.confirm("Inserat endgültig löschen? Das Inserat und seine Kontaktanfragen werden dauerhaft entfernt."))return;await apiRequest("/api/boerse/"+id,{method:"DELETE"});}else await apiRequest("/api/boerse/"+id,{method:"PATCH",body:{action}});await refresh();setMessage("Änderung gespeichert.");}catch(e){setMessage(errorMessage(e));}finally{setBusy(false);}}
