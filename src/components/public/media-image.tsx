@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 import { LogoMark } from "@/components/ui/logo";
-import { cn, organizationInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export type MediaLike = {
   url: string;
