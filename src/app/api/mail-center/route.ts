@@ -28,7 +28,7 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
   if(!template.enabled)return jsonError("Die Akquise-Vorlage ist deaktiviert.",400);
   const rendered=renderEmailTemplate(template,{organizationName:input.organizationName||"Ihre Organisation",websiteUrl:"https://fas-nav.ch"});
   const token=randomBytes(32).toString("hex");
-  const base=(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch").replace(/\\/$/,"");
+  const base=(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch").replace(/\/$/,"");
   const pixel=`<img src="${base}/api/mail-center/open/${token}.png" width="1" height="1" alt="" style="display:block;width:1px;height:1px" />`;
   const result=await sendMailboxMail({to:input.to,subject:rendered.subject,text:rendered.text,html:`${escapeHtmlEmail(rendered.text)}${pixel}`,acquisitionToken:token});
   await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.acquisition.send",entity:"MailCenterMessage",after:{recipient:input.to,type:input.type}});
