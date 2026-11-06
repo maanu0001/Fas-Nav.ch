@@ -47,6 +47,7 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
   await deleteMailboxThreadMessages(conversation.messages.map(m=>m.internetMessageId).filter((id):id is string=>!!id));
   await prisma.$transaction(async tx=>{
     await tx.deletedMailThread.upsert({where:{threadKey:conversation.providerThreadId},create:{threadKey:conversation.providerThreadId},update:{}});
+    await tx.acquisitionOpen.deleteMany({where:{messageId:{in:conversation.messages.map(m=>m.internetMessageId).filter((v):v is string=>!!v)}}});
     await tx.mailConversation.delete({where:{id}});
   });
   await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.delete.permanent",entity:"MailConversation",entityId:id});
