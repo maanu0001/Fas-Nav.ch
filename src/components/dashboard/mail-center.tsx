@@ -65,7 +65,7 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   const res=await fetch("/api/mail-center",{cache:"no-store"});
   if(!res.ok)throw new Error("Aktualisieren fehlgeschlagen.");
   const result=await res.json();
-  setConversations(result.conversations);
+  setConversations(prev=>initialSelected&&!result.conversations.some((c:Conversation)=>c.id===initialSelected)?[...prev.filter(c=>c.id===initialSelected),...result.conversations]:result.conversations);
   setContacts(result.contacts||[]);
   return result as {conversations:Conversation[];contacts:string[]};
  }
