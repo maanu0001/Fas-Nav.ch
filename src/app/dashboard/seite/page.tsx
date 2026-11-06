@@ -50,7 +50,7 @@ export default async function MyPageEditor() {
         organizationId={organization.id}
         type={organization.type}
         status={organization.status}
-        publicHref={publicHrefFor(organization)}
+        publicHref={organization.status==="PUBLISHED"?publicHrefFor(organization):`/dashboard/vorschau/${organization.id}`}
         cantons={cantons}
         initial={toEditorState(organization)}
         canPublish={canPublish}
