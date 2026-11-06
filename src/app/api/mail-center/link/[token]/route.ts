@@ -16,7 +16,7 @@ export async function GET(request:Request,{params}:{params:Promise<{token:string
   if(!/^[a-f0-9]{64}$/.test(token))return new Response("Link ungültig.",{status:404});
   try{
     await prisma.acquisitionOpen.update({where:{token},data:{clickCount:{increment:1},lastClickedAt:new Date()}});
-  }catch{return new Response("Link nicht mehr verfügbar.",{status:404});}
+  }catch{/* Even if a tracking row is missing, the customer-facing Fas-Nav link must remain usable. */}
   const response=NextResponse.redirect(target.toString(),{status:302});
   response.headers.set("Cache-Control","private, no-store, max-age=0");
   response.headers.set("Referrer-Policy","no-referrer");
