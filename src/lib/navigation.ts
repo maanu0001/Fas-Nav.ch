@@ -28,7 +28,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
   if (isStaff(role)) {
     return [
       {
-        items: [{ href: "/dashboard", label: "Dashboard", icon: "gauge", exact: true }],
+        items: [{ href: "/dashboard", label: "Dashboard", icon: "gauge", exact: true }, { href: "/dashboard/handbuch", label: "Fas-Nav Handbuch", icon: "book" }],
       },
       {
         title: "Inhalte",
