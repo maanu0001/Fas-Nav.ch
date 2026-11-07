@@ -282,6 +282,7 @@ model User {
   /// Kein Standardwert: Die Rolle wird beim Anlegen bewusst gesetzt.
   role           Role
   isActive       Boolean   @default(true)
+  sessionVersion Int       @default(0)
   phone          String?
   /// E-Mail bei neuen Ticketantworten erhalten. Standard an, weil eine
   /// unbeantwortete Rückfrage sonst unbemerkt liegen bleibt.
@@ -869,7 +870,7 @@ model Payment {
   periodStart   DateTime?
   periodEnd     DateTime?
   reference     String?
-  externalId    String?
+  externalId    String?       @unique
   notes         String?       @db.Text
 
   createdAt DateTime @default(now())
@@ -1421,4 +1422,24 @@ model DeletedMailThread {
  threadKey String @id
  deletedAt DateTime @default(now())
  @@map("deleted_mail_threads")
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  eventType   String
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+  @@map("stripe_webhook_events")
+}
+
+model StripeCheckoutAttempt {
+  organizationId String @id
+  planId         String
+  sessionId      String?
+  url            String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  @@index([expiresAt])
+  @@map("stripe_checkout_attempts")
 }

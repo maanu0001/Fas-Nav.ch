@@ -1,0 +1,41 @@
+name: Produktionsbackup (Datenbank und Uploads)
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+concurrency:
+  group: fas-nav-backup
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: SSH-Zugang
+        env:
+          KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$KEY"
+          test -n "$KNOWN"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+      - name: Backup erstellen und validieren
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_HOST"
+          test -n "$SSH_USER"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes -p 22 "$SSH_USER@$SSH_HOST" 'bash /opt/fas-nav/app/scripts/backup-production.sh'
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

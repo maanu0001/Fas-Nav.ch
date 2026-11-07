@@ -15,3 +15,8 @@ coverage
 .idea
 Dockerfile
 docker-compose*.yml
+
+# Never copy production backups, database exports or archives into build images.
+backups
+*.dump
+*.sql.gz

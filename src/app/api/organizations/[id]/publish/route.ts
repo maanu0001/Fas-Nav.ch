@@ -33,6 +33,15 @@ export async function POST(request: Request, { params }: Params) {
 
     const staff = isStaff(access.user.role);
 
+    if (status === "PUBLISHED" && before.status !== "PUBLISHED") {
+      const complete = await prisma.organization.findUnique({
+        where: { id }, select: { shortDescription: true, description: true, city: true, cantonId: true },
+      });
+      if (!complete?.city || !complete.cantonId || (!complete.shortDescription && !complete.description)) {
+        return jsonError("Vor der Veröffentlichung müssen Ort, Kanton und Beschreibung ausgefüllt sein.", 422);
+      }
+    }
+
     if (!staff) {
       if (!SELF_ALLOWED.has(status)) {
         return jsonError("Diesen Status darf nur das Fas-Nav-Team setzen.", 403);
@@ -44,19 +53,7 @@ export async function POST(request: Request, { params }: Params) {
         );
       }
 
-      // Mindestangaben, damit keine leeren Seiten öffentlich werden.
-      if (status === "PUBLISHED") {
-        const complete = await prisma.organization.findUnique({
-          where: { id },
-          select: { shortDescription: true, description: true, city: true, cantonId: true },
-        });
-        if (!complete?.city || !complete.cantonId) {
-          return jsonError("Bitte ergänze zuerst Ort und Kanton.", 422);
-        }
-        if (!complete.shortDescription && !complete.description) {
-          return jsonError("Bitte ergänze zuerst eine Beschreibung deiner Organisation.", 422);
-        }
-      }
+
     }
 
     const organization = await prisma.organization.update({

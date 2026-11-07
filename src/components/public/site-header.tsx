@@ -55,7 +55,7 @@ export function SiteHeader({ isAuthenticated }: { isAuthenticated: boolean }) {
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   active
                     ? "bg-secondary text-primary-900"
-                    : "text-slate-600 hover:bg-secondary hover:text-primary-900",
+                    : "text-foreground/80 hover:bg-secondary hover:text-foreground",
                 )}
               >
                 {item.label}
@@ -129,7 +129,7 @@ export function SiteHeader({ isAuthenticated }: { isAuthenticated: boolean }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-secondary"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-secondary"
                 >
                   <item.icon className="h-5 w-5 shrink-0" aria-hidden />{item.label}
                 </Link>

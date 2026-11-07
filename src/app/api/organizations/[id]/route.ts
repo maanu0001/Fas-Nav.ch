@@ -56,6 +56,14 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const becomesPublished =
       admin.status === "PUBLISHED" && before.status !== "PUBLISHED";
+    if (becomesPublished) {
+      const city=content.city ?? before.city;
+      const cantonId=content.cantonId ?? before.cantonId;
+      const description=content.shortDescription ?? before.shortDescription;
+      const fullDescription=content.description ?? before.description;
+      if (!city || !cantonId || (!description && !fullDescription))
+        return jsonError("Vor der Veröffentlichung bitte Ort, Kanton und Beschreibung ergänzen.",422);
+    }
 
     const organization = await prisma.organization.update({
       where: { id },

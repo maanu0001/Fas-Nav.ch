@@ -60,6 +60,26 @@ export default async function PrivacyPage() {
         werden als Support-Ticket gespeichert und nach Abschluss der Bearbeitung archiviert.
       </p>
 
+      <h3>Akquise-E-Mails und Linkmessung</h3>
+      <p>
+        Bei individuell versendeten Einladungs- und Akquise-E-Mails können wir erfassen,
+        wie oft ein individueller Link zu Fas-Nav.ch aufgerufen wurde und wann der letzte
+        Linkaufruf stattgefunden hat. Zusätzlich können einzelne E-Mail-Programme ein
+        technisches Bild zum Messen des Nachrichtenaufrufs laden. Diese Messwerte sind
+        nicht zwingend echte Lesevorgänge: Sicherheitsdienste und Mailprogramme können
+        Links und Bilder automatisch abrufen. Die Messung dient ausschliesslich der
+        Nachverfolgung unserer eigenen Kommunikation; sie wird nicht an Werbenetzwerke
+        weitergegeben. Zu einer gelöschten Akquise-Konversation gehörende Messdaten
+        werden bei der endgültigen Löschung ebenfalls entfernt.
+      </p>
+      <h3>Online-Zahlungen</h3>
+      <p>
+        Für kostenpflichtige Online-Abonnemente setzen wir Stripe als Zahlungsdienstleister
+        ein. Zahlungs-, Rechnungs- und Abonnementdaten werden zur Vertragsabwicklung
+        verarbeitet; Bank- und Kartendaten werden nicht von Fas-Nav.ch gespeichert.
+        Stripe verarbeitet die Zahlungsangaben nach seinen eigenen Datenschutzbestimmungen.
+      </p>
+
       <h2>3. Zweck der Bearbeitung</h2>
       <ul>
         <li>Betrieb und Weiterentwicklung der Plattform</li>
@@ -91,8 +111,8 @@ export default async function PrivacyPage() {
       <h2>6. Aufbewahrung</h2>
       <p>
         Wir bewahren Personendaten nur so lange auf, wie dies für die genannten Zwecke erforderlich
-        ist oder gesetzliche Aufbewahrungsfristen es verlangen. Statistikdaten werden aggregiert
-        und ohne Personenbezug gespeichert.
+        ist oder gesetzliche Aufbewahrungsfristen es verlangen. Nutzungsstatistiken verwenden zeitlich begrenzte pseudonyme Kennungen.
+        Gesetzliche Aufbewahrungspflichten für Rechnungs- und Vertragsdaten bleiben vorbehalten.
       </p>
 
       <h2>7. Deine Rechte</h2>

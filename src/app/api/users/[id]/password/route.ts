@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: Params) {
     await prisma.$transaction([
       prisma.user.update({
         where: { id },
-        data: { passwordHash: await hashPassword(body.password) },
+        data: { passwordHash: await hashPassword(body.password), sessionVersion: { increment: 1 } },
       }),
       // Offene Reset-Links werden ungültig.
       prisma.passwordResetToken.deleteMany({ where: { userId: id, usedAt: null } }),

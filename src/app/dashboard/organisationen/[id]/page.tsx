@@ -72,6 +72,7 @@ export default async function AdminOrganizationPage({ params }: Params) {
             nextDueAt: true,
             autoRenew: true,
             planId: true,
+            externalSubscriptionId: true,
             plan: { select: { name: true } },
           },
         },
