@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FasnachtPage({ params }: Props) {
   const { slug } = await params;
-  const org = await getPublicOrganization(slug, "CARNIVAL");
+  const org = await getPublicOrganization(slug, "CARNIVAL") ?? await getOwnedDraftBySlug(slug, "CARNIVAL");
   if (!org) notFound();
 
   const [events, related] = await Promise.all([
