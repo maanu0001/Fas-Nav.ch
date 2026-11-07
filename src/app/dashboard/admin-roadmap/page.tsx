@@ -47,7 +47,7 @@ async function save(form: FormData) {
   if (!sources.some(s => s.key === source) || !["ACTIVE", "WAITING", "PAUSED", "DONE", "CANCELLED"].includes(status)) throw new Error("Ungültiger Status");
   const note = String(form.get("note") ?? "").slice(0, 2000);
   const due = String(form.get("due") ?? "");
-  if (due && !/^\\d{4}-\\d{2}-\\d{2}$/.test(due)) throw new Error("Ungültiges Datum");
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) throw new Error("Ungültiges Datum");
   const checked = manual.filter(s => form.get(s.key) === "on").map(s => s.key);
   await prisma.siteSetting.upsert({
     where: { key: keyFor(id) },
