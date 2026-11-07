@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { handleApiError, jsonOk, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { roadmapKey, ROADMAP_GROUP } from "@/lib/admin-roadmap";
 import { requirePermission } from "@/lib/rbac";
 
 const status=z.enum(["IMPORTED","CONTACTED","REPLIED","CLAIMED","CUSTOMER","NOT_INTERESTED","UNREACHABLE"]);
@@ -24,6 +25,15 @@ export async function PATCH(request:Request,{params}:{params:Promise<{organizati
   const nextHistory:HistoryEntry[]=changes.length?[...history,{at:new Date().toISOString(),by:user.name??user.email??"Admin",changes}]:history;
   const value:Prisma.InputJsonObject={status:body.status,nextFollowUp:body.nextFollowUp,notes:body.notes,contactPerson:body.contactPerson,history:nextHistory};
   await prisma.siteSetting.upsert({where:{key},create:{key,value,group:"crm",label:"CRM"},update:{value,group:"crm"}});
+  // A meaningful CRM contact activates the roadmap once; never overwrite staff edits.
+  if (["CONTACTED","REPLIED","CLAIMED","CUSTOMER"].includes(body.status)) {
+    const roadmapKeyValue = roadmapKey(organizationId);
+    await prisma.siteSetting.upsert({
+      where: { key: roadmapKeyValue },
+      create: { key: roadmapKeyValue, group: ROADMAP_GROUP, label: "Interner Kundenprozess", value: { source: "ACQUISITION", status: body.status === "CUSTOMER" ? "DONE" : body.status === "CONTACTED" ? "WAITING" : "ACTIVE", checked: [], note: "", due: body.nextFollowUp ?? "", updatedAt: new Date().toISOString(), updatedBy: user.id } },
+      update: {},
+    });
+  }
   await prisma.auditLog.create({data:{action:"CRM_UPDATED",entity:"Organization",entityId:organization.id,entityLabel:organization.name,userId:user.id,userLabel:user.name??user.email??null,after:{changes}}});
   return jsonOk(value);
  }catch(error){return handleApiError(error)}
