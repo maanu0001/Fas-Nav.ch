@@ -14,6 +14,41 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      if (typeof token.id !== "string") {
+        token.isActive = false;
+        return token;
+      }
+      const current = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { role: true, isActive: true, sessionVersion: true, email: true, name: true },
+      });
+      if (!current) { token.isActive = false; return token; }
+      if (user) token.sessionVersion = current.sessionVersion;
+      if (typeof token.sessionVersion !== "number" || token.sessionVersion !== current.sessionVersion) {
+        token.isActive = false;
+        return token;
+      }
+      token.isActive = current.isActive;
+      token.role = current.role;
+      token.email = current.email;
+      token.name = current.name;
+      return token;
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as typeof session.user.role;
+        session.user.isActive = token.isActive === true;
+      }
+      return session;
+    },
+  },
   providers: [
     Credentials({
       credentials: {
