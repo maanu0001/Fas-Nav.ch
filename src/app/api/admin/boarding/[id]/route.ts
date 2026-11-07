@@ -13,7 +13,7 @@ export async function PATCH(request:Request,{params}:Params){
  try{
   const actor=await requireAdmin(),{id}=await params;
   const {action}=z.object({action:z.enum(["approve","reject","revoke"])}).parse(await request.json());
-  const invitation=await prisma.boardingInvitation.findUnique({where:{id},include:{organization:{select:{id:true,name:true,type:true,claimStatus:true}}}});
+  const invitation=await prisma.boardingInvitation.findUnique({where:{id},include:{user:{select:{email:true,name:true}},organization:{select:{id:true,name:true,type:true,claimStatus:true}}}});
   if(!invitation)return jsonError("Einladung nicht gefunden.",404);
   if(action==="revoke"){
    if(invitation.status!=="SENT")return jsonError("Nur offene Einladungen können widerrufen werden.",409);
@@ -35,8 +35,8 @@ export async function PATCH(request:Request,{params}:Params){
    }
    const template=await getEmailTemplate(action==="approve"?"boarding_approved":"boarding_rejected");
    if(template.enabled){
-    const message=renderEmailTemplate(template,{contactName:invitation.contactName||"zusammen",organizationName:invitation.organization.name,dashboardUrl:(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch")+"/dashboard/onboarding"});
-    try{await sendMailboxMail({to:invitation.email,subject:message.subject,text:message.text});}catch(error){console.error("[boarding] Status geändert, Benachrichtigungsmail fehlgeschlagen",error);}
+    const message=renderEmailTemplate(template,{contactName:invitation.user?.name||invitation.contactName||"zusammen",organizationName:invitation.organization.name,dashboardUrl:(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch")+"/dashboard/onboarding"});
+    try{await sendMailboxMail({to:invitation.user?.email ?? invitation.email,subject:message.subject,text:message.text});}catch(error){console.error("[boarding] Status geändert, Benachrichtigungsmail fehlgeschlagen",error);}
    }
   }
   await logAudit({userId:actor.id,userLabel:actor.email,action:"boarding."+action,entity:"BoardingInvitation",entityId:id,after:{organizationId:invitation.organizationId,email:invitation.email}});
