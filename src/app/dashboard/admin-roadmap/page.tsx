@@ -24,6 +24,9 @@ async function save(form: FormData) {
   const key = roadmapKey(id);
   const existing = await prisma.siteSetting.findUnique({ where: { key }, select: { value: true } });
   const previous = existing ? parseRoadmap(existing.value) : null;
+  const submittedVersion = String(form.get("version") ?? "");
+  if (existing && submittedVersion !== (previous?.updatedAt ?? "")) throw new Error("Dieser Prozess wurde zwischenzeitlich geändert. Bitte Seite neu laden und Änderungen erneut prüfen.");
+  if (!existing && submittedVersion) throw new Error("Der Prozess wurde zwischenzeitlich geändert. Bitte Seite neu laden.");
   const next = { source, status, due, note, checked, updatedAt: new Date().toISOString(), updatedBy: context.user.id };
   const changes: string[] = [];
   if (!previous || previous.source !== source) changes.push("Einstieg: " + source);
@@ -79,7 +82,7 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
       {details.pendingClaim && <p className="rounded-lg border border-amber-500/40 p-3 text-sm">Eine Profilbeanspruchung wartet auf Prüfung. Vor Freigabe die Berechtigung verifizieren.</p>}
       {details.invitation && <p className="text-sm text-muted-foreground">Letzte Boarding-Einladung: {details.invitation.status} · {details.invitation.openCount} Öffnungen · Ablauf {details.invitation.expiresAt.toLocaleDateString("de-CH")}</p>}
       <form action={save} className="space-y-4 border-t pt-4">
-        <input type="hidden" name="organizationId" value={selected.id}/>
+        <input type="hidden" name="organizationId" value={selected.id}/><input type="hidden" name="version" value={state?.updatedAt ?? ""}/>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">Einstiegsweg<select name="source" defaultValue={state?.source ?? (details.pendingClaim ? "CLAIM" : details.invitation ? "BOARDING" : details.crmStatus === "CONTACTED" ? "ACQUISITION" : "CONTACT")} className="mt-1 w-full rounded-lg border bg-background p-2">{roadmapSources.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select></label>
           <label className="text-sm">Prozessstatus<select name="status" defaultValue={state?.status ?? "ACTIVE"} className="mt-1 w-full rounded-lg border bg-background p-2">{Object.entries(statusLabels).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label>
