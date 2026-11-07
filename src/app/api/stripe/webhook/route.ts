@@ -100,6 +100,10 @@ export async function POST(request: Request) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded":
         await handleCheckout(object);
+        if (metadata(object).organizationId) await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:metadata(object).organizationId!,sessionId:stripeId(object.id)}});
+        break;
+      case "checkout.session.expired":
+        if (metadata(object).organizationId) await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:metadata(object).organizationId!,sessionId:stripeId(object.id)}});
         break;
       case "invoice.paid":
       case "invoice.payment_succeeded":
