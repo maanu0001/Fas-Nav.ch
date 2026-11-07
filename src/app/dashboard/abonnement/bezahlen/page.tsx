@@ -33,7 +33,7 @@ export default async function CheckoutPage() {
       {!canManage ? <Alert variant="warning" title="Keine Berechtigung">Nur Owner und Manager können ein Abonnement buchen oder wechseln.</Alert> : null}
       {!configured ? <Alert variant="error" title="Online-Zahlung noch nicht verfügbar" className="mt-4">Stripe ist auf dem Produktionsserver noch nicht vollständig konfiguriert.</Alert> : null}
 
-      {existingStripe?<div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-5"><h2 className="font-semibold text-primary-900">Dein Stripe-Abo besteht bereits</h2><p className="mt-2 text-sm text-primary-800">Verwalte dein bestehendes Abo und Zahlungsmittel im Stripe-Kundenportal. Ein zweiter Checkout wird zum Schutz vor doppelten Abbuchungen nicht gestartet. Tarifwechsel sind im Portal verfügbar, sofern diese Funktion in Stripe freigeschaltet ist.</p><div className="mt-4 max-w-sm"><StripePortalButton organizationId={context.organization.id}/></div></div>:null}
+      {existingStripe?<div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-5"><h2 className="font-semibold text-primary-900 dark:text-white">Dein Stripe-Abo besteht bereits</h2><p className="mt-2 text-sm text-primary-800 dark:text-slate-200">Verwalte dein bestehendes Abo und Zahlungsmittel im Stripe-Kundenportal. Ein zweiter Checkout wird zum Schutz vor doppelten Abbuchungen nicht gestartet. Tarifwechsel sind im Portal verfügbar, sofern diese Funktion in Stripe freigeschaltet ist.</p><div className="mt-4 max-w-sm"><StripePortalButton organizationId={context.organization.id}/></div></div>:null}
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {plans.map((plan) => {
           const current = context.subscription?.planId === plan.id;
@@ -41,14 +41,14 @@ export default async function CheckoutPage() {
             <Card key={plan.id} className="flex h-full flex-col p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-xl font-bold text-primary-900">{plan.name}</h2>
+                  <h2 className="font-display text-xl font-bold text-primary-900 dark:text-slate-100">{plan.name}</h2>
                   {plan.description ? <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p> : null}
                 </div>
                 {current ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Aktuell</span> : null}
               </div>
-              <p className="mt-5 font-display text-3xl font-bold text-primary-900">{formatChf(Number(plan.priceChf))}<span className="ml-1 text-sm font-normal text-muted-foreground">/{plan.billingInterval === "MONTHLY" ? "Monat" : "Jahr"}</span></p>
+              <p className="mt-5 font-display text-3xl font-bold text-primary-900 dark:text-slate-100">{formatChf(Number(plan.priceChf))}<span className="ml-1 text-sm font-normal text-muted-foreground">/{plan.billingInterval === "MONTHLY" ? "Monat" : "Jahr"}</span></p>
               <ul className="my-5 flex-1 space-y-2">
-                {plan.features.slice(0, 8).map((item) => <li key={item.id} className="flex gap-2 text-sm text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{item.feature.name}</li>)}
+                {plan.features.slice(0, 8).map((item) => <li key={item.id} className="flex gap-2 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{item.feature.name}</li>)}
               </ul>
               <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />
             </Card>
