@@ -49,7 +49,10 @@ export function checkRateLimit(
 
 /** Ermittelt eine Client-Kennung aus Proxy-Headern. */
 export function clientKey(request: Request, prefix: string): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  // Prefer the IP validated and set by our reverse proxy. Forwarded-For is
+  // client-controllable unless the proxy explicitly strips incoming values.
+  const realIp=request.headers.get("x-real-ip")?.trim();
+  const forwarded=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip=realIp||forwarded||"unknown";
   return `${prefix}:${ip}`;
 }
