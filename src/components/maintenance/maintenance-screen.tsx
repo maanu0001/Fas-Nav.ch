@@ -49,7 +49,7 @@ export function MaintenanceScreen({ message }: { message: string }) {
           Wir sind gleich wieder da
         </h1>
 
-        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-slate-600">
+        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground">
           {message}
         </p>
 
