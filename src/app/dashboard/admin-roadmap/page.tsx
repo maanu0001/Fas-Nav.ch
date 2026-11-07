@@ -35,6 +35,13 @@ async function save(form: FormData) {
   if (!previous || previous.note !== note) changes.push("Notiz geändert");
   if (!previous || checked.join(",") !== previous.checked.join(",")) changes.push("Checkliste aktualisiert");
   await prisma.$transaction(async tx => {
+    // Serialize updates to the same roadmap case and recheck the submitted version.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+    const current = await tx.siteSetting.findUnique({ where: { key }, select: { value: true } });
+    const currentVersion = current ? parseRoadmap(current.value).updatedAt ?? "" : "";
+    if (currentVersion !== submittedVersion || Boolean(current) !== Boolean(existing)) {
+      throw new Error("Dieser Prozess wurde inzwischen geändert. Bitte neu laden.");
+    }
     await tx.siteSetting.upsert({ where: { key }, create: { key, group: ROADMAP_GROUP, label: "Interner Kundenprozess", value: next }, update: { value: next } });
     if (changes.length) await tx.auditLog.create({ data: { action: "ROADMAP_UPDATED", entity: "Organization", entityId: id, entityLabel: org.name, userId: context.user.id, userLabel: context.user.name, before: previous ? JSON.parse(JSON.stringify(previous)) : undefined, after: { changes, state: next } } });
   });
