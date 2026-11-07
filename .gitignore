@@ -15,3 +15,6 @@ next-env.d.ts
 !/public/uploads/.gitkeep
 coverage/
 .vercel
+
+# Production database dumps and media archives must never be committed.
+/backups/
