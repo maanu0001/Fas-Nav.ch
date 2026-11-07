@@ -870,7 +870,7 @@ model Payment {
   periodStart   DateTime?
   periodEnd     DateTime?
   reference     String?
-  externalId    String?
+  externalId    String?       @unique
   notes         String?       @db.Text
 
   createdAt DateTime @default(now())
