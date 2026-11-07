@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { jsonError, jsonOk, handleApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { roadmapDue, parseRoadmap, ROADMAP_GROUP, ROADMAP_PREFIX } from "@/lib/admin-roadmap";
+import { reconcileRoadmapCases } from "@/lib/admin-roadmap-reconcile";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
       if (!session?.user?.isActive) return jsonError("Nicht angemeldet.", 401);
       if (session.user.role !== "ADMIN") return jsonError("Keine Berechtigung.", 403);
     }
+    const reconciliation = await reconcileRoadmapCases();
     const [settings, staff] = await Promise.all([
       prisma.siteSetting.findMany({ where: { group: ROADMAP_GROUP, key: { startsWith: ROADMAP_PREFIX } }, select: { key: true, value: true } }),
       prisma.user.findMany({ where: { role: { in: ["ADMIN","TEAM"] }, isActive: true }, select: { id: true } }),
@@ -37,6 +39,6 @@ export async function POST(request: Request) {
         created++;
       }
     }
-    return jsonOk({ checked, created });
+    return jsonOk({ checked, created, reconciliation });
   } catch (error) { return handleApiError(error); }
 }
