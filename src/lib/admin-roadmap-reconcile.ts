@@ -19,19 +19,20 @@ export async function reconcileRoadmapCases() {
   for (const invite of invites) detected.set(invite.organizationId, "BOARDING");
   for (const claim of claims) detected.set(claim.organizationId, "CLAIM");
   let created = 0;
+  let existingCount = 0;
   for (const [organizationId, source] of detected) {
     const key = roadmapKey(organizationId);
     const existing = await prisma.siteSetting.findUnique({ where: { key }, select: { id: true } });
-    if (existing) continue;
+    if (existing) { existingCount++; continue; }
     const due = new Date(Date.now() + (source === "CLAIM" ? 2 : source === "BOARDING" ? 5 : 14) * 86400000).toISOString().slice(0,10);
     // Upsert preserves any case created concurrently by a staff member.
-    const row = await prisma.siteSetting.upsert({
+    await prisma.siteSetting.upsert({
       where: { key },
       create: { key, group: ROADMAP_GROUP, label: "Interner Kundenprozess", value: { source, status: source === "BOARDING" ? "WAITING" : "ACTIVE", checked: [], note: "", due, updatedAt: new Date().toISOString(), updatedBy: "system" } },
       update: {},
       select: { id: true },
     });
-    if (row.id) created++;
+    created++;
   }
-  return { detected: detected.size, created };
+  return { detected: detected.size, created, existing: existingCount };
 }
