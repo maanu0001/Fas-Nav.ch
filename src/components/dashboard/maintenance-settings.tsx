@@ -34,6 +34,7 @@ export function MaintenanceSettings({
 
   async function speichern(event: React.FormEvent) {
     event.preventDefault();
+    if (!enabled && initialEnabled && !window.confirm("Öffentliche Freigabe bestätigen? Vorher müssen Stripe-Testzahlungen, Zugriffsrollen, Impressum, Backups/Restore und Mobile-Ansichten geprüft sein.")) return;
     setPending(true);
     try {
       await apiRequest("/api/settings", {
