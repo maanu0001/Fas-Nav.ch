@@ -1423,3 +1423,12 @@ model DeletedMailThread {
  deletedAt DateTime @default(now())
  @@map("deleted_mail_threads")
 }
+
+model StripeWebhookEvent {
+  id          String   @id
+  eventType   String
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+  @@map("stripe_webhook_events")
+}
