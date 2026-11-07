@@ -74,7 +74,7 @@ export default async function PricingPage() {
       </div>
 
       <div className="container py-14">
-        <div className="mb-8 rounded-xl border border-primary-200 bg-primary-50 p-5 text-sm text-primary-900"><strong>Tarife direkt online buchen:</strong> Organisationen mit Account können ihren Tarif im Dashboard selbst auswählen und über Stripe bezahlen. Noch keinen Account? <Link href="/organisation-eintragen" className="font-semibold underline">Organisation anmelden</Link> – das Team richtet den Zugang ein; danach erfolgt die Buchung online. <Link href="/kontakt" className="font-semibold underline">Beratung ist weiterhin möglich.</Link>{!onlineAvailable?<p className="mt-2 font-semibold text-amber-800">Die Online-Zahlungsanbindung ist auf diesem Server derzeit nicht vollständig eingerichtet.</p>:null}</div>
+        <div className="mb-8 rounded-xl border border-primary-200 bg-primary-50 p-5 text-sm text-primary-900 dark:border-border dark:bg-card dark:text-foreground"><strong>Tarife direkt online buchen:</strong> Organisationen mit Account können ihren Tarif im Dashboard selbst auswählen und über Stripe bezahlen. Noch keinen Account? <Link href="/organisation-eintragen" className="font-semibold underline">Organisation anmelden</Link> – das Team richtet den Zugang ein; danach erfolgt die Buchung online. <Link href="/kontakt" className="font-semibold underline">Beratung ist weiterhin möglich.</Link>{!onlineAvailable?<p className="mt-2 font-semibold text-amber-800">Die Online-Zahlungsanbindung ist auf diesem Server derzeit nicht vollständig eingerichtet.</p>:null}</div>
         {plans.length === 0 ? (
           <EmptyState
             title="Aktuell sind keine Tarife veröffentlicht"
