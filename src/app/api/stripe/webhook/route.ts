@@ -17,6 +17,8 @@ async function syncSubscription(object: StripeObject) {
   const externalSubscriptionId = stripeId(object.id); const externalCustomerId = stripeId(object.customer); const meta = metadata(object);
   let local = externalSubscriptionId ? await prisma.subscription.findFirst({ where: { externalSubscriptionId }, include: { plan: true } }) : null;
   if (!local && meta.organizationId) local = await prisma.subscription.findUnique({ where: { organizationId: meta.organizationId }, include: { plan: true } });
+  // Never replace a different, still-active Stripe subscription with an old event.
+  if (local?.externalSubscriptionId && local.externalSubscriptionId !== externalSubscriptionId && !["CANCELLED", "EXPIRED"].includes(local.status)) return null;
   const planId = meta.planId || local?.planId; const organizationId = meta.organizationId || local?.organizationId;
   if (!planId || !organizationId || !externalSubscriptionId) return null;
   const plan = local && local.planId === planId ? local.plan : await prisma.plan.findUnique({ where: { id: planId } }); if (!plan) return null;
@@ -27,6 +29,8 @@ async function syncSubscription(object: StripeObject) {
 async function handleCheckout(object: StripeObject) {
   if (object.mode !== "subscription") return; const externalSubscriptionId = stripeId(object.subscription); const externalCustomerId = stripeId(object.customer); const meta = metadata(object); if (!externalSubscriptionId || !meta.organizationId || !meta.planId) return;
   const plan = await prisma.plan.findUnique({ where: { id: meta.planId } }); if (!plan) return;
+  const current = await prisma.subscription.findUnique({where:{organizationId:meta.organizationId},select:{externalSubscriptionId:true,status:true}});
+  if (current?.externalSubscriptionId && current.externalSubscriptionId !== externalSubscriptionId && !["CANCELLED","EXPIRED"].includes(current.status)) return;
   await prisma.subscription.upsert({ where: { organizationId: meta.organizationId }, create: { organizationId: meta.organizationId, planId: plan.id, priceChf: plan.priceChf, status: object.payment_status === "paid" ? "ACTIVE" : "PAYMENT_PENDING", externalCustomerId, externalSubscriptionId }, update: { planId: plan.id, priceChf: plan.priceChf, status: object.payment_status === "paid" ? "ACTIVE" : "PAYMENT_PENDING", externalCustomerId: externalCustomerId || undefined, externalSubscriptionId, cancelledAt: null, autoRenew: true, expiringNotifiedAt: null, expiredNotifiedAt: null } });
 }
 function invoiceSubscriptionId(object: StripeObject) { return stripeId(object.subscription) || stripeId(object.parent?.subscription_details?.subscription) || stripeId(object.lines?.data?.[0]?.parent?.subscription_item_details?.subscription); }
@@ -84,6 +88,8 @@ export async function POST(request: Request) {
     }
     const saved = await prisma.stripeWebhookEvent.findUnique({ where: { id: event.id }, select: { processedAt: true } });
     if (saved?.processedAt) return NextResponse.json({ received: true, duplicate: true });
+    // An interrupted worker must not block this event forever. A later retry reclaims it.
+    await prisma.stripeWebhookEvent.deleteMany({where:{id:event.id,processedAt:null,createdAt:{lt:new Date(Date.now()-10*60_000)}}});
     // An event in progress must be retried, not silently acknowledged.
     return NextResponse.json({ error: "Ereignis wird verarbeitet. Bitte erneut senden." }, { status: 503 });
   }
@@ -103,8 +109,12 @@ export async function POST(request: Request) {
         await handleInvoice(object, false);
         break;
       case "customer.subscription.created":
-      case "customer.subscription.updated":
-        await syncSubscription(object);
+      case "customer.subscription.updated": {
+        const liveId=stripeId(object.id);
+        const latest=liveId?await stripeGet<StripeObject>(`/subscriptions/${encodeURIComponent(liveId)}`):object;
+        await syncSubscription(latest);
+        break;
+      }
         break;
       case "customer.subscription.deleted":
         await syncSubscription({ ...object, status: "canceled" });
