@@ -40,6 +40,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
             ? [{ href: "/dashboard/homepage", label: "Homepage", icon: "layout" }]
             : []),
           { href: "/dashboard/organisationen", label: "Organisationen", icon: "building" },
+          { href: "/dashboard/admin-roadmap", label: "Admin Roadmap", icon: "route" },
           { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
           { href: "/dashboard/medien", label: "Medien", icon: "image" },
           ...(isAdmin(role)
