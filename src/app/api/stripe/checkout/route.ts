@@ -1,4 +1,4 @@
-import { BillingInterval } from "@prisma/client";
+import { BillingInterval, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
@@ -42,9 +42,27 @@ export async function POST(request: Request) {
     const interval = recurringInterval(plan.billingInterval);
     if (!interval) return jsonError("Dieser Tarif kann nicht als wiederkehrendes Stripe-Abo gebucht werden.", 422);
 
+    const now = new Date();
+    const old = await prisma.stripeCheckoutAttempt.findUnique({where:{organizationId:organization.id}});
+    if (old?.expiresAt && old.expiresAt > now) {
+      if (old.url && old.planId === plan.id) return jsonOk({url:old.url});
+      return jsonError("Für diese Organisation läuft bereits eine Tarifbuchung. Bitte zuerst abschliessen oder den Ablauf abwarten.",409);
+    }
+    if (old) {
+      await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:organization.id,expiresAt:{lte:now}}});
+    }
+    const expiresAt = new Date(now.getTime() + 60*60_000);
+    try {
+      await prisma.stripeCheckoutAttempt.create({data:{organizationId:organization.id,planId:plan.id,expiresAt}});
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code==="P2002")
+        return jsonError("Für diese Organisation wird bereits ein Checkout vorbereitet. Bitte erneut versuchen.",409);
+      throw error;
+    }
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://fas-nav.ch").replace(/\/$/, "");
     const params = new URLSearchParams();
     params.set("mode", "subscription");
+    params.set("expires_at", String(Math.floor(expiresAt.getTime()/1000)));
     params.set("success_url", `${appUrl}/dashboard/abonnement?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
     params.set("cancel_url", `${appUrl}/dashboard/abonnement?checkout=cancelled`);
     params.set("client_reference_id", organization.id);
@@ -66,9 +84,15 @@ export async function POST(request: Request) {
     if (current?.externalCustomerId) params.set("customer", current.externalCustomerId);
     else if (access.user.email) params.set("customer_email", access.user.email);
 
-    const session = await stripePost<CheckoutSession>("/checkout/sessions", params);
-    if (!session.url) return jsonError("Stripe hat keine Checkout-Adresse zurückgegeben.", 502);
-    return jsonOk({ url: session.url });
+    try {
+      const session = await stripePost<CheckoutSession>("/checkout/sessions", params);
+      if (!session.url) throw new Error("Stripe hat keine Checkout-Adresse zurückgegeben.");
+      await prisma.stripeCheckoutAttempt.update({where:{organizationId:organization.id},data:{url:session.url,sessionId:session.id}});
+      return jsonOk({ url: session.url });
+    } catch(error) {
+      await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:organization.id,sessionId:null}}).catch(()=>{});
+      throw error;
+    }
   } catch (error) {
     return handleApiError(error);
   }
