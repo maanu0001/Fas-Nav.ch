@@ -46,5 +46,5 @@ export async function roadmapSignals(organizationId: string) {
   return { org, signals, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
 }
 export function roadmapDue(state: RoadmapState, now = new Date()) {
-  return Boolean(state.due && /^\d{4}-\d{2}-\d{2}$/.test(state.due) && state.due <= now.toISOString().slice(0, 10) && !["DONE","CANCELLED","PAUSED"].includes(state.status));
+  return Boolean(state.due && /^\d{4}-\d{2}-\d{2}$/.test(state.due) && state.due <= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich", year: "numeric", month: "2-digit", day: "2-digit" }).format(now) && !["DONE","CANCELLED","PAUSED"].includes(state.status));
 }
