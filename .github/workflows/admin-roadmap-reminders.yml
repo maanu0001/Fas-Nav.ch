@@ -1,0 +1,62 @@
+name: Admin-Roadmap-Erinnerungen
+on:
+  schedule:
+    - cron: "35 6 * * *"
+  workflow_dispatch:
+concurrency:
+  group: admin-roadmap-reminders
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  erinnern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: SSH vorbereiten
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SSH_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ] || [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
+            echo "::error::Deployment-SSH-Secrets fehlen."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: Admin-Roadmap-Erinnerungen auf dem produktiven Server ausführen
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes -p 22 "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          run_reminders() {
+            cd /opt/fas-nav/app
+            test -f .env || { echo "Server-.env fehlt."; exit 1; }
+            secret="$(sed -n 's/^CRON_SECRET=//p' .env | tail -n 1 | tr -d '\r')"
+            secret="${secret#\"}"
+            secret="${secret%\"}"
+            if [ -z "$secret" ]; then
+              echo "CRON_SECRET auf dem Server fehlt – bitte zuerst den Mail-Center-Synchronisierungsjob starten." >&2
+              exit 1
+            fi
+            response="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 300 -X POST -w '\n%{http_code}' http://127.0.0.1:3000/api/jobs/admin-roadmap-reminders)"
+            status="$(printf '%s\n' "$response" | tail -n 1)"
+            if [ "$status" != "200" ]; then
+              echo "Erinnerungslauf fehlgeschlagen (HTTP $status)." >&2
+              exit 1
+            fi
+            echo "Erinnerungslauf abgeschlossen: $(printf '%s\n' "$response" | head -n 1 | cut -c 1-240)"
+          }
+          run_reminders < /dev/null
+          REMOTE
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
