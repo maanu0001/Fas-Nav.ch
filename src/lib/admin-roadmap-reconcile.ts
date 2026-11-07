@@ -7,11 +7,12 @@ import { roadmapKey, ROADMAP_GROUP } from "@/lib/admin-roadmap";
  * The unique SiteSetting.key makes repeat runs safe.
  */
 export async function reconcileRoadmapCases() {
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Look back 180 days so interrupted cron runs do not silently lose onboarding events.
+  const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
   const [claims, invites, registrations] = await Promise.all([
-    prisma.claimRequest.findMany({ where: { createdAt: { gte: since } }, select: { organizationId: true }, take: 1000, orderBy: { createdAt: "desc" } }),
-    prisma.boardingInvitation.findMany({ where: { sentAt: { gte: since } }, select: { organizationId: true }, take: 1000, orderBy: { sentAt: "desc" } }),
-    prisma.organization.findMany({ where: { createdAt: { gte: since }, importedAt: null, onboardingCompleted: false, memberships: { some: {} } }, select: { id: true }, take: 1000, orderBy: { createdAt: "desc" } }),
+    prisma.claimRequest.findMany({ where: { createdAt: { gte: since } }, select: { organizationId: true }, take: 5000, orderBy: { createdAt: "desc" } }),
+    prisma.boardingInvitation.findMany({ where: { sentAt: { gte: since } }, select: { organizationId: true }, take: 5000, orderBy: { sentAt: "desc" } }),
+    prisma.organization.findMany({ where: { createdAt: { gte: since }, importedAt: null, onboardingCompleted: false, memberships: { some: {} } }, select: { id: true }, take: 5000, orderBy: { createdAt: "desc" } }),
   ]);
   const detected = new Map<string, string>();
   for (const org of registrations) detected.set(org.id, "SELF");
