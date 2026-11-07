@@ -57,6 +57,6 @@ Diese Liste trennt **automatisierte Vorbereitungen** von der manuellen Freigabe.
 - [ ] Nach Freigabe Wartungsmodus ausschalten und öffentliche Seiten anonym prüfen
 
 ## Backup auf dem Produktionsserver
-Der Workflow `.github/workflows/backup-production.yml` startet täglich um **02:30 UTC** das Skript `scripts/backup-production.sh`. Dieses schreibt ein PostgreSQL-Custom-Dump und ein tar.gz-Archiv der Uploads in `/opt/fas-nav/app/backups/<UTC-Zeitstempel>`, erstellt SHA256-Summen, prüft die Archive und entfernt lokale Backups nach 14 Tagen.
+Der Workflow `.github/workflows/backup-production.yml` startet täglich um **02:30 UTC** das Skript `scripts/backup-production.sh`. Dieses schreibt ein PostgreSQL-Custom-Dump und ein tar.gz-Archiv der Uploads in `$HOME/fas-nav-backups/<UTC-Zeitstempel>`, erstellt SHA256-Summen, prüft die Archive und entfernt lokale Backups nach 14 Tagen.
 
 **Wichtig:** Die Workflow-Existenz beweist weder, dass ein Lauf schon erfolgreich war, noch dass ein Restore funktioniert. Beide Nachweise müssen separat dokumentiert werden. Kein Backuparchiv oder .env in Git einchecken. Kopie der Sicherungen verschlüsselt auf ein anderes System legen. Restore nur in isolierter Testumgebung durchführen.

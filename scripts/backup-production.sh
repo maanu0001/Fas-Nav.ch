@@ -8,7 +8,7 @@ command -v docker >/dev/null || { echo "Docker fehlt" >&2; exit 1; }
 command -v flock >/dev/null || { echo "flock fehlt" >&2; exit 1; }
 command -v sha256sum >/dev/null || { echo "sha256sum fehlt" >&2; exit 1; }
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
-BASE="$APP_DIR/backups"
+BASE="${FASNAV_BACKUP_DIR:-$HOME/fas-nav-backups}"
 mkdir -p "$BASE"
 chmod 700 "$BASE"
 exec 9>"$BASE/.backup.lock"
