@@ -1,8 +1,12 @@
 import type { MetadataRoute } from "next";
 
 import { absoluteUrl } from "@/lib/utils";
+import { getMaintenanceState } from "@/lib/maintenance";
+export const dynamic = "force-dynamic";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const maintenance = await getMaintenanceState();
+  if (maintenance.enabled) return { rules: [{ userAgent: "*", disallow: "/" }] };
   return {
     rules: [
       {
