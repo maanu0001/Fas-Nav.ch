@@ -36,7 +36,7 @@ async function save(form: FormData) {
   if (!previous || checked.join(",") !== previous.checked.join(",")) changes.push("Checkliste aktualisiert");
   await prisma.$transaction(async tx => {
     // Serialize updates to the same roadmap case and recheck the submitted version.
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))::text AS lock_result`;
     const current = await tx.siteSetting.findUnique({ where: { key }, select: { value: true } });
     const currentVersion = current ? parseRoadmap(current.value).updatedAt ?? "" : "";
     if (currentVersion !== submittedVersion || Boolean(current) !== Boolean(existing)) {
