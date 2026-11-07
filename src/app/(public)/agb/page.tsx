@@ -52,16 +52,19 @@ export default async function TermsPage() {
 
       <h2>5. Abonnemente, Preise und Zahlung</h2>
       <p>
-        Abonnemente werden in der Regel jährlich abgeschlossen. Die jeweils gültigen Preise sind
-        auf der Seite „Preise“ ersichtlich. Die Rechnungsstellung erfolgt zu Beginn der
-        Abonnementsperiode. Alle Preise verstehen sich in Schweizer Franken.
+        Tarife werden gemäss der bei der Buchung angegebenen Laufzeit abgerechnet
+        (beispielsweise monatlich oder jährlich). Massgebend sind der ausgewählte Tarif,
+        die angezeigten Vertragsbedingungen und die Bestätigung im Online-Checkout.
+        Manuell ausgestellte Rechnungen werden separat ausgewiesen. Alle Preise werden
+        in Schweizer Franken angezeigt.
       </p>
 
       <h2>6. Laufzeit, Verlängerung und Kündigung</h2>
       <p>
-        Das Abonnement verlängert sich jeweils um eine weitere Periode, sofern es nicht vor Ablauf
-        gekündigt wird. Vor dem Ablaufdatum informieren wir rechtzeitig über die anstehende
-        Verlängerung.
+        Wiederkehrende Online-Abonnemente verlängern sich gemäss der im Checkout vereinbarten
+        Laufzeit, sofern sie nicht rechtzeitig gekündigt werden. Die Verwaltung der
+        Zahlungsmittel und die Kündigung von Stripe-Abonnements erfolgt über das Kundenportal.
+        Für manuell verwaltete Abonnemente gelten die individuell vereinbarten Bedingungen.
       </p>
       <p>
         Nach Ablauf oder bei ausstehender Zahlung kann der Funktionsumfang eingeschränkt werden.
