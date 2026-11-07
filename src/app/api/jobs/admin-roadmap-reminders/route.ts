@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     // Transaction-scoped advisory lock serializes parallel runs across all app instances.
     // The same database transaction owns both the deduplication check and inserts.
     const result = await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(814270031)`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(814270031)::text AS lock_result`;
     const [settings, staff] = await Promise.all([
       tx.siteSetting.findMany({ where: { group: ROADMAP_GROUP, key: { startsWith: ROADMAP_PREFIX } }, select: { key: true, value: true } }),
       tx.user.findMany({ where: { role: { in: ["ADMIN","TEAM"] }, isActive: true }, select: { id: true } }),
