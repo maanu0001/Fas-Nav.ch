@@ -53,6 +53,12 @@ jobs:
       - name: Prisma Client erzeugen
         run: npx prisma generate
 
+      - name: TypeScript prüfen
+        run: npm run typecheck
+
+      - name: Automatisierte Tests ausführen
+        run: npm test
+
       - name: Lint prüfen
         run: npm run lint
 
