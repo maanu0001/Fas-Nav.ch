@@ -282,6 +282,7 @@ model User {
   /// Kein Standardwert: Die Rolle wird beim Anlegen bewusst gesetzt.
   role           Role
   isActive       Boolean   @default(true)
+  sessionVersion Int       @default(0)
   phone          String?
   /// E-Mail bei neuen Ticketantworten erhalten. Standard an, weil eine
   /// unbeantwortete Rückfrage sonst unbemerkt liegen bleibt.
