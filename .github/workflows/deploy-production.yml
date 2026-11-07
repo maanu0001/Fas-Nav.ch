@@ -165,6 +165,16 @@ jobs:
             echo "==> Datenbank starten"
             compose up -d db
 
+            echo "==> Sicherung vor Migrationen"
+            # Before touching the schema, create a validated restore point for the
+            # currently running production version (first install may lack app).
+            current_app="$(compose ps -q app 2>/dev/null || true)"
+            if [ -n "$current_app" ] && [ "$(docker inspect -f '{{.State.Running}}' "$current_app" 2>/dev/null || true)" = "true" ]; then
+              bash scripts/backup-production.sh
+            else
+              echo "    Erstinstallation / keine laufende App: keine Daten zu sichern"
+            fi
+
             echo "==> Migrationen anwenden"
             # Eigener Dienst mit vollständigen Abhängigkeiten. Das schlanke
             # Laufzeit-Image kann die Prisma-CLI nicht ausführen; Begründung
