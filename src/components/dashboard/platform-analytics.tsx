@@ -59,16 +59,16 @@ export async function PlatformAnalytics({role,days,from,to,lifetime=false}:{role
   const [views,previousViews,visitors,previousVisitors,searches,previousSearches,newOrgs,oldOrgs,newUsers,oldUsers,orgs,events,activeSubs,dayRows,topOrgs,topEvents,topSearches,orgStatus,revenues]=await Promise.all([
     prisma.pageView.count({where:{interaction:"VIEW",createdAt:{gte:start,lt:end}}}),
     prisma.pageView.count({where:{interaction:"VIEW",createdAt:{gte:previous,lt:start}}}),
-    prisma.pageView.groupBy({by:["visitorHash"],where:{interaction:"VIEW",visitorHash:{not:null},createdAt:{gte:start}}}).then(x=>x.length),
-    prisma.pageView.groupBy({by:["visitorHash"],where:{interaction:"VIEW",visitorHash:{not:null},createdAt:{gte:previous,lt:start}}}).then(x=>x.length),
-    prisma.searchQuery.count({where:{createdAt:{gte:start}}}),
+    prisma.$queryRaw<{total:bigint}[]>`SELECT COUNT(DISTINCT "visitorHash")::bigint AS total FROM "page_views" WHERE interaction='VIEW' AND "visitorHash" IS NOT NULL AND "createdAt">=${start} AND "createdAt"<${end}`.then(x=>Number(x[0]?.total??0)),
+    prisma.$queryRaw<{total:bigint}[]>`SELECT COUNT(DISTINCT "visitorHash")::bigint AS total FROM "page_views" WHERE interaction='VIEW' AND "visitorHash" IS NOT NULL AND "createdAt">=${previous} AND "createdAt"<${start}`.then(x=>Number(x[0]?.total??0)),
+    prisma.searchQuery.count({where:{createdAt:{gte:start,lt:end}}}),
     prisma.searchQuery.count({where:{createdAt:{gte:previous,lt:start}}}),
-    prisma.organization.count({where:{createdAt:{gte:start}}}),
+    prisma.organization.count({where:{createdAt:{gte:start,lt:end}}}),
     prisma.organization.count({where:{createdAt:{gte:previous,lt:start}}}),
-    prisma.user.count({where:{createdAt:{gte:start}}}),
+    prisma.user.count({where:{createdAt:{gte:start,lt:end}}}),
     prisma.user.count({where:{createdAt:{gte:previous,lt:start}}}),
     prisma.organization.count(),
-    prisma.event.count({where:{createdAt:{gte:start}}}),
+    prisma.event.count({where:{createdAt:{gte:start,lt:end}}}),
     prisma.subscription.count({where:{status:"ACTIVE"}}),
     prisma.$queryRaw<Daily[]>`SELECT date_bucket.day::timestamp as day,
       COALESCE(v.views,0)::bigint AS views,
@@ -83,11 +83,11 @@ export async function PlatformAnalytics({role,days,from,to,lifetime=false}:{role
       LEFT JOIN (SELECT date_trunc(${granularity},"createdAt") AS d,count(*)::bigint AS organizations FROM "organizations" WHERE "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1) o ON o.d=date_bucket.day
       LEFT JOIN (SELECT date_trunc(${granularity},"createdAt") AS d,count(*)::bigint AS event_views FROM "page_views" WHERE "createdAt">=${start} AND "createdAt"<${end} AND interaction='VIEW' AND "eventId" IS NOT NULL GROUP BY 1) ev ON ev.d=date_bucket.day
       ORDER BY date_bucket.day ASC`,
-    prisma.pageView.groupBy({by:["organizationId"],where:{interaction:"VIEW",organizationId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{organizationId:"desc"}},take:8}),
-    prisma.pageView.groupBy({by:["eventId"],where:{interaction:"VIEW",eventId:{not:null},createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{eventId:"desc"}},take:8}),
-    prisma.searchQuery.groupBy({by:["term"],where:{createdAt:{gte:start}},_count:{_all:true},orderBy:{_count:{term:"desc"}},take:8}),
+    prisma.pageView.groupBy({by:["organizationId"],where:{interaction:"VIEW",organizationId:{not:null},createdAt:{gte:start,lt:end}},_count:{_all:true},orderBy:{_count:{organizationId:"desc"}},take:8}),
+    prisma.pageView.groupBy({by:["eventId"],where:{interaction:"VIEW",eventId:{not:null},createdAt:{gte:start,lt:end}},_count:{_all:true},orderBy:{_count:{eventId:"desc"}},take:8}),
+    prisma.searchQuery.groupBy({by:["term"],where:{createdAt:{gte:start,lt:end}},_count:{_all:true},orderBy:{_count:{term:"desc"}},take:8}),
     prisma.organization.groupBy({by:["status"],_count:{_all:true}}),
-    can(role,"viewFinancialFigures")?prisma.payment.aggregate({where:{status:"PAID",createdAt:{gte:start}},_sum:{amountChf:true}}):Promise.resolve(null),
+    can(role,"viewFinancialFigures")?prisma.payment.aggregate({where:{status:"PAID",createdAt:{gte:start,lt:end}},_sum:{amountChf:true}}):Promise.resolve(null),
   ]);
   const orgIds=topOrgs.map(o=>o.organizationId).filter((v):v is string=>!!v),eventIds=topEvents.map(o=>o.eventId).filter((v):v is string=>!!v);
   const [names,eventNames]=await Promise.all([prisma.organization.findMany({where:{id:{in:orgIds}},select:{id:true,name:true}}),prisma.event.findMany({where:{id:{in:eventIds}},select:{id:true,title:true}})]);
@@ -107,7 +107,7 @@ export async function PlatformAnalytics({role,days,from,to,lifetime=false}:{role
     </div>
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Metric label="Seitenaufrufe" value={views} prev={lifetime?null:previousViews} icon={Eye}/>
-      <Metric label="Pseudonyme Besucher" value={visitors} prev={lifetime?null:previousVisitors} icon={Users} caption="Besucherkennungen, keine Personen"/>
+      <Metric label="Besucherkennungen" value={visitors} prev={lifetime?null:previousVisitors} icon={Users} caption="Besucherkennungen, keine Personen"/>
       <Metric label="Suchanfragen" value={searches} prev={lifetime?null:previousSearches} icon={Search}/>
       <Metric label="Neue Organisationen" value={newOrgs} prev={lifetime?null:oldOrgs} icon={Building2}/>
       <Metric label="Neue Accounts" value={newUsers} prev={lifetime?null:oldUsers} icon={Users}/>
