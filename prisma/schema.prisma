@@ -1432,3 +1432,14 @@ model StripeWebhookEvent {
   @@index([createdAt])
   @@map("stripe_webhook_events")
 }
+
+model StripeCheckoutAttempt {
+  organizationId String @id
+  planId         String
+  sessionId      String?
+  url            String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  @@index([expiresAt])
+  @@map("stripe_checkout_attempts")
+}
