@@ -28,7 +28,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
   if (isStaff(role)) {
     return [
       {
-        items: [{ href: "/dashboard", label: "Dashboard", icon: "gauge", exact: true }, { href: "/dashboard/handbuch", label: "Fas-Nav Handbuch", icon: "book" }],
+        items: [{ href: "/dashboard", label: "Dashboard", icon: "gauge", exact: true }],
       },
       {
         title: "Inhalte",
@@ -86,6 +86,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile
           // darin bleiben der Administration vorbehalten und werden auf der
           // Seite selbst geprüft, nicht durch Ausblenden im Menü.
+          { href: "/dashboard/handbuch", label: "Fas-Nav Handbuch", icon: "book" },
           { href: "/dashboard/einstellungen", label: "Einstellungen", icon: "settings" },
         ],
       },
