@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GuggePage({ params }: Props) {
   const { slug } = await params;
-  const org = await getPublicOrganization(slug, "GUGGE");
+  const org = await getPublicOrganization(slug, "GUGGE") ?? await getOwnedDraftBySlug(slug, "GUGGE");
   if (!org) notFound();
 
   const [events, related] = await Promise.all([
