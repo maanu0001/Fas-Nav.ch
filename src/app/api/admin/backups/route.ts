@@ -8,10 +8,12 @@ export async function GET() {
 }
 export async function POST(request: Request) {
   try {
-    await requireAdmin();
+    const secret = process.env.CRON_SECRET;
+    const job = Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
+    if (!job) await requireAdmin();
     const origin = request.headers.get("origin");
     const expected = new URL(request.url).origin;
-    if (!origin || origin !== expected) return NextResponse.json({ error: "Ungültiger Ursprung" }, { status: 403 });
+    if (!job && (!origin || origin !== expected)) return NextResponse.json({ error: "Ungültiger Ursprung" }, { status: 403 });
     const result = await createBackup();
     return NextResponse.json({ backup: result }, { status: 201 });
   } catch (error) {
