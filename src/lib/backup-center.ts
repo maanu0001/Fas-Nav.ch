@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
@@ -48,6 +48,8 @@ export async function createBackup() {
   if (!["postgres:", "postgresql:"].includes(parsed.protocol)) throw new Error("PostgreSQL erforderlich");
   const id = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z") + "-" + randomUUID().replace(/-/g, "").slice(0, 12);
   await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
+  const lockPath = join(BACKUP_ROOT, ".create.lock");
+  const lock = await open(lockPath, "wx", 0o600).catch(() => { throw new Error("Ein Backup läuft bereits oder eine verwaiste Sperre muss geprüft werden."); });
   const temp = join(BACKUP_ROOT, ".incomplete-" + id);
   await mkdir(temp, { mode: 0o700 });
   const env = { ...process.env, PGHOST: parsed.hostname, PGPORT: parsed.port || "5432", PGUSER: decodeURIComponent(parsed.username), PGPASSWORD: decodeURIComponent(parsed.password), PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)) };
@@ -63,6 +65,7 @@ export async function createBackup() {
     await rename(temp, join(BACKUP_ROOT, id));
     return manifest;
   } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
+  finally { await lock.close(); await rm(lockPath, { force: true }); }
 }
 export async function getBackupFile(id: string, kind: "database" | "uploads") {
   if (!validBackupId(id)) return null;
