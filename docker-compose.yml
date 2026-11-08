@@ -41,6 +41,7 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       UPLOAD_DIR: /app/public/uploads
+      BACKUP_DIR: /app/backups
       NEXT_PUBLIC_UPLOAD_BASE_URL: /uploads
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-8}
       CONTACT_NOTIFY_EMAIL: ${CONTACT_NOTIFY_EMAIL:-}
@@ -51,6 +52,7 @@ services:
       CRON_SECRET: ${CRON_SECRET:-}
     volumes:
       - uploads:/app/public/uploads
+      - backup_data:/app/backups
 
   # Einmalige Datenbankbefehle: Migrationen und Seed.
   #
@@ -87,3 +89,4 @@ services:
 volumes:
   db_data:
   uploads:
+  backup_data:
