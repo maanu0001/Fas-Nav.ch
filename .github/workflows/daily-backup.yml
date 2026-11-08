@@ -1,0 +1,50 @@
+name: Tägliches Produktionsbackup
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+concurrency:
+  group: fasnav-daily-backup
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: SSH einrichten
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY" && test -n "$SSH_KNOWN_HOSTS" && test -n "$SSH_HOST" && test -n "$SSH_USER"
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: Backup auf Produktionsserver auslösen
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/fas-nav/app
+          test -f .env
+          secret="$(sed -n 's/^CRON_SECRET=//p' .env | tail -n 1 | tr -d '\r')"
+          secret="${secret#\"}"
+          secret="${secret%\"}"
+          test -n "$secret" || { echo "CRON_SECRET fehlt" >&2; exit 1; }
+          response="$(printf 'header = "Authorization: Bearer %s"\n' "$secret" | curl -sS -K - --max-time 1200 -X POST -w '\n%{http_code}' http://127.0.0.1:3000/api/admin/backups)"
+          status="$(printf '%s\n' "$response" | tail -n 1)"
+          if [ "$status" != "201" ]; then echo "Backup fehlgeschlagen: HTTP $status" >&2; exit 1; fi
+          echo "Produktionsbackup erstellt."
+          REMOTE
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
