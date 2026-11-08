@@ -1,10 +1,9 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream } from "node:fs";
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-import { pipeline } from "node:stream/promises";
 
 export const BACKUP_ROOT = process.env.BACKUP_DIR || "/app/backups";
 const ID = /^20\d{6}T\d{6}Z-[a-f0-9]{12}$/;
@@ -15,17 +14,16 @@ async function hashFile(path: string) {
   for await (const chunk of createReadStream(path)) hash.update(chunk);
   return hash.digest("hex");
 }
-async function command(program: string, args: string[], env: NodeJS.ProcessEnv, output?: string) {
-  const child = spawn(program, args, { env, stdio: ["ignore", output ? "pipe" : "ignore", "pipe"] });
+async function command(program: string, args: string[], env: NodeJS.ProcessEnv) {
+  const child = spawn(program, args, { env, stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", chunk => { stderr = (stderr + chunk).slice(-3000); });
-  const outputTask = output && child.stdout ? pipeline(child.stdout, createWriteStream(output, { mode: 0o600 })) : Promise.resolve();
   const exit = new Promise<void>((resolve, reject) => {
     child.once("error", reject);
     child.once("close", code => code === 0 ? resolve() : reject(new Error(program + " failed: " + stderr)));
   });
-  try { await Promise.all([outputTask, exit]); } catch (error) { child.kill(); throw error; }
+  try { await exit; } catch (error) { child.kill(); throw error; }
 }
 export async function listBackups(): Promise<BackupEntry[]> {
   await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
