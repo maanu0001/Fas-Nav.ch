@@ -81,7 +81,7 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
           ...(isAdmin(role) ? [{ href: "/dashboard/saisonfeedback", label: "Saisonfeedback", icon: "book" }] : []),
           { href: "/dashboard/logs", label: "Logs", icon: "scroll" },
-          ...(isAdmin(role) ? [{ href: "/dashboard/testmodus", label: "Testmodus", icon: "eye" }] : []),
+          ...(isAdmin(role) ? [{ href: "/dashboard/testmodus", label: "Testmodus", icon: "eye" }, { href: "/dashboard/backups", label: "Backups", icon: "database" }] : []),
           // Die Einstellungen enthalten für jede Rolle das eigene Konto –
           // E-Mail-Adresse, Ticketmeldungen, Passwort. Die Plattformteile
           // darin bleiben der Administration vorbehalten und werden auf der
