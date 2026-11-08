@@ -1,0 +1,76 @@
+import "server-only";
+import { createHash, randomUUID } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { spawn } from "node:child_process";
+import { pipeline } from "node:stream/promises";
+
+export const BACKUP_ROOT = process.env.BACKUP_DIR || "/app/backups";
+const ID = /^20\d{6}T\d{6}Z-[a-f0-9]{12}$/;
+export function validBackupId(id: string) { return ID.test(id); }
+export type BackupEntry = { id: string; createdAt: string; databaseBytes: number; uploadsBytes: number; verified: boolean };
+async function hashFile(path: string) {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest("hex");
+}
+async function command(program: string, args: string[], env: NodeJS.ProcessEnv, output?: string) {
+  const child = spawn(program, args, { env, stdio: ["ignore", output ? "pipe" : "ignore", "pipe"] });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", chunk => { stderr = (stderr + chunk).slice(-3000); });
+  const outputTask = output && child.stdout ? pipeline(child.stdout, createWriteStream(output, { mode: 0o600 })) : Promise.resolve();
+  const exit = new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", code => code === 0 ? resolve() : reject(new Error(program + " failed: " + stderr)));
+  });
+  try { await Promise.all([outputTask, exit]); } catch (error) { child.kill(); throw error; }
+}
+export async function listBackups(): Promise<BackupEntry[]> {
+  await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
+  const names = await readdir(BACKUP_ROOT);
+  const entries = await Promise.all(names.filter(validBackupId).map(async id => {
+    try {
+      const root = join(BACKUP_ROOT, id);
+      const data = JSON.parse(await readFile(join(root, "manifest.json"), "utf8")) as BackupEntry;
+      if (data.id !== id) return null;
+      const [db, uploads] = await Promise.all([stat(join(root, "database.dump")), stat(join(root, "uploads.tar.gz"))]);
+      return { ...data, databaseBytes: db.size, uploadsBytes: uploads.size };
+    } catch { return null; }
+  }));
+  return entries.filter((e): e is BackupEntry => Boolean(e)).sort((a,b) => b.id.localeCompare(a.id));
+}
+export async function createBackup() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL fehlt");
+  const parsed = new URL(url);
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol)) throw new Error("PostgreSQL erforderlich");
+  const id = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z") + "-" + randomUUID().replace(/-/g, "").slice(0, 12);
+  await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
+  const temp = join(BACKUP_ROOT, ".incomplete-" + id);
+  await mkdir(temp, { mode: 0o700 });
+  const env = { ...process.env, PGHOST: parsed.hostname, PGPORT: parsed.port || "5432", PGUSER: decodeURIComponent(parsed.username), PGPASSWORD: decodeURIComponent(parsed.password), PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)) };
+  try {
+    await command("pg_dump", ["--format=custom", "--no-owner", "--no-acl", "--file", join(temp, "database.dump")], env);
+    await command("tar", ["-C", process.env.UPLOAD_DIR || "/app/public/uploads", "-czf", join(temp, "uploads.tar.gz"), "."], env);
+    const [db, uploads] = await Promise.all([stat(join(temp, "database.dump")), stat(join(temp, "uploads.tar.gz"))]);
+    if (!db.size || !uploads.size) throw new Error("Backup unvollständig");
+    await command("pg_restore", ["--list", join(temp, "database.dump")], env);
+    await command("tar", ["-tzf", join(temp, "uploads.tar.gz")], env);
+    const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: uploads.size, verified: true, sha256: { database: await hashFile(join(temp, "database.dump")), uploads: await hashFile(join(temp, "uploads.tar.gz")) } };
+    await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
+    await rename(temp, join(BACKUP_ROOT, id));
+    return manifest;
+  } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
+}
+export async function getBackupFile(id: string, kind: "database" | "uploads") {
+  if (!validBackupId(id)) return null;
+  const root = join(BACKUP_ROOT, id);
+  const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+  if (manifest.id !== id || manifest.verified !== true) return null;
+  const filename = kind === "database" ? "database.dump" : "uploads.tar.gz";
+  const path = join(root, filename);
+  if (await hashFile(path) !== manifest.sha256?.[kind]) throw new Error("Prüfsumme stimmt nicht überein");
+  return { path, filename, size: (await stat(path)).size };
+}
