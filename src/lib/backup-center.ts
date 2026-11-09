@@ -145,7 +145,14 @@ export async function testRestore(id: string) {
     } finally {
       await rm(sqlPath, { force: true });
     }
-    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"], env);
+    // Verify media can be extracted safely without touching production uploads.
+    await validateMediaArchive(media.path);
+    const mediaTestDir = join(BACKUP_ROOT, ".media-test-" + id);
+    await mkdir(mediaTestDir, { mode: 0o700 });
+    try {
+      await command("tar", ["-xzf", media.path, "-C", mediaTestDir, "--no-same-owner", "--no-same-permissions"], env);
+    } finally { await rm(mediaTestDir, { recursive: true, force: true }); }
+    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "DO $ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public') = 0 THEN RAISE EXCEPTION 'Backup contains no application tables'; END IF; END $;"], env);
     const root = join(BACKUP_ROOT, id);
     const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
     manifest.restoreTest = { status: "passed", checkedAt: new Date().toISOString(), databaseHash: await hashFile(db.path), uploadsHash: await hashFile(media.path) };
