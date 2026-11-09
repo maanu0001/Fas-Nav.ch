@@ -82,16 +82,16 @@ export async function getBackupFile(id: string, kind: "database" | "uploads") {
 /** Reject tar path traversal, absolute paths and links before accepting media archives. */
 async function validateMediaArchive(path: string) {
   const { stdout } = await execFileAsync("tar", ["-tvzf", path], { maxBuffer: 32 * 1024 * 1024 });
-  const entries = stdout.split("\\n").filter(Boolean);
+  const entries = stdout.split("\n").filter(Boolean);
   if (!entries.length) throw new Error("Medienarchiv ist leer");
   for (const entry of entries) {
     const type = entry[0];
     if (type !== "-" && type !== "d") throw new Error("Medienarchiv enthält unzulässige Verknüpfungen oder Dateitypen");
   }
   const { stdout: names } = await execFileAsync("tar", ["-tzf", path], { maxBuffer: 32 * 1024 * 1024 });
-  for (const name of names.split("\\n").filter(Boolean)) {
+  for (const name of names.split("\n").filter(Boolean)) {
     const normalized = name.replace(/^\\.\\//, "");
-    if (normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\\0")) throw new Error("Unsicherer Pfad im Medienarchiv");
+    if (normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\0")) throw new Error("Unsicherer Pfad im Medienarchiv");
   }
 }
 
