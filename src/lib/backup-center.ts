@@ -116,7 +116,16 @@ export async function testRestore(id: string) {
   const env = { ...process.env, PGHOST: test.hostname, PGPORT: test.port || "5432", PGUSER: decodeURIComponent(test.username), PGPASSWORD: decodeURIComponent(test.password), PGDATABASE: decodeURIComponent(test.pathname.slice(1)) };
   try {
     await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"], env);
-    await command("pg_restore", ["--exit-on-error", "--no-owner", "--no-acl", "--dbname", env.PGDATABASE, db.path], env);
+    // Alpine may ship pg_restore 17+ while the test server runs PostgreSQL 16.
+    // Render SQL first and remove only the unsupported session setting.
+    const sqlPath = join(BACKUP_ROOT, ".restore-test-" + id + ".sql");
+    try {
+      await command("pg_restore", ["--no-owner", "--no-acl", "--file", sqlPath, db.path], env);
+      await command("sed", ["-i", "/^SET transaction_timeout = 0;$/d", sqlPath], env);
+      await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-f", sqlPath], env);
+    } finally {
+      await rm(sqlPath, { force: true });
+    }
     await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"], env);
     const root = join(BACKUP_ROOT, id);
     const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
