@@ -4,6 +4,9 @@ import { createReadStream } from "node:fs";
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+const execFileAsync = promisify(execFile);
 
 export const BACKUP_ROOT = process.env.BACKUP_DIR || "/app/backups";
 const ID = /^20\d{6}T\d{6}Z-[a-f0-9]{12}$/;
@@ -57,7 +60,7 @@ export async function createBackup() {
     const [db, uploads] = await Promise.all([stat(join(temp, "database.dump")), stat(join(temp, "uploads.tar.gz"))]);
     if (!db.size || !uploads.size) throw new Error("Backup unvollständig");
     await command("pg_restore", ["--list", join(temp, "database.dump")], env);
-    await command("tar", ["-tzf", join(temp, "uploads.tar.gz")], env);
+    await validateMediaArchive(join(temp, "uploads.tar.gz"));
     const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: uploads.size, verified: true, sha256: { database: await hashFile(join(temp, "database.dump")), uploads: await hashFile(join(temp, "uploads.tar.gz")) } };
     await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
     await rename(temp, join(BACKUP_ROOT, id));
@@ -76,6 +79,22 @@ export async function getBackupFile(id: string, kind: "database" | "uploads") {
   return { path, filename, size: (await stat(path)).size };
 }
 
+/** Reject tar path traversal, absolute paths and links before accepting media archives. */
+async function validateMediaArchive(path: string) {
+  const { stdout } = await execFileAsync("tar", ["-tvzf", path], { maxBuffer: 32 * 1024 * 1024 });
+  const entries = stdout.split("\\n").filter(Boolean);
+  if (!entries.length) throw new Error("Medienarchiv ist leer");
+  for (const entry of entries) {
+    const type = entry[0];
+    if (type !== "-" && type !== "d") throw new Error("Medienarchiv enthält unzulässige Verknüpfungen oder Dateitypen");
+  }
+  const { stdout: names } = await execFileAsync("tar", ["-tzf", path], { maxBuffer: 32 * 1024 * 1024 });
+  for (const name of names.split("\\n").filter(Boolean)) {
+    const normalized = name.replace(/^\\.\\//, "");
+    if (normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\\0")) throw new Error("Unsicherer Pfad im Medienarchiv");
+  }
+}
+
 /** Accept a downloaded backup pair only after archive validation. Never writes to live DB. */
 export async function importBackupFiles(database: File, uploads: File) {
   const max = Number(process.env.BACKUP_IMPORT_MAX_BYTES || 536870912);
@@ -90,7 +109,7 @@ export async function importBackupFiles(database: File, uploads: File) {
     await writeFile(dbPath, Buffer.from(await database.arrayBuffer()), { mode: 0o600 });
     await writeFile(uploadPath, Buffer.from(await uploads.arrayBuffer()), { mode: 0o600 });
     await command("pg_restore", ["--list", dbPath], process.env);
-    await command("tar", ["-tzf", uploadPath], process.env);
+    await validateMediaArchive(uploadPath);
     const [db, media] = await Promise.all([stat(dbPath), stat(uploadPath)]);
     const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: media.size, verified: true, sha256: { database: await hashFile(dbPath), uploads: await hashFile(uploadPath) }, source: "import" };
     await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
