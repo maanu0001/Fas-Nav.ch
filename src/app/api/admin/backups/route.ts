@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validBackupOrigin } from "@/lib/backup-origin";
 import { requireAdmin } from "@/lib/rbac";
 import { createBackup, listBackups } from "@/lib/backup-center";
 export const dynamic = "force-dynamic";
@@ -11,9 +12,7 @@ export async function POST(request: Request) {
     const secret = process.env.CRON_SECRET;
     const job = Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
     if (!job) await requireAdmin();
-    const origin = request.headers.get("origin");
-    const expected = new URL(request.url).origin;
-    if (!job && (!origin || origin !== expected)) return NextResponse.json({ error: "Ungültiger Ursprung" }, { status: 403 });
+    if (!job && !validBackupOrigin(request)) return NextResponse.json({ error: "Ungültiger Ursprung" }, { status: 403 });
     const result = await createBackup();
     return NextResponse.json({ backup: result }, { status: 201 });
   } catch (error) {
