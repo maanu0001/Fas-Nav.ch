@@ -45,7 +45,8 @@ mkdir -p "$SAFE"
 chmod 700 "$SAFE"
 # Store independent rollback snapshot before any mutation.
 "${COMPOSE[@]}" exec -T db sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner' > "$SAFE/database.dump"
-docker cp "$APP_CID:/app/public/uploads/." "$WORK/previous-uploads"
+mkdir -p "$WORK/previous-uploads"
+docker cp "$APP_CID:/app/public/uploads/." "$WORK/previous-uploads/"
 tar -C "$WORK/previous-uploads" -czf "$SAFE/uploads.tar.gz" .
 "${COMPOSE[@]}" exec -T db pg_restore --list < "$SAFE/database.dump" >/dev/null
 tar -tzf "$SAFE/uploads.tar.gz" >/dev/null
@@ -66,6 +67,7 @@ restore_media() {
  docker cp "$archive/." "$container:/app/public/uploads/"
 }
 rollback() {
+ trap - ERR
  echo "Restore failed; attempting rollback" >&2
  restore_db "$SAFE/database.dump" || echo "CRITICAL: database rollback failed" >&2
  mkdir -p "$WORK/rollback-uploads"
