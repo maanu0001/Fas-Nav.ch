@@ -43,8 +43,7 @@ for name in open(sys.argv[1]):
 PY
 if tar -tvzf "$WORK/uploads.tar.gz" | grep -Ev '^[-d]' >/dev/null; then echo "Unsafe archive member type" >&2; exit 1; fi
 "${COMPOSE[@]}" exec -T db pg_restore --list < "$WORK/database.dump" >/dev/null
-echo "==> Stop app and all writers; maintenance must be enabled at reverse proxy before proceeding"
-"${COMPOSE[@]}" stop app
+echo "==> Preparing rollback snapshot only; no live restore or write stop"
 # Before touching live data, take an independent recovery snapshot.
 ROLLBACK="$WORK/rollback"
 mkdir -m 700 "$ROLLBACK"
@@ -58,5 +57,5 @@ cp "$ROLLBACK/database.dump" "$SAFE/database.dump"
 tar -C "$ROLLBACK" -czf "$SAFE/uploads.tar.gz" uploads
 echo "Rollback snapshot: $SAFE"
 echo "Restore is intentionally NOT executed automatically: DB and media require coordinated cutover."
-echo "Production app remains stopped. Follow docs/BACKUP-CENTER.md for controlled recovery."
-exit 3
+echo "Production app was not stopped or modified. Follow docs/BACKUP-CENTER.md for controlled recovery."
+exit 0
