@@ -90,7 +90,7 @@ async function validateMediaArchive(path: string) {
   }
   const { stdout: names } = await execFileAsync("tar", ["-tzf", path], { maxBuffer: 32 * 1024 * 1024 });
   for (const name of names.split("\n").filter(Boolean)) {
-    const normalized = name.replace(/^\\.\\//, "");
+    const normalized = name.startsWith("./") ? name.slice(2) : name;
     if (normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\0")) throw new Error("Unsicherer Pfad im Medienarchiv");
   }
 }
