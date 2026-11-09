@@ -34,7 +34,7 @@ export function BackupCenter() {
       const response = await fetch(`/api/admin/backups/${id}/test`, { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Restore-Prüfung fehlgeschlagen");
-      setNotice("Die Datenbank wurde erfolgreich auf dem separaten Testserver wiederhergestellt.");
+      setNotice("Datenbank auf separatem Testserver wiederhergestellt und Medienarchiv isoliert entpackt und geprüft.");
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Restore-Prüfung fehlgeschlagen"); }
     finally { setBusy(false); }
