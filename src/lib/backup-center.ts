@@ -98,3 +98,36 @@ export async function importBackupFiles(database: File, uploads: File) {
     return manifest;
   } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
 }
+
+/** Restore rehearsal against a separately configured PostgreSQL server. */
+export async function testRestore(id: string) {
+  if (!validBackupId(id)) throw new Error("Ungültige Backup-ID");
+  const source = process.env.DATABASE_URL;
+  const target = process.env.BACKUP_TEST_DATABASE_URL;
+  if (!source || !target) throw new Error("Isolierte Testdatenbank ist noch nicht konfiguriert");
+  const live = new URL(source);
+  const test = new URL(target);
+  if (test.hostname === live.hostname || !test.hostname || !test.pathname.slice(1) || !test.password) throw new Error("Testdatenbank muss auf einem anderen PostgreSQL-Server liegen");
+  const db = await getBackupFile(id, "database");
+  const media = await getBackupFile(id, "uploads");
+  if (!db || !media) throw new Error("Backup nicht gefunden");
+  const lockPath = join(BACKUP_ROOT, ".restore-test.lock");
+  const lock = await open(lockPath, "wx", 0o600).catch(() => { throw new Error("Eine Restore-Prüfung läuft bereits"); });
+  const env = { ...process.env, PGHOST: test.hostname, PGPORT: test.port || "5432", PGUSER: decodeURIComponent(test.username), PGPASSWORD: decodeURIComponent(test.password), PGDATABASE: decodeURIComponent(test.pathname.slice(1)) };
+  try {
+    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"], env);
+    await command("pg_restore", ["--exit-on-error", "--no-owner", "--no-acl", "--dbname", env.PGDATABASE, db.path], env);
+    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"], env);
+    const root = join(BACKUP_ROOT, id);
+    const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+    manifest.restoreTest = { status: "passed", checkedAt: new Date().toISOString(), databaseHash: await hashFile(db.path), uploadsHash: await hashFile(media.path) };
+    await writeFile(join(root, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
+    return manifest.restoreTest;
+  } catch (error) {
+    const root = join(BACKUP_ROOT, id);
+    const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+    manifest.restoreTest = { status: "failed", checkedAt: new Date().toISOString() };
+    await writeFile(join(root, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
+    throw error;
+  } finally { await lock.close(); await rm(lockPath, { force: true }); }
+}
