@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 export const BACKUP_ROOT = process.env.BACKUP_DIR || "/app/backups";
 const ID = /^20\d{6}T\d{6}Z-[a-f0-9]{12}$/;
 export function validBackupId(id: string) { return ID.test(id); }
-export type BackupEntry = { id: string; createdAt: string; databaseBytes: number; uploadsBytes: number; verified: boolean };
+export type BackupEntry = { id: string; createdAt: string; databaseBytes: number; uploadsBytes: number; verified: boolean; restoreTest?: { status: "passed" | "failed"; checkedAt: string; databaseHash?: string; uploadsHash?: string } };
 async function hashFile(path: string) {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(path)) hash.update(chunk);
