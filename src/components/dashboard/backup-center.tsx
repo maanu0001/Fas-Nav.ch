@@ -4,6 +4,8 @@ type Entry = { id: string; createdAt: string; databaseBytes: number; uploadsByte
 export function BackupCenter() {
   const [items, setItems] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
+  const [databaseFile, setDatabaseFile] = useState<File | null>(null);
+  const [uploadsFile, setUploadsFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   async function refresh() {
@@ -26,6 +28,21 @@ export function BackupCenter() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unbekannter Fehler"); }
     finally { setBusy(false); }
   }
+  async function importFiles() {
+    if (!databaseFile || !uploadsFile) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const form = new FormData();
+      form.set("database", databaseFile);
+      form.set("uploads", uploadsFile);
+      const response = await fetch("/api/admin/backups/import", { method: "POST", body: form });
+      if (!response.ok) throw new Error("Importprüfung fehlgeschlagen. Die Dateien wurden nicht übernommen.");
+      setNotice("Dateien erfolgreich geprüft und als Backup abgelegt. Die produktive Datenbank wurde nicht verändert.");
+      setDatabaseFile(null); setUploadsFile(null);
+      await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Import fehlgeschlagen"); }
+    finally { setBusy(false); }
+  }
   const size = (n: number) => (n / 1048576).toFixed(1) + " MB";
   return <div className="space-y-5">
     <section className="rounded-xl border bg-card p-5 space-y-3">
@@ -44,6 +61,12 @@ export function BackupCenter() {
     </section>
     <section className="rounded-xl border border-amber-500/40 p-5 space-y-2">
       <h2 className="text-lg font-semibold">Wiederherstellung</h2>
+      <p className="text-sm text-muted-foreground">Lade die beiden Dateien einer Sicherung hoch. Das System prüft die Archivstruktur und legt sie erst danach im Backup-Verlauf ab.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm">PostgreSQL-Dump (.dump)<input aria-label="Datenbankdatei" className="mt-1 block w-full text-sm" type="file" accept=".dump" onChange={e => setDatabaseFile(e.target.files?.[0] ?? null)}/></label>
+        <label className="text-sm">Medienarchiv (.tar.gz)<input aria-label="Mediendatei" className="mt-1 block w-full text-sm" type="file" accept=".gz,.tgz" onChange={e => setUploadsFile(e.target.files?.[0] ?? null)}/></label>
+      </div>
+      <button type="button" disabled={busy || !databaseFile || !uploadsFile} onClick={importFiles} className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">Backup prüfen und ablegen</button>
       <p className="text-sm text-muted-foreground">Ein direkter Import in die laufende Produktionsdatenbank ist aus Sicherheitsgründen gesperrt. Vollständige und selektive Wiederherstellungen erfordern eine isolierte Testumgebung, eine geprüfte Sicherung und die Freigabe des Betreibers. Eine automatische selektive Wiederherstellung ist noch nicht implementiert.</p>
     </section>
   </div>;
