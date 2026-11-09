@@ -22,7 +22,7 @@ export function BackupCenter() {
     setBusy(true); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/backups", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      if (!response.ok) throw new Error("Backup konnte nicht erstellt werden");
+      if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(`Backup konnte nicht erstellt werden (HTTP ${response.status}): ${data?.error || "Keine Servermeldung"}`); }
       setNotice("Backup erfolgreich erstellt und geprüft.");
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Unbekannter Fehler"); }
@@ -47,7 +47,7 @@ export function BackupCenter() {
       form.set("database", databaseFile);
       form.set("uploads", uploadsFile);
       const response = await fetch("/api/admin/backups/import", { method: "POST", body: form });
-      if (!response.ok) throw new Error("Importprüfung fehlgeschlagen. Die Dateien wurden nicht übernommen.");
+      if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(`Importprüfung fehlgeschlagen (HTTP ${response.status}): ${data?.error || "Keine Servermeldung"}`); }
       setNotice("Dateien erfolgreich geprüft und als Backup abgelegt. Die produktive Datenbank wurde nicht verändert.");
       setDatabaseFile(null); setUploadsFile(null);
       await refresh();
