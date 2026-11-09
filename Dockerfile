@@ -6,7 +6,8 @@
 
 FROM node:22-alpine AS base
 # libc6-compat wird von einigen nativen Abhängigkeiten (u.a. sharp) benötigt.
-RUN apk add --no-cache libc6-compat openssl ffmpeg postgresql-client tar gzip
+RUN apk add --no-cache libc6-compat openssl ffmpeg tar gzip && \
+    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v3.22/main postgresql16-client
 WORKDIR /app
 
 
