@@ -4,9 +4,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-const execFileAsync = promisify(execFile);
+
 
 export const BACKUP_ROOT = process.env.BACKUP_DIR || "/app/backups";
 const ID = /^20\d{6}T\d{6}Z-[a-f0-9]{12}$/;
@@ -81,20 +79,25 @@ export async function getBackupFile(id: string, kind: "database" | "uploads") {
 
 /** Reject tar path traversal, absolute paths and links before accepting media archives. */
 async function validateMediaArchive(path: string) {
-  const { stdout } = await execFileAsync("tar", ["-tvzf", path], { maxBuffer: 32 * 1024 * 1024 });
-  const entries = stdout.split("\n").filter(Boolean);
+  // Listing is safe, but tar extraction of user-supplied archives is not.
+  // Only regular files/directories with relative paths are accepted.
+  const { execFile: exec } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = promisify(exec);
+  const { stdout: names } = await run("tar", ["-tzf", path], { maxBuffer: 32 * 1024 * 1024 });
+  const entries = names.split("\n").filter(Boolean);
   if (!entries.length) throw new Error("Medienarchiv ist leer");
-  for (const entry of entries) {
-    const type = entry[0];
-    if (type !== "-" && type !== "d") throw new Error("Medienarchiv enthält unzulässige Verknüpfungen oder Dateitypen");
+  for (const name of entries) {
+    const normalized = name.replace(/^\.\//, "");
+    if (!normalized || normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\0")) {
+      throw new Error("Unsicherer Pfad im Medienarchiv");
+    }
   }
-  const { stdout: names } = await execFileAsync("tar", ["-tzf", path], { maxBuffer: 32 * 1024 * 1024 });
-  for (const name of names.split("\n").filter(Boolean)) {
-    const normalized = name.startsWith("./") ? name.slice(2) : name;
-    if (normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\0")) throw new Error("Unsicherer Pfad im Medienarchiv");
+  const { stdout: verbose } = await run("tar", ["-tvzf", path], { maxBuffer: 32 * 1024 * 1024 });
+  for (const line of verbose.split("\n").filter(Boolean)) {
+    if (!["-", "d"].includes(line[0])) throw new Error("Medienarchiv enthält Links oder Spezialdateien");
   }
 }
-
 /** Accept a downloaded backup pair only after archive validation. Never writes to live DB. */
 export async function importBackupFiles(database: File, uploads: File) {
   const max = Number(process.env.BACKUP_IMPORT_MAX_BYTES || 536870912);
@@ -150,7 +153,7 @@ export async function testRestore(id: string) {
     const mediaTestDir = join(BACKUP_ROOT, ".media-test-" + id);
     await mkdir(mediaTestDir, { mode: 0o700 });
     try {
-      await command("tar", ["-xzf", media.path, "-C", mediaTestDir, "--no-same-owner", "--no-same-permissions"], env);
+      await command("tar", ["-xzf", media.path, "-C", mediaTestDir], env);
     } finally { await rm(mediaTestDir, { recursive: true, force: true }); }
     await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1 / (SELECT count(*)::integer FROM information_schema.tables WHERE table_schema = 'public');"], env);
     const root = join(BACKUP_ROOT, id);
