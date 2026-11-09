@@ -24,6 +24,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # Separater PostgreSQL-Server für die Restore-Probe, ohne veröffentlichte Ports.
+  backup_test_db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: backupcheck
+      POSTGRES_PASSWORD: ${BACKUP_TEST_DB_PASSWORD:?BACKUP_TEST_DB_PASSWORD muss gesetzt sein}
+      POSTGRES_DB: backupcheck
+    volumes:
+      - backup_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backupcheck -d backupcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build:
       context: .
@@ -42,6 +58,7 @@ services:
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       UPLOAD_DIR: /app/public/uploads
       BACKUP_DIR: /app/backups
+      BACKUP_TEST_DATABASE_URL: postgresql://backupcheck:${BACKUP_TEST_DB_PASSWORD:?BACKUP_TEST_DB_PASSWORD muss gesetzt sein}@backup_test_db:5432/backupcheck
       NEXT_PUBLIC_UPLOAD_BASE_URL: /uploads
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-8}
       CONTACT_NOTIFY_EMAIL: ${CONTACT_NOTIFY_EMAIL:-}
@@ -90,3 +107,4 @@ volumes:
   db_data:
   uploads:
   backup_data:
+  backup_test_data:
