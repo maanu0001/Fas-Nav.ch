@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-type Entry = { id: string; createdAt: string; databaseBytes: number; uploadsBytes: number; verified: boolean };
+type Entry = { id: string; createdAt: string; databaseBytes: number; uploadsBytes: number; verified: boolean; restoreTest?: { status: "passed" | "failed"; checkedAt: string } };
 export function BackupCenter() {
   const [items, setItems] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -26,6 +26,17 @@ export function BackupCenter() {
       setNotice("Backup erfolgreich erstellt und geprüft.");
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Unbekannter Fehler"); }
+    finally { setBusy(false); }
+  }
+  async function test(id: string) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/admin/backups/${id}/test`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Restore-Prüfung fehlgeschlagen");
+      setNotice("Die Datenbank wurde erfolgreich auf dem separaten Testserver wiederhergestellt.");
+      await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Restore-Prüfung fehlgeschlagen"); }
     finally { setBusy(false); }
   }
   async function importFiles() {
@@ -55,8 +66,8 @@ export function BackupCenter() {
     <section className="rounded-xl border bg-card p-5 space-y-3">
       <h2 className="text-lg font-semibold">Backup-Verlauf</h2>
       {items.length === 0 ? <p className="text-sm text-muted-foreground">Noch keine Backups im Backup-Verzeichnis vorhanden.</p> : <div className="space-y-3">{items.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-        <div><p className="font-medium">{new Date(item.createdAt).toLocaleString("de-CH", { timeZone: "Europe/Zurich" })}</p><p className="text-xs text-muted-foreground">Datenbank {size(item.databaseBytes)} · Medien {size(item.uploadsBytes)} · {item.verified ? "Verifiziert" : "Nicht verifiziert"}</p></div>
-        <div className="flex gap-2"><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/database`}>Datenbank herunterladen</a><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/uploads`}>Medien herunterladen</a></div>
+        <div><p className="font-medium">{new Date(item.createdAt).toLocaleString("de-CH", { timeZone: "Europe/Zurich" })}</p><p className="text-xs text-muted-foreground">Datenbank {size(item.databaseBytes)} · Medien {size(item.uploadsBytes)} · {item.verified ? "Archiv geprüft" : "Nicht verifiziert"} · Restore-Test: {item.restoreTest?.status === "passed" ? "Bestanden" : item.restoreTest?.status === "failed" ? "Fehlgeschlagen" : "Ausstehend"}</p></div>
+        <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => test(item.id)} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">Restore testen</button><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/database`}>Datenbank herunterladen</a><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/uploads`}>Medien herunterladen</a></div>
       </div>)}</div>}
     </section>
     <section className="rounded-xl border border-amber-500/40 p-5 space-y-2">
@@ -67,7 +78,7 @@ export function BackupCenter() {
         <label className="text-sm">Medienarchiv (.tar.gz)<input aria-label="Mediendatei" className="mt-1 block w-full text-sm" type="file" accept=".gz,.tgz" onChange={e => setUploadsFile(e.target.files?.[0] ?? null)}/></label>
       </div>
       <button type="button" disabled={busy || !databaseFile || !uploadsFile} onClick={importFiles} className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">Backup prüfen und ablegen</button>
-      <p className="text-sm text-muted-foreground">Ein direkter Import in die laufende Produktionsdatenbank ist aus Sicherheitsgründen gesperrt. Vollständige und selektive Wiederherstellungen erfordern eine isolierte Testumgebung, eine geprüfte Sicherung und die Freigabe des Betreibers. Eine automatische selektive Wiederherstellung ist noch nicht implementiert.</p>
+      <p className="text-sm text-muted-foreground">Ein direkter Import in die laufende Produktionsdatenbank ist aus Sicherheitsgründen gesperrt. Vollständige und selektive Wiederherstellungen erfordern eine isolierte Testumgebung, eine geprüfte Sicherung und die Freigabe des Betreibers. Eine automatische selektive Wiederherstellung ist noch nicht implementiert. Über «Restore testen» wird die Datenbank auf dem separat konfigurierten Testserver probeweise eingespielt.</p>
     </section>
   </div>;
 }
