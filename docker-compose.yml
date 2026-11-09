@@ -27,10 +27,11 @@ services:
   # Separater PostgreSQL-Server für die Restore-Probe, ohne veröffentlichte Ports.
   backup_test_db:
     image: postgres:16-alpine
+    profiles: ["backup-test"]
     restart: unless-stopped
     environment:
       POSTGRES_USER: backupcheck
-      POSTGRES_PASSWORD: ${BACKUP_TEST_DB_PASSWORD:?BACKUP_TEST_DB_PASSWORD muss gesetzt sein}
+      POSTGRES_PASSWORD: ${BACKUP_TEST_DB_PASSWORD:-}
       POSTGRES_DB: backupcheck
     volumes:
       - backup_test_data:/var/lib/postgresql/data
@@ -58,7 +59,7 @@ services:
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       UPLOAD_DIR: /app/public/uploads
       BACKUP_DIR: /app/backups
-      BACKUP_TEST_DATABASE_URL: postgresql://backupcheck:${BACKUP_TEST_DB_PASSWORD:?BACKUP_TEST_DB_PASSWORD muss gesetzt sein}@backup_test_db:5432/backupcheck
+      BACKUP_TEST_DATABASE_URL: ${BACKUP_TEST_DATABASE_URL:-}
       NEXT_PUBLIC_UPLOAD_BASE_URL: /uploads
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-8}
       CONTACT_NOTIFY_EMAIL: ${CONTACT_NOTIFY_EMAIL:-}
