@@ -28,7 +28,7 @@ SELECT_FIELDS="${SELECT_FIELDS%,}"
 "${COMPOSE[@]}" --profile backup-test exec -T -e PGPASSWORD="$TEST_DB" backup_test_db \
  psql -X -A -t -v ON_ERROR_STOP=1 -U backupcheck -d backupcheck \
  -c "SELECT row_to_json(t) FROM (SELECT $SELECT_FIELDS FROM organizations WHERE id = '$ORG') t" > "$WORK/profile.json"
-[[ -s "$WORK/profile.json" ]] || { echo "Organization not present in test backup" >&2; exit 1; }
+[[ -s "$WORK/profile.json" && "$(cat "$WORK/profile.json")" != "" ]] || { echo "Organization not present in test backup" >&2; exit 1; }
 python3 - "$WORK/profile.json" <<'PY'
 import json,sys
 with open(sys.argv[1]) as f: data=json.load(f)
@@ -52,7 +52,7 @@ WITH incoming AS (
  SELECT jsonb_populate_record(NULL::organizations, convert_from(decode(:'payload','base64'),'UTF8')::jsonb) AS row
 )
 UPDATE organizations AS live SET
-$(printf '%s\n' "${COLS[@]}" | awk '{printf "%c%s%c = (SELECT (row).%c%s%c FROM incoming),\\n",34,$1,34,34,$1,34}' | sed '$ s/,$//')
+$(printf '%s\n' "${COLS[@]}" | awk '{printf "%c%s%c = (SELECT (row).%c%s%c FROM incoming),%c",34,$1,34,34,$1,34,10}' | sed '$ s/,$//')
 WHERE live.id = :'org_id';
 COMMIT;"
 "${COMPOSE[@]}" exec -T db sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
