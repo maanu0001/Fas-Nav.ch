@@ -62,6 +62,7 @@ export async function createBackup() {
     const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: uploads.size, verified: true, sha256: { database: await hashFile(join(temp, "database.dump")), uploads: await hashFile(join(temp, "uploads.tar.gz")) } };
     await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
     await rename(temp, join(BACKUP_ROOT, id));
+    await pruneOldBackups();
     return manifest;
   } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
   finally { await lock.close(); await rm(lockPath, { force: true }); }
@@ -168,4 +169,27 @@ export async function testRestore(id: string) {
     await writeFile(join(root, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
     throw error;
   } finally { await lock.close(); await rm(lockPath, { force: true }); }
+}
+
+/**
+ * Retain recent backups without deleting the last known good recovery point.
+ * Failures are non-fatal: never turn a successful backup into an error because
+ * an old snapshot could not be deleted.
+ */
+export async function pruneOldBackups() {
+  const days = Number(process.env.BACKUP_RETENTION_DAYS || "30");
+  if (!Number.isInteger(days) || days < 7 || days > 3650) return;
+  const entries = await listBackups();
+  const cutoff = Date.now() - days * 86400000;
+  for (const entry of entries.slice(1)) {
+    if (new Date(entry.createdAt).getTime() >= cutoff) continue;
+    try {
+      const root = join(BACKUP_ROOT, entry.id);
+      const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+      if (manifest.id !== entry.id || manifest.verified !== true) continue;
+      await rm(root, { recursive: true, force: true });
+    } catch (error) {
+      console.error("Backup retention cleanup failed", entry.id, error);
+    }
+  }
 }
