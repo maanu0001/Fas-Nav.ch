@@ -52,7 +52,7 @@ WITH incoming AS (
  SELECT jsonb_populate_record(NULL::organizations, convert_from(decode(:'payload','base64'),'UTF8')::jsonb) AS row
 )
 UPDATE organizations AS live SET
-$(printf '%s\n' "${COLS[@]}" | awk '{printf "%s = (SELECT (row).%s FROM incoming),\n",$1,$1}' | sed '$ s/,$//')
+$(printf '%s\n' "${COLS[@]}" | awk '{printf "\\"%s\\" = (SELECT (row).\\"%s\\" FROM incoming),\\n",$1,$1}' | sed '$ s/,$//')
 WHERE live.id = :'org_id';
 COMMIT;"
 "${COMPOSE[@]}" exec -T db sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
