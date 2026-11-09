@@ -75,3 +75,26 @@ export async function getBackupFile(id: string, kind: "database" | "uploads") {
   if (await hashFile(path) !== manifest.sha256?.[kind]) throw new Error("Prüfsumme stimmt nicht überein");
   return { path, filename, size: (await stat(path)).size };
 }
+
+/** Accept a downloaded backup pair only after archive validation. Never writes to live DB. */
+export async function importBackupFiles(database: File, uploads: File) {
+  const max = Number(process.env.BACKUP_IMPORT_MAX_BYTES || 536870912);
+  if (!database.size || !uploads.size || database.size > max || uploads.size > max) throw new Error("Backup-Dateien fehlen oder überschreiten die Grössenbegrenzung.");
+  await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
+  const id = new Date().toISOString().replace(/[-:]/g, "").replace(/\\.\\d{3}Z$/, "Z") + "-" + randomUUID().replace(/-/g, "").slice(0, 12);
+  const temp = join(BACKUP_ROOT, ".import-" + id);
+  await mkdir(temp, { mode: 0o700 });
+  try {
+    const dbPath = join(temp, "database.dump");
+    const uploadPath = join(temp, "uploads.tar.gz");
+    await writeFile(dbPath, Buffer.from(await database.arrayBuffer()), { mode: 0o600 });
+    await writeFile(uploadPath, Buffer.from(await uploads.arrayBuffer()), { mode: 0o600 });
+    await command("pg_restore", ["--list", dbPath], process.env);
+    await command("tar", ["-tzf", uploadPath], process.env);
+    const [db, media] = await Promise.all([stat(dbPath), stat(uploadPath)]);
+    const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: media.size, verified: true, sha256: { database: await hashFile(dbPath), uploads: await hashFile(uploadPath) }, source: "import" };
+    await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
+    await rename(temp, join(BACKUP_ROOT, id));
+    return manifest;
+  } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
+}
