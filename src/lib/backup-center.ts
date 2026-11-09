@@ -81,7 +81,7 @@ export async function importBackupFiles(database: File, uploads: File) {
   const max = Number(process.env.BACKUP_IMPORT_MAX_BYTES || 536870912);
   if (!database.size || !uploads.size || database.size > max || uploads.size > max) throw new Error("Backup-Dateien fehlen oder überschreiten die Grössenbegrenzung.");
   await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
-  const id = new Date().toISOString().replace(/[-:]/g, "").replace(/\\.\\d{3}Z$/, "Z") + "-" + randomUUID().replace(/-/g, "").slice(0, 12);
+  const id = new Date().toISOString().replace(/[-:.]/g, "").replace("Z", "Z") + "-" + randomUUID().replace(/-/g, "").slice(0, 12);
   const temp = join(BACKUP_ROOT, ".import-" + id);
   await mkdir(temp, { mode: 0o700 });
   try {
