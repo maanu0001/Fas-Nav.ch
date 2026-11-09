@@ -16,13 +16,14 @@ TEST_DB="${BACKUP_TEST_DB_PASSWORD:-}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 # Explicit allowlist of editorial columns. Never restore billing, login, media FK or IDs.
-FIELDS='name,short_name,tagline,short_description,description,history,important_info,contact_name,contact_email,contact_phone,website,booking_email,motto,booking_info,arrival_by_car,arrival_by_public_transport,arrival_notes,arrival_map_url,arrival_transport_url,meta_title,meta_desc'
+FIELDS='name,shortName,tagline,shortDescription,description,history,importantInfo,contactName,contactEmail,contactPhone,website,bookingEmail,motto,bookingInfo,arrivalByCar,arrivalByPublicTransport,arrivalNotes,arrivalMapUrl,arrivalTransportUrl,metaTitle,metaDesc'
 # Query information_schema to ensure this installation uses exactly the expected columns.
 IFS=, read -ra COLS <<< "$FIELDS"
 for col in "${COLS[@]}"; do
-  [[ "$col" =~ ^[a-z_]+$ ]] || exit 2
+  [[ "$col" =~ ^[a-zA-Z]+$ ]] || exit 2
 done
-SELECT_FIELDS="$(IFS=,; echo "${COLS[*]}")"
+SELECT_FIELDS="$(printf '"%s",' "${COLS[@]}")"
+SELECT_FIELDS="${SELECT_FIELDS%,}"
 # Test database is a separate PostgreSQL server and must contain a tested snapshot.
 "${COMPOSE[@]}" --profile backup-test exec -T -e PGPASSWORD="$TEST_DB" backup_test_db \
  psql -X -A -t -v ON_ERROR_STOP=1 -U backupcheck -d backupcheck \
