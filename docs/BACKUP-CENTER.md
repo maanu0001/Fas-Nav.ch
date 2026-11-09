@@ -26,3 +26,18 @@
 - Die bisherige Sicherung `scripts/backup-production.sh` wird durch das neue Backup-Center **nicht ersetzt** und bleibt als separates Sicherheitsnetz vor Migrationen bestehen.
 - Das neue Backup-Center liest nicht die bisherigen Host-Backups ein.
 - Es gibt derzeit keine nachgewiesene erfolgreiche Ausführung des neuen Jobs oder Wiederherstellung.
+
+## Isolierte Restore-Prüfung aktivieren
+
+Der zusätzliche Dienst `backup_test_db` ist bewusst als optionales Docker-Compose-Profil konfiguriert und wird nicht automatisch mit dem produktiven Stack gestartet. Die Testdatenbank verwendet ein eigenes Volume und veröffentlicht keinen Port.
+
+1. Ein langes, zufälliges Passwort erzeugen (z.B. `openssl rand -hex 32`).
+2. In der produktiven `.env` ergänzen:
+   - `BACKUP_TEST_DB_PASSWORD=<zufälliges Passwort>`
+   - `BACKUP_TEST_DATABASE_URL=postgresql://backupcheck:<dasselbe URL-kodierte Passwort>@backup_test_db:5432/backupcheck`
+3. Auf dem Server: `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile backup-test up -d backup_test_db app`
+4. Im Dashboard unter Backups bei einer Sicherung auf **Restore testen** klicken. Das System prüft die SHA-256-Werte und stellt die Datenbank im separaten PostgreSQL-Container wieder her. Die Live-Datenbank wird nicht verändert.
+
+**Grenzen der Prüfung:** Die Datenbank-Wiederherstellung wird ausgeführt, aber kein vollständiger fachlicher Anwendungstest. Das Medienarchiv wird auf Lesbarkeit und Prüfsumme geprüft, nicht in einer separaten Anwendung gestartet. Ein bestandener Restore-Test ist deshalb noch keine Garantie für eine fehlerfreie produktive Übernahme.
+
+**Produktive Wiederherstellung bleibt gesperrt:** Die Umsetzung eines sicheren, automatischen Produktions-Restores inklusive Schreibstopp, Rückfall-Backup, Rollback, Session-Invalidierung und selektivem relationalem Import ist weiterhin offen. Keine ungetesteten Live-Restores durchführen.
