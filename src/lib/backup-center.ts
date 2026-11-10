@@ -50,7 +50,8 @@ export async function createBackup() {
   const lockPath = join(BACKUP_ROOT, ".create.lock");
   const lock = await open(lockPath, "wx", 0o600).catch(() => { throw new Error("Ein Backup läuft bereits oder eine verwaiste Sperre muss geprüft werden."); });
   const temp = join(BACKUP_ROOT, ".incomplete-" + id);
-  await mkdir(temp, { mode: 0o700 });
+  try { await mkdir(temp, { mode: 0o700 }); }
+  catch (error) { await lock.close(); await rm(lockPath, { force: true }); throw error; }
   const env = { ...process.env, PGHOST: parsed.hostname, PGPORT: parsed.port || "5432", PGUSER: decodeURIComponent(parsed.username), PGPASSWORD: decodeURIComponent(parsed.password), PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)) };
   try {
     await command("pg_dump", ["--format=custom", "--no-owner", "--no-acl", "--file", join(temp, "database.dump")], env);
@@ -62,7 +63,9 @@ export async function createBackup() {
     const manifest = { id, createdAt: new Date().toISOString(), databaseBytes: db.size, uploadsBytes: uploads.size, verified: true, sha256: { database: await hashFile(join(temp, "database.dump")), uploads: await hashFile(join(temp, "uploads.tar.gz")) } };
     await writeFile(join(temp, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600 });
     await rename(temp, join(BACKUP_ROOT, id));
-    await pruneOldBackups();
+    // Retention must never turn a completed, verified backup into HTTP 500.
+    try { await pruneOldBackups(); }
+    catch (error) { console.error("Backup retention failed after successful creation", error); }
     return manifest;
   } catch (error) { await rm(temp, { recursive: true, force: true }); throw error; }
   finally { await lock.close(); await rm(lockPath, { force: true }); }
