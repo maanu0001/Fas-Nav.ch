@@ -78,7 +78,7 @@ export function BackupCenter() {
         <label className="text-sm">Medienarchiv (.tar.gz)<input aria-label="Mediendatei" className="mt-1 block w-full text-sm" type="file" accept=".gz,.tgz" onChange={e => setUploadsFile(e.target.files?.[0] ?? null)}/></label>
       </div>
       <button type="button" disabled={busy || !databaseFile || !uploadsFile} onClick={importFiles} className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">Backup prüfen und ablegen</button>
-      <p className="text-sm text-muted-foreground">Ein direkter Import in die laufende Produktionsdatenbank ist aus Sicherheitsgründen gesperrt. Vollständige und selektive Wiederherstellungen erfordern eine isolierte Testumgebung, eine geprüfte Sicherung und die Freigabe des Betreibers. Eine automatische selektive Wiederherstellung ist noch nicht implementiert. Über «Restore testen» wird die Datenbank auf dem separat konfigurierten Testserver probeweise eingespielt.</p>
+      <p className="text-sm text-muted-foreground">Ein direkter Import in die laufende Produktionsdatenbank ist aus Sicherheitsgründen gesperrt. Die vollständige Systemwiederherstellung erfordert eine isolierte Testumgebung, eine geprüfte Sicherung und die Freigabe des Betreibers. Über «Restore testen» wird die Datenbank auf dem separat konfigurierten Testserver probeweise eingespielt.</p>
     </section>
   </div>;
 }
