@@ -97,7 +97,7 @@ restore_media "$WORK/restore-uploads"
 "${COMPOSE[@]}" start app
 container="$("${COMPOSE[@]}" ps -q app)"
 healthy=0
-for i in $(seq 1 30); do
+for ((attempt=0; attempt<30; attempt++)); do
  status="$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo unknown)"
  if [[ "$status" == running ]] && curl --silent --fail --max-time 3 "http://127.0.0.1:3000/api/health" >/dev/null; then healthy=1; break; fi
  sleep 5
