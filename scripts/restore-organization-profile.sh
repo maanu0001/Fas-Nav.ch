@@ -6,6 +6,9 @@ umask 077
 cd "${APP_DIR:-/opt/fas-nav/app}"
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
 ORG="${1:-}"
+BACKUP_ID="${2:-}"
+[[ "$BACKUP_ID" =~ ^20[0-9]{6}T[0-9]{6}Z-[a-f0-9]{12}$ ]] || { echo "A verified backup ID is required as second argument" >&2; exit 2; }
+[[ "${FASNAV_CONFIRM_BACKUP_ID:-}" == "$BACKUP_ID" ]] || { echo "Set FASNAV_CONFIRM_BACKUP_ID=$BACKUP_ID" >&2; exit 2; }
 [[ "$ORG" =~ ^[a-zA-Z0-9_-]{8,64}$ ]] || { echo "Invalid organization ID" >&2; exit 2; }
 [[ "${FASNAV_CONFIRM_ORG_RESTORE:-}" == "$ORG" ]] || { echo "Set FASNAV_CONFIRM_ORG_RESTORE=$ORG" >&2; exit 2; }
 [[ "${FASNAV_MAINTENANCE_CONFIRMED:-}" == YES ]] || { echo "Maintenance mode required" >&2; exit 2; }
@@ -13,7 +16,14 @@ exec 9>"${FASNAV_RECOVERY_LOCK:-/tmp/fasnav-full-restore.lock}"
 flock -n 9 || exit 1
 TEST_DB="${BACKUP_TEST_DB_PASSWORD:-}"
 [[ -n "$TEST_DB" ]] || { echo "BACKUP_TEST_DB_PASSWORD is required" >&2; exit 2; }
+APP_CID="$("${COMPOSE[@]}" ps -q app)"
+[[ -n "$APP_CID" ]] || exit 2
 WORK="$(mktemp -d)"
+docker cp "$APP_CID:/app/backups/$BACKUP_ID/manifest.json" "$WORK/manifest.json"
+node - "$WORK/manifest.json" "$BACKUP_ID" <<'NODE'
+const fs=require("fs"); const m=JSON.parse(fs.readFileSync(process.argv[2],"utf8"));
+if(m.id!==process.argv[3] || m.verified!==true || m.restoreTest?.status!=="passed") throw Error("Backup is not verified and restore-tested");
+NODE
 trap 'rm -rf "$WORK"' EXIT
 # Explicit allowlist of editorial columns. Never restore billing, login, media FK or IDs.
 FIELDS='name,shortName,tagline,shortDescription,description,history,importantInfo,contactName,contactEmail,contactPhone,website,bookingEmail,motto,bookingInfo,arrivalByCar,arrivalByPublicTransport,arrivalNotes,arrivalMapUrl,arrivalTransportUrl,metaTitle,metaDesc'
@@ -34,9 +44,11 @@ import json,sys
 with open(sys.argv[1]) as f: data=json.load(f)
 if not isinstance(data,dict): raise SystemExit('Invalid organization profile')
 PY
+echo "WARNING: The isolated test database must contain EXACTLY backup $BACKUP_ID. A passing manifest alone does not prove that. Do not apply without verifying the test database snapshot independently." >&2
 echo "Profile preview (sensitive fields omitted):"
 echo "Organization: $ORG"
 echo "Columns: $SELECT_FIELDS"
+[[ "${FASNAV_VERIFIED_TEST_SNAPSHOT_ID:-}" == "$BACKUP_ID" ]] || { echo "Explicitly verify the test database snapshot ID first" >&2; exit 2; }
 [[ "${FASNAV_APPLY_ORG_RESTORE:-}" == YES ]] || { echo "Preview only. Set FASNAV_APPLY_ORG_RESTORE=YES to apply"; exit 0; }
 # Persistent full rollback dump before changing even a single organization row.
 SAFE="${FASNAV_BACKUP_DIR:-$HOME/fas-nav-backups}/pre-org-restore-$(date -u +%Y%m%dT%H%M%SZ)"
