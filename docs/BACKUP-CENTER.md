@@ -1,5 +1,9 @@
 # Backup-Center – Betriebsanleitung
 
+## Umfang: nur vollständige Systemsicherungen
+
+Es gibt keine selektive Wiederherstellung einzelner Organisationen oder Datensätze.
+
 ## Implementiert
 - Nur ADMIN: Dashboard → Backups.
 - Manuelle Sicherung per Klick, PostgreSQL-Custom-Dump und Upload-Tarball.
@@ -9,7 +13,7 @@
 - Persistentes Docker-Volume `backup_data`, getrennt vom Datenbank- und Upload-Volume.
 
 ## Nicht implementiert – Sicherheitsgrenze
-**Ein automatischer vollständiger oder selektiver Restore in die produktive Datenbank ist noch nicht implementiert.** Hochgeladene Backup-Dateien werden derzeit nur auf Archiv-Lesbarkeit geprüft und als Sicherung gespeichert; es findet keine isolierte Testwiederherstellung statt. Die Oberfläche zeigt dies ausdrücklich an. Eine direkte Wiederherstellung in die laufende Produktionsdatenbank wäre riskant: Verknüpfungen zwischen Organisationen, Accounts, Zahlungen und Medien dürfen nicht unkontrolliert überschrieben werden. Eine sichere selektive Wiederherstellung erfordert zunächst Restore in eine isolierte Datenbank, Vorschau aller betroffenen Relationen, Konfliktregeln und Transaktionen.
+**Eine automatische vollständige Wiederherstellung über das Dashboard ist nicht implementiert.** Hochgeladene Backup-Dateien werden derzeit nur auf Archiv-Lesbarkeit geprüft und als Sicherung gespeichert; es findet keine isolierte Testwiederherstellung statt. Die Oberfläche zeigt dies ausdrücklich an. Eine direkte Wiederherstellung in die laufende Produktionsdatenbank wäre riskant: Verknüpfungen zwischen Organisationen, Accounts, Zahlungen und Medien dürfen nicht unkontrolliert überschrieben werden. Es werden ausschliesslich vollständige Systemsicherungen und vollständige Systemwiederherstellungen unterstützt.
 
 ## Prüfungen vor produktivem Einsatz
 1. GitHub Actions → Deploy Production: Build und Deploy grün.
@@ -40,4 +44,4 @@ Der zusätzliche Dienst `backup_test_db` ist bewusst als optionales Docker-Compo
 
 **Grenzen der Prüfung:** Die Datenbank-Wiederherstellung wird ausgeführt, aber kein vollständiger fachlicher Anwendungstest. Das Medienarchiv wird auf Lesbarkeit und Prüfsumme geprüft, nicht in einer separaten Anwendung gestartet. Ein bestandener Restore-Test ist deshalb noch keine Garantie für eine fehlerfreie produktive Übernahme.
 
-**Produktive Wiederherstellung bleibt gesperrt:** Die Umsetzung eines sicheren, automatischen Produktions-Restores inklusive Schreibstopp, Rückfall-Backup, Rollback, Session-Invalidierung und selektivem relationalem Import ist weiterhin offen. Keine ungetesteten Live-Restores durchführen.
+**Produktive Wiederherstellung bleibt gesperrt:** Die Umsetzung eines sicheren, automatischen Produktions-Restores inklusive Schreibstopp, Rückfall-Backup, Rollback und Session-Invalidierung ist weiterhin offen. Keine ungetesteten Live-Restores durchführen.
