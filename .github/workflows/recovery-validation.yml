@@ -1,0 +1,20 @@
+name: Recovery scripts static validation
+on:
+  push:
+    branches: [feature/backup-recovery-completion]
+  pull_request:
+    paths:
+      - 'scripts/restore-*.sh'
+      - '.github/workflows/recovery-validation.yml'
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse recovery scripts
+        run: |
+          bash -n scripts/restore-production.sh
+          bash -n scripts/prepare-full-restore.sh
+      - name: ShellCheck
+        run: |
+          shellcheck -s bash scripts/restore-production.sh scripts/prepare-full-restore.sh
