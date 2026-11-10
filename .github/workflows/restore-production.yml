@@ -1,0 +1,58 @@
+name: Full system restore
+on:
+  workflow_dispatch:
+    inputs:
+      backup_id:
+        description: Verified full-system backup ID
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: fasnav-production-mutations
+  cancel-in-progress: false
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    steps:
+      - name: Validate backup ID
+        env:
+          BACKUP_ID: ${{ inputs.backup_id }}
+        run: |
+          [[ "$BACKUP_ID" =~ ^20[0-9]{6}T[0-9]{6}Z-[a-f0-9]{12}$ ]] || exit 2
+      - name: Configure trusted SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY" && test -n "$SSH_KNOWN_HOSTS"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Execute restore outside application container
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_HOST" && test -n "$SSH_USER"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes -o ServerAliveInterval=30 "$SSH_USER@$SSH_HOST" "bash -s -- '$BACKUP_ID'" <<'REMOTE'
+          set -Eeuo pipefail
+          id="$1"
+          cd /opt/fas-nav/app
+          # The reverse proxy must already serve a maintenance page and block all writers.
+          # This file is managed on the host, never in the repository or application container.
+          test -f /opt/fas-nav/maintenance-confirmed || { echo "Maintenance gate missing; restore refused" >&2; exit 2; }
+          test "$(stat -c %a /opt/fas-nav/maintenance-confirmed)" = "600" || { echo "Maintenance gate permissions must be 600" >&2; exit 2; }
+          FASNAV_CONFIRM_FULL_RESTORE="$id" FASNAV_MAINTENANCE_CONFIRMED=YES bash scripts/restore-production.sh "$id" </dev/null
+          REMOTE
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
