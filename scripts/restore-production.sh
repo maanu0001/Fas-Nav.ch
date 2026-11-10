@@ -66,14 +66,27 @@ restore_media() {
  docker cp "$archive/." "$container:/app/public/uploads/"
 }
 rollback() {
+ local original_status=$?
  trap - ERR
- echo "Restore failed; attempting rollback" >&2
- restore_db "$SAFE/database.dump" || echo "CRITICAL: database rollback failed" >&2
+ set +e
+ echo "Restore failed (exit $original_status); attempting rollback" >&2
+ restore_db "$SAFE/database.dump"
+ local db_status=$?
  mkdir -p "$WORK/rollback-uploads"
  tar -xzf "$SAFE/uploads.tar.gz" -C "$WORK/rollback-uploads"
- restore_media "$WORK/rollback-uploads" || echo "CRITICAL: media rollback failed" >&2
- "${COMPOSE[@]}" start app || true
- echo "Maintenance mode remains required until manual verification. Rollback snapshot: $SAFE" >&2
+ local extract_status=$?
+ local media_status=1
+ if [[ "$extract_status" -eq 0 ]]; then
+   restore_media "$WORK/rollback-uploads"
+   media_status=$?
+ fi
+ "${COMPOSE[@]}" start app
+ local start_status=$?
+ if [[ "$db_status" -ne 0 || "$media_status" -ne 0 || "$start_status" -ne 0 ]]; then
+   echo "CRITICAL: rollback incomplete (db=$db_status media=$media_status app=$start_status)" >&2
+ fi
+ echo "Maintenance mode MUST remain enabled. Recovery snapshot: $SAFE" >&2
+ exit 1
 }
 MEDIA_CID="$(docker run -d --rm --volumes-from "$APP_CID" --entrypoint sh "$(docker inspect -f '{{.Config.Image}}' "$APP_CID")" -c "sleep 3600")"
 trap 'docker rm -f "$MEDIA_CID" >/dev/null 2>&1 || true; rm -rf "$WORK"' EXIT
