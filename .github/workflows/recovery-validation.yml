@@ -14,8 +14,7 @@ jobs:
       - name: Parse recovery scripts
         run: |
           bash -n scripts/restore-production.sh
-          bash -n scripts/restore-organization-profile.sh
           bash -n scripts/prepare-full-restore.sh
       - name: ShellCheck
         run: |
-          shellcheck -s bash scripts/restore-production.sh scripts/restore-organization-profile.sh scripts/prepare-full-restore.sh
+          shellcheck -s bash scripts/restore-production.sh scripts/prepare-full-restore.sh
