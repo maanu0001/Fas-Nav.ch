@@ -92,6 +92,8 @@ async function validateMediaArchive(path: string) {
   const entries = names.split("\n").filter(Boolean);
   if (!entries.length) throw new Error("Medienarchiv ist leer");
   for (const name of entries) {
+    // GNU tar includes "./" for the archive root; this is safe.
+    if (name === "./" || name === ".") continue;
     const normalized = name.replace(/^\.\//, "");
     if (!normalized || normalized.startsWith("/") || normalized.split("/").includes("..") || normalized.includes("\0")) {
       throw new Error("Unsicherer Pfad im Medienarchiv");
