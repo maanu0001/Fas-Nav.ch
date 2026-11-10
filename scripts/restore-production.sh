@@ -59,8 +59,7 @@ restore_db() {
 }
 restore_media() {
  local archive="$1"
- local container
- container="$("${COMPOSE[@]}" ps -q app)"
+ local container="$MEDIA_CID"
  [[ -n "$container" ]]
  # Volume persists across container restart; remove old media before copying replacement.
  docker exec "$container" sh -c 'find /app/public/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +'
@@ -76,6 +75,8 @@ rollback() {
  "${COMPOSE[@]}" start app || true
  echo "Maintenance mode remains required until manual verification. Rollback snapshot: $SAFE" >&2
 }
+MEDIA_CID="$(docker run -d --rm --volumes-from "$APP_CID" --entrypoint sh "$(docker inspect -f '{{.Config.Image}}' "$APP_CID")" -c "sleep 3600")"
+trap 'docker rm -f "$MEDIA_CID" >/dev/null 2>&1 || true; rm -rf "$WORK"' EXIT
 trap rollback ERR
 "${COMPOSE[@]}" stop app
 restore_db "$WORK/database.dump"
@@ -90,4 +91,5 @@ for i in $(seq 1 30); do
 done
 [[ "$healthy" == 1 ]] || { echo "Health check failed" >&2; false; }
 trap - ERR
+docker rm -f "$MEDIA_CID" >/dev/null 2>&1 || true
 echo "Restore completed; verify application data before removing maintenance mode."
