@@ -193,3 +193,17 @@ export async function pruneOldBackups() {
     }
   }
 }
+
+/** Confirm that the isolated test database still corresponds to this exact backup. */
+export async function requireTestedBackup(id: string) {
+  if (!validBackupId(id)) throw new Error("Ungültige Backup-ID");
+  const root = join(BACKUP_ROOT, id);
+  const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
+  if (manifest.id !== id || manifest.verified !== true || manifest.restoreTest?.status !== "passed")
+    throw new Error("Das Backup muss zuerst erfolgreich isoliert getestet werden.");
+  const [db, uploads] = await Promise.all([getBackupFile(id, "database"), getBackupFile(id, "uploads")]);
+  if (!db || !uploads || manifest.restoreTest.databaseHash !== manifest.sha256?.database ||
+      manifest.restoreTest.uploadsHash !== manifest.sha256?.uploads)
+    throw new Error("Backup und getesteter Datenstand stimmen nicht überein.");
+  return { id, database: db.path, uploads: uploads.path, testedAt: manifest.restoreTest.checkedAt };
+}
