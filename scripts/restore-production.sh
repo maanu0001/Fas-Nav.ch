@@ -9,7 +9,7 @@ ID="${1:-}"
 [[ "$ID" =~ ^20[0-9]{6}T[0-9]{6}Z-[a-f0-9]{12}$ ]] || { echo "Invalid backup ID" >&2; exit 2; }
 [[ "${FASNAV_CONFIRM_FULL_RESTORE:-}" == "$ID" ]] || { echo "Set FASNAV_CONFIRM_FULL_RESTORE=$ID" >&2; exit 2; }
 [[ "${FASNAV_MAINTENANCE_CONFIRMED:-}" == YES ]] || { echo "Maintenance mode and external writers must be stopped" >&2; exit 2; }
-for c in docker flock node tar python3; do command -v "$c" >/dev/null || exit 2; done
+for c in docker flock node tar python3 curl; do command -v "$c" >/dev/null || exit 2; done
 exec 9>"${FASNAV_RECOVERY_LOCK:-/tmp/fasnav-full-restore.lock}"
 flock -n 9 || { echo "Another restore is running" >&2; exit 1; }
 WORK="$(mktemp -d)"
@@ -98,8 +98,8 @@ restore_media "$WORK/restore-uploads"
 container="$("${COMPOSE[@]}" ps -q app)"
 healthy=0
 for i in $(seq 1 30); do
- status="$(docker inspect -f '{{.State.Health.Status}}' "$container" 2>/dev/null || echo unknown)"
- if [[ "$status" == healthy ]]; then healthy=1; break; fi
+ status="$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo unknown)"
+ if [[ "$status" == running ]] && curl --silent --fail --max-time 3 "http://127.0.0.1:3000/" >/dev/null; then healthy=1; break; fi
  sleep 5
 done
 [[ "$healthy" == 1 ]] || { echo "Health check failed" >&2; false; }
