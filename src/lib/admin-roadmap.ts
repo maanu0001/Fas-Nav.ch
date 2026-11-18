@@ -25,7 +25,7 @@ export function parseRoadmap(value: unknown): RoadmapState {
 }
 export async function roadmapSignals(organizationId: string) {
   const [org, invitations, crm] = await Promise.all([
-    prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { id: true, name: true, status: true, claimStatus: true, contactEmail: true, description: true, logoId: true, onboardingCompleted: true, memberships: { select: { id: true }, take: 1 }, claimRequests: { select: { status: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 }, subscription: { select: { status: true, autoRenew: true, endDate: true, plan: { select: { name: true, tier: true } } } }, _count: { select: { events: true } } } }),
+    prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { id: true, name: true, status: true, claimStatus: true, contactName: true, contactPhone: true, city: true, contactEmail: true, description: true, logoId: true, onboardingCompleted: true, memberships: { select: { id: true }, take: 1 }, claimRequests: { select: { status: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 }, subscription: { select: { status: true, autoRenew: true, endDate: true, plan: { select: { name: true, tier: true } } } }, _count: { select: { events: true } } } }),
     prisma.boardingInvitation.findMany({ where: { organizationId }, orderBy: { sentAt: "desc" }, take: 1, select: { status: true, sentAt: true, acceptedAt: true, expiresAt: true, openCount: true, contactName: true, email: true, openedAt: true } }),
     prisma.siteSetting.findUnique({ where: { key: "crm.organization." + organizationId }, select: { value: true } }),
   ]);
