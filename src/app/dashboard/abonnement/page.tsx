@@ -15,6 +15,7 @@ import { formatDateShort } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { daysUntilExpiry, isExpiringSoon, isSubscriptionUsable } from "@/lib/subscription";
 import { formatChf } from "@/lib/utils";
+import { stripeGet } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,33 @@ export const metadata: Metadata = { title: "Abonnement" };
 
 export default async function SubscriptionPage() {
   const context = await requireOrganizationContext();
-  const subscription = context.subscription;
+  let subscription = context.subscription;
+  // Recheck Stripe when the dashboard is opened, including portal cancellations.
+  if (subscription?.externalSubscriptionId) {
+    try {
+      const remote = await stripeGet<{
+        status: string; cancel_at_period_end: boolean;
+        canceled_at: number | null; cancel_at: number | null;
+        current_period_end: number | null;
+      }>(`/subscriptions/${encodeURIComponent(subscription.externalSubscriptionId)}`);
+      const cancelled = remote.status === "canceled";
+      const scheduled = remote.cancel_at_period_end === true || (typeof remote.cancel_at === "number" && remote.cancel_at > Date.now() / 1000);
+      const remoteEnd = remote.current_period_end ? new Date(remote.current_period_end * 1000) : subscription.endDate;
+      const updated = await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          status: cancelled ? "CANCELLED" : remote.status === "active" || remote.status === "trialing" ? "ACTIVE" : remote.status === "paused" ? "SUSPENDED" : "PAYMENT_PENDING",
+          autoRenew: !cancelled && !scheduled,
+          cancelledAt: cancelled || scheduled ? (remote.canceled_at ? new Date(remote.canceled_at * 1000) : subscription.cancelledAt ?? new Date()) : null,
+          ...(remoteEnd ? { endDate: remoteEnd, nextDueAt: cancelled || scheduled ? null : remoteEnd } : {}),
+        },
+      });
+      subscription = { ...subscription, ...updated };
+    } catch (error) {
+      console.error("[subscription] Stripe status reconciliation failed", error);
+    }
+  }
+  const cancellationScheduled = Boolean(subscription && subscription.externalSubscriptionId && !subscription.autoRenew && subscription.status === "ACTIVE");
 
   const payments = await prisma.payment.findMany({
     where: { organizationId: context.organization.id },
@@ -60,7 +87,13 @@ export default async function SubscriptionPage() {
         />
       ) : (
         <>
-          {!usable ? (
+          {cancellationScheduled ? (
+            <Alert variant="warning" title="Abonnement gekündigt" className="mb-6">
+              Die automatische Verlängerung ist deaktiviert. Dein Tarif bleibt
+              {subscription.endDate ? ` bis ${formatDateShort(subscription.endDate)}` : " bis zum Ende der bezahlten Laufzeit"} verfügbar.
+              Danach wird er nicht mehr verlängert.
+            </Alert>
+          ) : !usable ? (
             <Alert variant="error" title="Abonnement nicht aktiv" className="mb-6">
               Kostenpflichtige Funktionen sind derzeit eingeschränkt. Deine öffentliche Seite bleibt
               als Basiseintrag bestehen. Bei Fragen hilft dir das Fas-Nav-Team gerne weiter.
@@ -84,7 +117,10 @@ export default async function SubscriptionPage() {
                     {subscription.plan.name}
                   </h2>
                 </div>
-                <SubscriptionBadge status={subscription.status} />
+                <div className="flex flex-col items-end gap-1">
+                  <SubscriptionBadge status={subscription.status} />
+                  {cancellationScheduled ? <span className="text-xs font-semibold text-amber-700">Gekündigt · läuft aus</span> : null}
+                </div>
               </div>
 
               {subscription.plan.description ? (
@@ -113,7 +149,7 @@ export default async function SubscriptionPage() {
                   },
                   {
                     label: "Verlängerung",
-                    value: subscription.autoRenew ? "Automatisch" : "Manuell",
+                    value: cancellationScheduled ? "Gekündigt – keine Verlängerung" : subscription.autoRenew ? "Automatisch" : "Keine automatische Verlängerung",
                   },
                 ].map((row) => (
                   <div key={row.label}>
