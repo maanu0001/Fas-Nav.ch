@@ -64,10 +64,16 @@ export default async function RoadmapOrganizationPage({params}:{params:Promise<{
  const setting=await prisma.siteSetting.findUnique({where:{key:roadmapKey(id)},select:{value:true}});
  const state=setting?parseRoadmap(setting.value):undefined;
  const details=await roadmapSignals(id);
+ const legacy=details.crmValue;
+ const contactPerson=state?.contactPerson || String(legacy.contactPerson || "") || details.invitation?.contactName || details.org.contactName || "";
+ const contactEmail=state?.contactEmail || details.invitation?.email || details.org.contactEmail || "";
+ const acquisitionStatus=state?.crmStatus || String(legacy.status || "IMPORTED");
+ const dueDate=state?.due || String(legacy.nextFollowUp || "");
+ const notes=state?.note || String(legacy.notes || "");
  const history=await prisma.auditLog.findMany({where:{entity:"Organization",entityId:id,action:"ROADMAP_UPDATED"},orderBy:{createdAt:"desc"},take:50,select:{id:true,createdAt:true,userLabel:true,after:true}});
  const statusLabels:Record<string,string>={ACTIVE:"Aktiv",WAITING:"Warten auf Kunde",PAUSED:"Pausiert",DONE:"Abgeschlossen",CANCELLED:"Abgebrochen"};
  return <div className="space-y-5">
-  <Link href="/dashboard/admin-roadmap" className="text-sm font-semibold text-primary hover:underline">← Zur Admin-Roadmap</Link>
+  <Link href="/dashboard/admin-roadmap" className="text-sm font-semibold text-primary hover:underline">← Zur CRM-Übersicht</Link>
   <PageHeader title={selected.name} description="Kundenprozess, automatische Meilensteine, manuelle Aufgaben und Änderungshistorie." />
       <section className="space-y-4 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">{selected.name}</h2><Link href={`/dashboard/organisationen/${selected.id}`} className="text-sm underline">Organisation öffnen</Link></div>
