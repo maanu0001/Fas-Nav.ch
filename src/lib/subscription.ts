@@ -88,6 +88,16 @@ export function isExpiringSoon(endDate: Date | null | undefined): boolean {
 
 /** Lädt das Abonnement einer Organisation inklusive Tarifdetails. */
 export async function getSubscription(organizationId: string) {
+  const assigned = await prisma.subscription.findUnique({ where: { organizationId }, select: { plan: { select: { id: true, key: true, tier: true } } } });
+  if (assigned?.plan.tier === "PREMIUM" && assigned.plan.key !== "premium") {
+    const template = await prisma.plan.findUnique({ where: { key: "premium" }, include: { features: { where: { enabled: true } } } });
+    if (template) {
+      const existing = await prisma.planFeature.findMany({ where: { planId: assigned.plan.id }, select: { featureId: true } });
+      const keys = new Set(existing.map(item => item.featureId));
+      const missing = template.features.filter(item => !keys.has(item.featureId));
+      if (missing.length) await prisma.planFeature.createMany({ data: missing.map(item => ({ planId: assigned.plan.id, featureId: item.featureId, enabled: true, limit: item.limit, value: item.value, note: item.note })), skipDuplicates: true });
+    }
+  }
   return prisma.subscription.findUnique({
     where: { organizationId },
     include: subscriptionInclude,
