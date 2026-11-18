@@ -47,19 +47,29 @@ export default async function CheckoutPage() {
                 {current ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Aktuell</span> : null}
               </div>
               <p className="mt-5 font-display text-3xl font-bold text-primary-900 dark:text-slate-100">{formatChf(Number(plan.priceChf))}<span className="ml-1 text-sm font-normal text-muted-foreground">/{plan.billingInterval === "MONTHLY" ? "Monat" : "Jahr"}</span></p>
-              <ul className="my-5 flex-1 space-y-2">
-                {plan.features.slice(0, 8).map((item) => <li key={item.id} className="flex gap-2 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{item.feature.name}</li>)}
-              </ul>
+              <div className="my-5 flex-1">
+                <h3 className="mb-3 text-sm font-semibold">Alle enthaltenen Vorteile</h3>
+                <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+                  {plan.features.map((item) => (
+                    <li key={item.id} className="flex items-start gap-2 text-sm">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                      <span className="min-w-0">
+                        <span className="font-medium">{item.feature.name}</span>
+                        {item.limit !== null ? <span className="ml-1 text-xs text-muted-foreground">(bis {item.limit})</span> : null}
+                        {item.feature.description ? <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{item.feature.description}</span> : null}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {plan.features.length === 0 ? <p className="text-sm text-muted-foreground">Für diesen Tarif sind noch keine Vorteile hinterlegt.</p> : null}
+              </div>
               <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />
             </Card>
           );
         })}
       </div>
       <p className="mt-5 text-sm text-muted-foreground">Unsicher, welcher Tarif passt? <Link href="/dashboard/tickets/neu" className="font-semibold text-primary-700 underline">Beratung beim Team anfragen</Link>. Die Buchung erledigst du anschliessend selbst online.</p>
-      <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        <p className="font-semibold">Sichere Online-Zahlung über Stripe</p>
-        <p className="mt-1 text-emerald-800">Stripe zeigt beim Checkout die für wiederkehrende Zahlungen tatsächlich verfügbaren Zahlungsmethoden an. Welche davon angeboten werden (etwa Karten oder TWINT), hängt von den aktivierten Zahlungsarten und Stripe-Voraussetzungen ab. Manuelle Rechnungen können Admins weiterhin unabhängig davon erstellen.</p>
-      </div>
+
     </>
   );
 }
