@@ -26,6 +26,20 @@ async function command(program: string, args: string[], env: NodeJS.ProcessEnv) 
   });
   try { await exit; } catch (error) { child.kill(); throw error; }
 }
+async function queryScalar(args: string[], env: NodeJS.ProcessEnv): Promise<string> {
+  const child = spawn("psql", args, { env, stdio: ["ignore", "pipe", "pipe"] });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-4096); });
+  child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-3000); });
+  await new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", code => code === 0 ? resolve() : reject(new Error("psql failed: " + stderr)));
+  });
+  return stdout.trim();
+}
 export async function listBackups(): Promise<BackupEntry[]> {
   await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
   const names = await readdir(BACKUP_ROOT);
@@ -161,7 +175,10 @@ export async function testRestore(id: string) {
     try {
       await command("tar", ["-xzf", media.path, "-C", mediaTestDir], env);
     } finally { await rm(mediaTestDir, { recursive: true, force: true }); }
-    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 1/0 END FROM information_schema.tables WHERE table_schema = 'public';"], env);
+    const tableCount = Number(await queryScalar(["-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';"], env));
+    if (!Number.isSafeInteger(tableCount) || tableCount === 0) {
+      throw new Error("Restore-Test fehlgeschlagen: In der Testdatenbank wurden keine Anwendungstabellen gefunden. Bitte Datenbank-Dump und Restore-Protokoll prüfen.");
+    }
     const root = join(BACKUP_ROOT, id);
     const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
     manifest.restoreTest = { status: "passed", checkedAt: new Date().toISOString(), databaseHash: await hashFile(db.path), uploadsHash: await hashFile(media.path) };
