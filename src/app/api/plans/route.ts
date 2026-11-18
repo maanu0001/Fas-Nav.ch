@@ -12,14 +12,22 @@ export async function POST(request: Request) {
     const actor = await requirePermission("managePlans");
     const body = await parseBody(request, planSchema);
     const { features, ...planData } = body;
+    let resolvedFeatures = features ?? [];
+    if (planData.tier === "PREMIUM" && planData.key !== "premium") {
+      const template = await prisma.plan.findUnique({ where: { key: "premium" }, include: { features: { where: { enabled: true } } } });
+      if (template) {
+        const selected = new Set(resolvedFeatures.map(item => item.featureId));
+        resolvedFeatures = [...resolvedFeatures, ...template.features.filter(item => !selected.has(item.featureId)).map(item => ({ featureId: item.featureId, enabled: true, limit: item.limit, value: item.value, note: item.note }))];
+      }
+    }
 
     const plan = await prisma.plan.create({
       data: {
         ...planData,
-        ...(features?.length
+        ...(resolvedFeatures.length
           ? {
               features: {
-                create: features.map((f) => ({
+                create: resolvedFeatures.map((f) => ({
                   featureId: f.featureId,
                   enabled: f.enabled,
                   limit: f.limit,
