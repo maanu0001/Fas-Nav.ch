@@ -4,7 +4,7 @@ import { z } from "zod";
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationAccess } from "@/lib/rbac";
-import { stripePost } from "@/lib/stripe";
+import { stripeConfigured, stripePost } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,7 @@ function recurringInterval(interval: BillingInterval) {
 
 export async function POST(request: Request) {
   try {
+    if (!stripeConfigured()) return jsonError("Online-Buchungen sind derzeit nicht verfügbar. Bitte kontaktiere das Fas-Nav-Team.",503);
     const body = await parseBody(request, schema);
     const access = await requireOrganizationAccess(body.organizationId, "manage");
 
@@ -43,7 +44,16 @@ export async function POST(request: Request) {
     if (!interval) return jsonError("Dieser Tarif kann nicht als wiederkehrendes Stripe-Abo gebucht werden.", 422);
 
     const now = new Date();
-    const old = await prisma.stripeCheckoutAttempt.findUnique({where:{organizationId:organization.id}});
+    let old;
+    try {
+      old = await prisma.stripeCheckoutAttempt.findUnique({where:{organizationId:organization.id}});
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+        console.error("[stripe] Checkout-Tabelle fehlt; Datenbankmigration erforderlich.");
+        return jsonError("Die Online-Buchung wird gerade eingerichtet. Bitte versuche es später erneut.",503);
+      }
+      throw error;
+    }
     if (old?.expiresAt && old.expiresAt > now) {
       if (old.url && old.planId === plan.id) return jsonOk({url:old.url});
       return jsonError("Für diese Organisation läuft bereits eine Tarifbuchung. Bitte zuerst abschliessen oder den Ablauf abwarten.",409);
@@ -91,7 +101,8 @@ export async function POST(request: Request) {
       return jsonOk({ url: session.url });
     } catch(error) {
       await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:organization.id,sessionId:null}}).catch(()=>{});
-      throw error;
+      console.error("[stripe] Checkout session creation failed", error);
+      return jsonError("Die Buchung konnte bei Stripe nicht gestartet werden. Bitte versuche es später erneut oder kontaktiere das Fas-Nav-Team.",502);
     }
   } catch (error) {
     return handleApiError(error);
