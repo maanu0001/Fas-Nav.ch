@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Download, Lock, QrCode } from "lucide-react";
+import { Download, QrCode } from "lucide-react";
+import { SubscriptionUpgradeNotice } from "@/components/dashboard/subscription-feature-locked";
 
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,12 +54,8 @@ export function QrPanel({
             className="h-auto w-full rounded-xl border border-border bg-white p-3"
           />
         ) : (
-          <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/60 p-6 text-center">
-            <Lock className="h-6 w-6 text-muted-foreground" aria-hidden />
-            <p className="text-sm font-medium">Im Abonnement nicht enthalten</p>
-            <p className="text-xs text-muted-foreground">
-              Dieses Ziel steht in einem grösseren Tarif zur Verfügung.
-            </p>
+          <div className="flex aspect-square w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/60 p-6">
+            <SubscriptionUpgradeNotice title={ziel.label} />
           </div>
         )}
       </div>
