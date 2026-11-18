@@ -5,7 +5,8 @@ import { hashPassword } from "@/lib/password";
 import { roleForOrganizationType } from "@/lib/rbac";
 import { jsonOk,jsonError,handleApiError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { notifyStaff } from "@/lib/notifications";
+import { notify } from "@/lib/notifications";
+import { syncClaimStatus } from "@/lib/claim-status";
 export const dynamic="force-dynamic";
 type Params={params:Promise<{token:string}>};
 const hash=(token:string)=>createHash("sha256").update(token).digest("hex");
@@ -28,15 +29,18 @@ export async function POST(request:Request,{params}:Params){
   const body=schema.parse(await request.json());
   const invite=await prisma.boardingInvitation.findUnique({where:{tokenHash:hash(token)},include:{organization:{select:{type:true,name:true}}}});
   if(!invite||invite.status!=="SENT"||invite.expiresAt<=new Date())return jsonError("Diese Einladung ist nicht mehr gültig.",409);
+  if(body.email!==invite.email.toLowerCase())return jsonError("Bitte verwende die E-Mail-Adresse, an die die Einladung versendet wurde.",422);
   const user=await prisma.user.findUnique({where:{email:body.email}});
   if(user)return jsonError("Diese E-Mail-Adresse wird bereits verwendet. Bitte verwende für die Registrierung eine andere E-Mail-Adresse.",409);
   const updated=await prisma.$transaction(async tx=>{
    const account=await tx.user.create({data:{name:body.name,email:body.email,passwordHash:await hashPassword(body.password),role:roleForOrganizationType(invite.organization.type)}});
-   const accepted=await tx.boardingInvitation.updateMany({where:{id:invite.id,status:"SENT",expiresAt:{gt:new Date()}},data:{status:"PENDING",acceptedAt:new Date(),userId:account.id}});
+   const accepted=await tx.boardingInvitation.updateMany({where:{id:invite.id,status:"SENT",expiresAt:{gt:new Date()}},data:{status:"APPROVED",acceptedAt:new Date(),reviewedAt:new Date(),userId:account.id}});
    if(accepted.count!==1)throw new Error("Einladung bereits verwendet.");
+   await tx.membership.create({data:{userId:account.id,organizationId:invite.organizationId,role:"OWNER"}});
+   await syncClaimStatus(tx,invite.organizationId);
    return account;
   });
-  await notifyStaff({type:"SYSTEM",title:"Boarding-Freigabe erforderlich",body:updated.name+" möchte "+invite.organization.name+" übernehmen.",link:"/dashboard/boarding"});
-  return jsonOk({status:"PENDING",accountCreated:true});
+  await notify({userId:updated.id,organizationId:invite.organizationId,type:"SYSTEM",title:"Deine Organisation ist bereit",body:"Du kannst "+invite.organization.name+" ab sofort verwalten.",link:"/dashboard/onboarding"});
+  return jsonOk({status:"APPROVED",accountCreated:true});
  }catch(e){return handleApiError(e);}
 }
