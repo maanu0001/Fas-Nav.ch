@@ -17,16 +17,16 @@ export const roadmapManual = [
   { key: "handoff", label: "Betreuung und nächste Schritte vereinbart", href: "/dashboard/tickets" },
 ] as const;
 export type RoadmapStatus = "ACTIVE" | "WAITING" | "PAUSED" | "DONE" | "CANCELLED";
-export type RoadmapState = { source: string; status: RoadmapStatus; checked: string[]; note: string; due: string; updatedAt?: string; updatedBy?: string };
+export type RoadmapState = { source: string; status: RoadmapStatus; checked: string[]; note: string; due: string; contactPerson: string; contactEmail: string; crmStatus: string; updatedAt?: string; updatedBy?: string };
 export function parseRoadmap(value: unknown): RoadmapState {
   const v = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const status = typeof v.status === "string" && ["ACTIVE","WAITING","PAUSED","DONE","CANCELLED"].includes(v.status) ? v.status as RoadmapStatus : "ACTIVE";
-  return { source: typeof v.source === "string" ? v.source : "CONTACT", status, checked: Array.isArray(v.checked) ? v.checked.filter((x): x is string => typeof x === "string") : [], note: typeof v.note === "string" ? v.note : "", due: typeof v.due === "string" ? v.due : "", updatedAt: typeof v.updatedAt === "string" ? v.updatedAt : undefined, updatedBy: typeof v.updatedBy === "string" ? v.updatedBy : undefined };
+  return { source: typeof v.source === "string" ? v.source : "CONTACT", status, checked: Array.isArray(v.checked) ? v.checked.filter((x): x is string => typeof x === "string") : [], note: typeof v.note === "string" ? v.note : "", due: typeof v.due === "string" ? v.due : "", contactPerson: typeof v.contactPerson === "string" ? v.contactPerson : "", contactEmail: typeof v.contactEmail === "string" ? v.contactEmail : "", crmStatus: typeof v.crmStatus === "string" ? v.crmStatus : "", updatedAt: typeof v.updatedAt === "string" ? v.updatedAt : undefined, updatedBy: typeof v.updatedBy === "string" ? v.updatedBy : undefined };
 }
 export async function roadmapSignals(organizationId: string) {
   const [org, invitations, crm] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { id: true, name: true, status: true, claimStatus: true, contactEmail: true, description: true, logoId: true, onboardingCompleted: true, memberships: { select: { id: true }, take: 1 }, claimRequests: { select: { status: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 }, subscription: { select: { status: true, autoRenew: true, endDate: true, plan: { select: { name: true, tier: true } } } }, _count: { select: { events: true } } } }),
-    prisma.boardingInvitation.findMany({ where: { organizationId }, orderBy: { sentAt: "desc" }, take: 1, select: { status: true, sentAt: true, acceptedAt: true, expiresAt: true, openCount: true } }),
+    prisma.boardingInvitation.findMany({ where: { organizationId }, orderBy: { sentAt: "desc" }, take: 1, select: { status: true, sentAt: true, acceptedAt: true, expiresAt: true, openCount: true, contactName: true, email: true, openedAt: true } }),
     prisma.siteSetting.findUnique({ where: { key: "crm.organization." + organizationId }, select: { value: true } }),
   ]);
   const crmValue = crm?.value && typeof crm.value === "object" && !Array.isArray(crm.value) ? crm.value as Record<string, unknown> : {};
@@ -44,7 +44,7 @@ export async function roadmapSignals(organizationId: string) {
     { key: "tariff", label: "Aktives oder Test-Abonnement vorhanden", done: Boolean(org.subscription && ["ACTIVE","TRIAL"].includes(org.subscription.status)) },
     { key: "publication", label: "Profil veröffentlicht", done: org.status === "PUBLISHED" },
   ];
-  return { org, signals, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
+  return { org, signals, crmValue, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
 }
 export function roadmapDue(state: RoadmapState, now = new Date()) {
   return Boolean(state.due && /^\d{4}-\d{2}-\d{2}$/.test(state.due) && state.due <= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich", year: "numeric", month: "2-digit", day: "2-digit" }).format(now) && !["DONE","CANCELLED","PAUSED"].includes(state.status));
