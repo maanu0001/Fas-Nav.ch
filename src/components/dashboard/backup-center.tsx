@@ -4,6 +4,7 @@ type Entry = { id: string; createdAt: string; databaseBytes: number; uploadsByte
 export function BackupCenter() {
   const [items, setItems] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"create" | "test" | "delete" | "restore" | "import" | null>(null);
   const [selectedRestore, setSelectedRestore] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [databaseFile, setDatabaseFile] = useState<File | null>(null);
@@ -21,7 +22,7 @@ export function BackupCenter() {
   useEffect(() => { void refresh(); }, []);
   async function create() {
     if (!window.confirm("Jetzt eine vollständige Sicherung von Datenbank und Uploads erstellen?")) return;
-    setBusy(true); setError(""); setNotice("");
+    setBusy(true); setBusyAction("create"); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/backups", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(`Backup konnte nicht erstellt werden (HTTP ${response.status}): ${data?.error || "Keine Servermeldung"}`); }
@@ -68,6 +69,19 @@ export function BackupCenter() {
     } catch (e) { setError(e instanceof Error ? e.message : "Import fehlgeschlagen"); }
     finally { setBusy(false); }
   }
+  async function deleteBackup(id: string) {
+    if (!window.confirm("Backup " + id + " endgültig löschen? Datenbank-Dump und Medienarchiv werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.")) return;
+    setBusy(true); setBusyAction("delete"); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/backups/" + id, { method: "DELETE" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Löschen fehlgeschlagen");
+      if (selectedRestore === id) { setSelectedRestore(""); setConfirmation(""); }
+      setNotice("Backup gelöscht.");
+      await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Löschen fehlgeschlagen"); }
+    finally { setBusy(false); setBusyAction(null); }
+  }
   const restoreEntry = items.find(item => item.id === selectedRestore);
   const newest = items[0];
   const ageHours = newest ? (Date.now() - new Date(newest.createdAt).getTime()) / 3600000 : Infinity;
@@ -78,7 +92,7 @@ export function BackupCenter() {
     <section className="rounded-xl border bg-card p-5 space-y-3">
       <h2 className="text-lg font-semibold">Vollständiges Backup erstellen</h2>
       <p className="text-sm text-muted-foreground">Sichert die PostgreSQL-Datenbank und alle Uploads in zwei verifizierten Dateien. Während der Sicherung keine grösseren Datenänderungen vornehmen.</p>
-      <button type="button" disabled={busy} onClick={create} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Backup wird erstellt …" : "Backup erstellen"}</button>
+      <button type="button" disabled={busy} onClick={create} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busyAction === "test" ? "Backup wird geprüft …" : busyAction === "create" ? "Backup wird erstellt …" : "Backup erstellen"}</button>
       {notice && <p role="status" className="text-sm">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </section>
@@ -86,7 +100,7 @@ export function BackupCenter() {
       <h2 className="text-lg font-semibold">Backup-Verlauf</h2>
       {items.length === 0 ? <p className="text-sm text-muted-foreground">Noch keine Backups im Backup-Verzeichnis vorhanden.</p> : <div className="space-y-3">{items.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
         <div><p className="font-medium">{new Date(item.createdAt).toLocaleString("de-CH", { timeZone: "Europe/Zurich" })}</p><p className="text-xs text-muted-foreground">Datenbank {size(item.databaseBytes)} · Medien {size(item.uploadsBytes)} · {item.verified ? "Archiv geprüft" : "Nicht verifiziert"} · Restore-Test: {item.restoreTest?.status === "passed" ? "Bestanden" : item.restoreTest?.status === "failed" ? "Fehlgeschlagen" : "Ausstehend"}</p></div>
-        <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => test(item.id)} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">Restore testen</button><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/database`}>Datenbank herunterladen</a><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/uploads`}>Medien herunterladen</a></div>
+        <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => test(item.id)} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">Restore testen</button><button type="button" disabled={busy} onClick={() => deleteBackup(item.id)} className="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50">Löschen</button><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/database`}>Datenbank herunterladen</a><a className="rounded-lg border px-3 py-2 text-sm hover:bg-muted" href={`/api/admin/backups/${item.id}/uploads`}>Medien herunterladen</a></div>
       </div>)}</div>}
     </section>
     <section className="rounded-xl border border-amber-500/40 p-5 space-y-3">

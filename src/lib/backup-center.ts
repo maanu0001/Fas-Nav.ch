@@ -198,3 +198,22 @@ export async function pruneOldBackups() {
     }
   }
 }
+
+/** Remove a local backup only when no restore is currently running. */
+export async function deleteBackup(id: string) {
+  if (!validBackupId(id)) throw new Error("Ungültige Backup-ID");
+  await mkdir(BACKUP_ROOT, { recursive: true, mode: 0o700 });
+  const lock = await open(join(BACKUP_ROOT, ".delete.lock"), "wx", 0o600).catch(() => { throw new Error("Ein Löschvorgang läuft bereits"); });
+  try {
+    for (const name of [".restore-test.lock", ".create.lock"]) {
+      try { await stat(join(BACKUP_ROOT, name)); throw new Error("Während einer Sicherung oder Restore-Prüfung kann nicht gelöscht werden"); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    }
+    const folder = join(BACKUP_ROOT, id);
+    const manifest = JSON.parse(await readFile(join(folder, "manifest.json"), "utf8"));
+    if (manifest.id !== id) throw new Error("Ungültiges Backup-Manifest");
+    const entries = await listBackups();
+    if (entries.length <= 1) throw new Error("Das letzte verbleibende Backup darf nicht gelöscht werden");
+    await rm(folder, { recursive: true, force: false });
+  } finally { await lock.close(); await rm(join(BACKUP_ROOT, ".delete.lock"), { force: true }); }
+}
