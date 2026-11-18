@@ -5,14 +5,14 @@ export const ROADMAP_PREFIX = "admin-roadmap:";
 export const roadmapKey = (id: string) => ROADMAP_PREFIX + id;
 export const roadmapSources = [
   { key: "ACQUISITION", label: "Akquise", href: "/dashboard/mails", guide: "Akquise-Mail senden, Reaktion prüfen und bei Interesse Boarding starten." },
-  { key: "CLAIM", label: "Profil beanspruchen", href: "/dashboard/boarding", guide: "Antrag und Identität prüfen, Zugriff erst nach Freigabe erteilen." },
+  { key: "CLAIM", label: "Profil beanspruchen", href: "/dashboard/uebernahmeanfragen", guide: "Antrag und Identität prüfen, Zugriff erst nach Freigabe erteilen." },
   { key: "SELF", label: "Selbstregistrierung", href: "/dashboard/accounts", guide: "Dubletten prüfen, Konto zuordnen und Profil vervollständigen." },
   { key: "CONTACT", label: "Direkte Anfrage", href: "/dashboard/kontaktanfragen", guide: "Anliegen einordnen, Kontaktperson bestimmen und nächsten Schritt vereinbaren." },
-  { key: "BOARDING", label: "Boarding-Mail", href: "/dashboard/boarding", guide: "Einladung versenden, Annahme überwachen und Organisationszugriff prüfen." },
+  { key: "BOARDING", label: "Boarding-Mail", href: "/dashboard/mails", guide: "Einladung versenden, Annahme überwachen und Organisationszugriff prüfen." },
 ] as const;
 export const roadmapManual = [
   { key: "contact", label: "Interesse und Kontaktperson bestätigt", href: "/dashboard/mails" },
-  { key: "identity", label: "Identität und Berechtigung geprüft", href: "/dashboard/boarding" },
+  { key: "identity", label: "Identität und Berechtigung geprüft", href: "/dashboard/uebernahmeanfragen" },
   { key: "quality", label: "Profil und Inhalte geprüft", href: "/dashboard/organisationen" },
   { key: "handoff", label: "Betreuung und nächste Schritte vereinbart", href: "/dashboard/tickets" },
 ] as const;
@@ -36,7 +36,8 @@ export async function roadmapSignals(organizationId: string) {
     { key: "outreach", label: "Akquise-Kontakt erfasst", done: ["CONTACTED","REPLIED","CLAIMED","CUSTOMER"].includes(String(crmValue.status ?? "")) },
     { key: "claim", label: "Profilbeanspruchung genehmigt", done: org.claimStatus === "CLAIMED" || org.claimRequests[0]?.status === "APPROVED" },
     { key: "boarding", label: "Boarding-Einladung verschickt", done: Boolean(invite) },
-    { key: "accepted", label: "Boarding-Einladung angenommen", done: Boolean(invite?.acceptedAt) },
+    { key: "opened", label: "Boarding-Link geöffnet", done: Boolean(invite?.openCount) },
+    { key: "accepted", label: "Boarding-Einladung angenommen / Account erstellt", done: Boolean(invite?.acceptedAt) },
     { key: "account", label: "Account zugeordnet", done: org.memberships.length > 0 },
     { key: "profile", label: "Beschreibung und Logo vorhanden", done: Boolean(org.description && org.logoId) },
     { key: "onboarding", label: "Onboarding abgeschlossen", done: org.onboardingCompleted },
