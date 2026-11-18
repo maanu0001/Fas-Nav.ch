@@ -31,7 +31,7 @@ export default async function ContactRequestsLayout({
           },
           {
             href: "/dashboard/kontaktanfragen/profil",
-            label: counts.claims ? `Profil beanspruchen (${counts.claims})` : "Profil beanspruchen",
+            label: counts.claims ? `Profilübernahme (${counts.claims})` : "Profilübernahme",
           },
         ]}
       />
