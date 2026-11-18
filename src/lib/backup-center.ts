@@ -161,7 +161,7 @@ export async function testRestore(id: string) {
     try {
       await command("tar", ["-xzf", media.path, "-C", mediaTestDir], env);
     } finally { await rm(mediaTestDir, { recursive: true, force: true }); }
-    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "DO $ BEGIN IF (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public') = 0 THEN RAISE EXCEPTION 'No application tables restored'; END IF; END $;"], env);
+    await command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-c", "SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 1/0 END FROM information_schema.tables WHERE table_schema = 'public';"], env);
     const root = join(BACKUP_ROOT, id);
     const manifest = JSON.parse(await readFile(join(root, "manifest.json"), "utf8"));
     manifest.restoreTest = { status: "passed", checkedAt: new Date().toISOString(), databaseHash: await hashFile(db.path), uploadsHash: await hashFile(media.path) };

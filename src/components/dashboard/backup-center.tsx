@@ -29,7 +29,7 @@ export function BackupCenter() {
       setNotice("Backup erfolgreich erstellt und geprüft.");
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Unbekannter Fehler"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setBusyAction(null); }
   }
   async function test(id: string) {
     setBusy(true); setError(""); setNotice("");
