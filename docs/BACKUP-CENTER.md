@@ -48,3 +48,6 @@ Der zusätzliche Dienst `backup_test_db` ist bewusst als optionales Docker-Compo
 
 ## Status November 2026
 Die Schaltfläche «Restore testen» stellt die Datenbank isoliert wieder her und prüft das Medienarchiv. Ein produktiver Restore per Web-Klick bleibt gesperrt, bis Wartungsmodus, unabhängige Rollback-Prüfung, externe Schreibsperre und Session-Invalidierung vollständig orchestriert und getestet sind. Offsite-Backups benötigen eigene Zugangsdaten und externe Infrastruktur. Das Dashboard warnt bei einer lokalen Sicherung älter als 36 Stunden.
+
+## Freigegebener Restore aus dem Dashboard
+GitHub Environment `backup-restore` mit Required Reviewers konfigurieren. GitHub Actions-Token mit minimalem Actions:write-Recht als `BACKUP_RESTORE_GITHUB_TOKEN` in Server-.env eintragen. Workflow benötigt SSH-Secrets. Vor Freigabe muss der Betreiber extern den Wartungsmodus aktivieren, alle Schreiber anhalten und `/opt/fas-nav/maintenance/restore-approved` mit der Backup-ID befüllen. Der Dashboard-Klick stellt eine Anfrage; erst nach separater GitHub-Freigabe wird das Host-Restore-Skript ausgeführt. Rollback und Session-Invalidierung auf isolierter Infrastruktur prüfen, bevor ein produktiver Restore zugelassen wird.

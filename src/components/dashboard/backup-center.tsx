@@ -5,6 +5,7 @@ export function BackupCenter() {
   const [items, setItems] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
   const [selectedRestore, setSelectedRestore] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const [databaseFile, setDatabaseFile] = useState<File | null>(null);
   const [uploadsFile, setUploadsFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -38,6 +39,18 @@ export function BackupCenter() {
       setNotice("Datenbank auf separatem Testserver wiederhergestellt und Medienarchiv isoliert entpackt und geprüft.");
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Restore-Prüfung fehlgeschlagen"); }
+    finally { setBusy(false); }
+  }
+  async function requestRestore() {
+    if (!selectedRestore || confirmation !== "RESTORE " + selectedRestore) return;
+    if (!window.confirm("Produktive Daten auf diesen Backup-Stand zurücksetzen? Neuere Daten können verloren gehen.")) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/backups/" + selectedRestore + "/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Restore-Anfrage fehlgeschlagen");
+      setNotice("Restore angefragt. Die Ausführung benötigt eine separate Freigabe im GitHub-Workflow und einen bestätigten Wartungsmodus.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Restore-Anfrage fehlgeschlagen"); }
     finally { setBusy(false); }
   }
   async function importFiles() {
@@ -88,6 +101,8 @@ export function BackupCenter() {
       {restoreEntry && <div className="space-y-2 rounded-lg border p-3">
         <p className="text-sm font-medium">Ausgewählt: {restoreEntry.id}</p>
         <p className="text-xs text-muted-foreground">Vor Ausführung: Wartungsseite aktivieren, externe Schreibzugriffe stoppen, Backup-Dateien extern sichern und Wiederherstellung auf einer separaten Instanz prüfen. Das Skript erstellt einen zusätzlichen Rollback-Snapshot.</p>
+        <label className="block text-sm">Bestätigung: <code>RESTORE {selectedRestore}</code><input value={confirmation} onChange={e => setConfirmation(e.target.value)} className="mt-1 block w-full rounded-lg border bg-background p-2" /></label>
+        <button type="button" disabled={busy || confirmation !== "RESTORE " + selectedRestore} onClick={requestRestore} className="rounded-lg border border-red-500 px-4 py-2 text-sm font-semibold disabled:opacity-50">Produktions-Restore anfragen</button>
         <code className="block break-all rounded bg-muted p-3 text-xs">{restoreCommand}</code>
         <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={() => { void navigator.clipboard.writeText(restoreCommand); }}>Host-Befehl kopieren</button>
         <p className="text-xs text-muted-foreground">Der Befehl startet nichts im Browser. Ein Administrator muss ihn auf dem Produktionshost nach Aktivierung des Wartungsmodus ausführen. Bei einem Fehler bleibt der Wartungsmodus aktiv.</p>

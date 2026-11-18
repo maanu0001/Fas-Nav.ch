@@ -1,0 +1,50 @@
+name: Freigegebene Produktionswiederherstellung
+on:
+  workflow_dispatch:
+    inputs:
+      backup_id:
+        description: Verifizierte Backup-ID
+        required: true
+        type: string
+concurrency:
+  group: fasnav-production-maintenance
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: backup-restore
+    steps:
+      - name: SSH vorbereiten
+        env:
+          KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$KEY" && test -n "$KNOWN"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+      - name: Freigegebenen Restore auf Host ausführen
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+        run: |
+          set -euo pipefail
+          [[ "$BACKUP_ID" =~ ^20[0-9]{6}T[0-9]{6}Z-[a-f0-9]{12}$ ]]
+          test -n "$HOST" && test -n "$USER"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes "$USER@$HOST" "bash -s -- '$BACKUP_ID'" <<'REMOTE'
+          set -euo pipefail
+          id="$1"
+          cd /opt/fas-nav/app
+          test -f /opt/fas-nav/maintenance/restore-approved
+          test "$(cat /opt/fas-nav/maintenance/restore-approved)" = "$id"
+          FASNAV_CONFIRM_FULL_RESTORE="$id" FASNAV_MAINTENANCE_CONFIRMED=YES bash scripts/restore-production.sh "$id"
+          REMOTE
+      - name: SSH-Schlüssel entfernen
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
