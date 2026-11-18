@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DeleteClaimButton } from "@/components/dashboard/delete-claim-button";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Card } from "@/components/ui/card";
 import { requireStaffPage } from "@/lib/dashboard-context";
@@ -38,7 +39,7 @@ export default async function ClaimRequestsPage() {
             </div>
             {request.contactPhone && <p className="text-sm">Telefon: {request.contactPhone}</p>}
             <p className="whitespace-pre-wrap text-sm">{request.message}</p>
-            <Link href={`/dashboard/organisationen/${request.organization.id}`} className="inline-block text-sm font-medium text-primary-700 underline">Organisationsprofil prüfen</Link>
+            <div className="flex flex-wrap items-center gap-3"><Link href={`/dashboard/organisationen/${request.organization.id}`} className="inline-block text-sm font-medium text-primary-700 underline">Organisationsprofil prüfen</Link><DeleteClaimButton id={request.id} /></div>
           </Card>
         ))}
       </div>
