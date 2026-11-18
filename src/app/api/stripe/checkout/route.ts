@@ -4,12 +4,12 @@ import { z } from "zod";
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationAccess } from "@/lib/rbac";
-import { stripeConfigured, stripePost } from "@/lib/stripe";
+import { stripeConfigured, stripeGet, stripePost } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
 const schema = z.object({ organizationId: z.string().cuid(), planId: z.string().cuid() });
-type CheckoutSession = { id: string; url: string | null };
+type CheckoutSession = { id: string; url: string | null; status?: "open" | "complete" | "expired"; payment_status?: string };
 
 function recurringInterval(interval: BillingInterval) {
   if (interval === "MONTHLY") return "month";
@@ -54,12 +54,29 @@ export async function POST(request: Request) {
       }
       throw error;
     }
-    if (old?.expiresAt && old.expiresAt > now) {
-      if (old.url && old.planId === plan.id) return jsonOk({url:old.url});
-      return jsonError("Für diese Organisation läuft bereits eine Tarifbuchung. Bitte zuerst abschliessen oder den Ablauf abwarten.",409);
-    }
-    if (old) {
-      await prisma.stripeCheckoutAttempt.deleteMany({where:{organizationId:organization.id,expiresAt:{lte:now}}});
+    if (old?.sessionId) {
+      // A previous checkout must be checked at Stripe before it can be replaced.
+      // A completed session must never be expired or silently replaced.
+      const previous = await stripeGet<CheckoutSession>(`/checkout/sessions/${encodeURIComponent(old.sessionId)}`);
+      if (previous.status === "complete" || previous.payment_status === "paid") {
+        return jsonError("Die vorherige Buchung wurde bereits abgeschlossen. Bitte lade dein Abonnement neu.", 409);
+      }
+      if (previous.status === "open") {
+        // Reuse the same open session for the same plan, otherwise expire it
+        // before creating a different checkout. Stripe rejects expiry of completed sessions.
+        if (old.planId === plan.id && old.url) return jsonOk({ url: old.url });
+        try {
+          await stripePost(`/checkout/sessions/${encodeURIComponent(old.sessionId)}/expire`, new URLSearchParams());
+        } catch (error) {
+          console.error("[stripe] Previous checkout could not be expired", error);
+          return jsonError("Die vorherige Buchung konnte nicht sicher abgebrochen werden. Bitte versuche es erneut.", 409);
+        }
+      }
+      await prisma.stripeCheckoutAttempt.deleteMany({ where: { organizationId: organization.id, sessionId: old.sessionId } });
+    } else if (old) {
+      // A checkout being prepared by another request must not be replaced.
+      if (old.expiresAt > now) return jsonError("Eine Buchung wird gerade vorbereitet. Bitte versuche es gleich erneut.", 409);
+      await prisma.stripeCheckoutAttempt.deleteMany({ where: { organizationId: organization.id, expiresAt: { lte: now } } });
     }
     const expiresAt = new Date(now.getTime() + 60*60_000);
     try {
