@@ -70,13 +70,11 @@ export default async function CheckoutPage() {
               </div>
               <p className="mt-5 font-display text-3xl font-bold text-primary-900 dark:text-slate-100">{formatChf(Number(plan.priceChf))}<span className="ml-1 text-sm font-normal text-muted-foreground">/{plan.billingInterval === "MONTHLY" ? "Monat" : "Jahr"}</span></p>
               <div className="my-5 flex-1">
-                <h3 className="mb-3 text-sm font-semibold">Zusätzliche Vorteile gegenüber Free</h3>
                 <ul className="space-y-2">{visible.map(benefit)}</ul>
                 {remaining.length > 0 ? (
                   <details className="group mt-3">
-                    <summary className="cursor-pointer select-none text-sm font-semibold text-primary-700 hover:underline">
-                      <span className="group-open:hidden">Siehe mehr ({remaining.length})</span>
-                      <span className="hidden group-open:inline">Weniger anzeigen</span>
+                    <summary className="cursor-pointer select-none text-sm font-semibold text-primary-700 hover:underline group-open:hidden">
+                      Mehr anzeigen
                     </summary>
                     <ul className="mt-3 space-y-2">{remaining.map(benefit)}</ul>
                   </details>
