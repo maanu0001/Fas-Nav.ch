@@ -3,6 +3,17 @@ import { LockKeyhole } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 
+export function SubscriptionUpgradeNotice({ title }: { title: string }) {
+  return (
+    <div className="space-y-3 text-center">
+      <LockKeyhole className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden />
+      <p className="font-semibold">Ein anderes Abonnement erforderlich</p>
+      <p className="text-sm text-muted-foreground">{title} ist in deinem aktuellen Tarif nicht enthalten.</p>
+      <Link href="/dashboard/abonnement/bezahlen" className="inline-block text-sm font-semibold text-primary-700 underline">Abonnemente ansehen</Link>
+    </div>
+  );
+}
+
 export function SubscriptionFeatureLocked({ title }: { title: string }) {
   return (
     <>
