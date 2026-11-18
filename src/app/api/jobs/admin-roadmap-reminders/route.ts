@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       const org = await tx.organization.findUnique({ where: { id: orgId }, select: { id: true, name: true } });
       if (!org) continue;
       checked++;
-      const link = `/dashboard/admin-roadmap?org=${encodeURIComponent(orgId)}`;
+      const link = `/dashboard/admin-roadmap/${encodeURIComponent(orgId)}`;
       const marker = `[Roadmap:${orgId}:${state.due}]`;
       for (const member of staff) {
         const exists = await tx.notification.findFirst({ where: { userId: member.id, type: "SYSTEM", body: { startsWith: marker } }, select: { id: true } });
