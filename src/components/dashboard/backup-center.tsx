@@ -56,9 +56,12 @@ export function BackupCenter() {
     finally { setBusy(false); }
   }
   const restoreEntry = items.find(item => item.id === selectedRestore);
+  const newest = items[0];
+  const ageHours = newest ? (Date.now() - new Date(newest.createdAt).getTime()) / 3600000 : Infinity;
   const restoreCommand = selectedRestore ? `FASNAV_CONFIRM_FULL_RESTORE=${selectedRestore} FASNAV_MAINTENANCE_CONFIRMED=YES bash scripts/restore-production.sh ${selectedRestore}` : "";
   const size = (n: number) => (n / 1048576).toFixed(1) + " MB";
   return <div className="space-y-5">
+    <section className="rounded-xl border bg-card p-5 space-y-2"><h2 className="text-lg font-semibold">Backup-Überwachung</h2><p className={ageHours > 36 ? "font-semibold text-amber-700" : "font-semibold text-emerald-700"}>{!newest ? "Keine Sicherung vorhanden" : ageHours > 36 ? "Letztes Backup älter als 36 Stunden" : "Aktuelle Sicherung vorhanden"}</p><p className="text-sm text-muted-foreground">Letzte lokale Sicherung: {newest ? new Date(newest.createdAt).toLocaleString("de-CH", { timeZone: "Europe/Zurich" }) : "–"}. Offsite-Sicherungen werden hier nicht überwacht.</p></section>
     <section className="rounded-xl border bg-card p-5 space-y-3">
       <h2 className="text-lg font-semibold">Vollständiges Backup erstellen</h2>
       <p className="text-sm text-muted-foreground">Sichert die PostgreSQL-Datenbank und alle Uploads in zwei verifizierten Dateien. Während der Sicherung keine grösseren Datenänderungen vornehmen.</p>

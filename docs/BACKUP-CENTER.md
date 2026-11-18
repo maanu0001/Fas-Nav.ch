@@ -45,3 +45,6 @@ Der zusätzliche Dienst `backup_test_db` ist bewusst als optionales Docker-Compo
 **Grenzen der Prüfung:** Die Datenbank-Wiederherstellung wird ausgeführt, aber kein vollständiger fachlicher Anwendungstest. Das Medienarchiv wird auf Lesbarkeit und Prüfsumme geprüft, nicht in einer separaten Anwendung gestartet. Ein bestandener Restore-Test ist deshalb noch keine Garantie für eine fehlerfreie produktive Übernahme.
 
 **Produktive Wiederherstellung bleibt gesperrt:** Die Umsetzung eines sicheren, automatischen Produktions-Restores inklusive Schreibstopp, Rückfall-Backup, Rollback und Session-Invalidierung ist weiterhin offen. Keine ungetesteten Live-Restores durchführen.
+
+## Status November 2026
+Die Schaltfläche «Restore testen» stellt die Datenbank isoliert wieder her und prüft das Medienarchiv. Ein produktiver Restore per Web-Klick bleibt gesperrt, bis Wartungsmodus, unabhängige Rollback-Prüfung, externe Schreibsperre und Session-Invalidierung vollständig orchestriert und getestet sind. Offsite-Backups benötigen eigene Zugangsdaten und externe Infrastruktur. Das Dashboard warnt bei einer lokalen Sicherung älter als 36 Stunden.
