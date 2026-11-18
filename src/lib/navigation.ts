@@ -110,7 +110,6 @@ export function dashboardNavigation(role: Role, organizationId?: string | null):
           icon: "image",
         },
         { href: "/dashboard/qr-code", label: "QR-Code", icon: "layout" },
-        { href: "/dashboard/anleitung", label: "Anleitung", icon: "book" },
         { href: "/dashboard/statistik", label: "Statistik", icon: "chart" },
         { href: "/dashboard/anleitung", label: "Anleitung", icon: "book" },
       ],
