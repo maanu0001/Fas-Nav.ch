@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { GalleryManager } from "@/components/dashboard/gallery-manager";
+import { SubscriptionFeatureLocked } from "@/components/dashboard/subscription-feature-locked";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { FEATURE_KEYS } from "@/lib/constants";
 import { requireOrganizationAccessPage } from "@/lib/dashboard-context";
@@ -48,6 +49,8 @@ export default async function OrganizationGalleryPage({ params }: Params) {
   ]);
 
   const access = featureAccess(subscription, FEATURE_KEYS.GALLERY);
+
+  if (!access.enabled && !zugriff.viaStaff) return <SubscriptionFeatureLocked title="Medien" />;
 
   return (
     <>
