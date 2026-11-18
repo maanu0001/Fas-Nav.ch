@@ -20,11 +20,15 @@ export default async function CheckoutPage() {
   const canManage = context.can("manage");
   const configured = stripeConfigured();
   const existingStripe=Boolean(context.subscription?.externalSubscriptionId && context.subscription?.externalCustomerId && !["CANCELLED","EXPIRED"].includes(context.subscription.status));
-  const plans = await prisma.plan.findMany({
+  const [plans, freePlan] = await Promise.all([prisma.plan.findMany({
     where: { isActive: true, isPublic: true, priceChf: { gt: 0 }, billingInterval: { in: ["MONTHLY", "YEARLY"] } },
     orderBy: { sortOrder: "asc" },
     include: { features: { where: { enabled: true }, include: { feature: true }, orderBy: { feature: { sortOrder: "asc" } } } },
-  });
+  }), prisma.plan.findFirst({
+    where: { tier: "FREE", isActive: true },
+    include: { features: { where: { enabled: true }, include: { feature: true } } },
+  })]);
+  const freeFeatures = new Map(freePlan?.features.map((entry) => [entry.feature.key, entry]) ?? []);
 
   return (
     <>
@@ -37,6 +41,24 @@ export default async function CheckoutPage() {
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {plans.map((plan) => {
           const current = context.subscription?.planId === plan.id;
+          const upgrades = plan.features.filter((entry) => {
+            const free = freeFeatures.get(entry.feature.key);
+            if (!free) return true;
+            if (free.limit === null) return false;
+            return entry.limit === null || entry.limit > free.limit;
+          });
+          const visible = upgrades.slice(0, 4);
+          const remaining = upgrades.slice(4);
+          const benefit = (item: (typeof upgrades)[number]) => (
+            <li key={item.id} className="flex items-start gap-2 text-sm">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="font-medium">{item.feature.name}</span>
+                {item.limit !== null ? <span className="ml-1 text-xs text-muted-foreground">(bis {item.limit})</span> : null}
+                {item.feature.description ? <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{item.feature.description}</span> : null}
+              </span>
+            </li>
+          );
           return (
             <Card key={plan.id} className="flex h-full flex-col p-6">
               <div className="flex items-start justify-between gap-3">
@@ -48,20 +70,18 @@ export default async function CheckoutPage() {
               </div>
               <p className="mt-5 font-display text-3xl font-bold text-primary-900 dark:text-slate-100">{formatChf(Number(plan.priceChf))}<span className="ml-1 text-sm font-normal text-muted-foreground">/{plan.billingInterval === "MONTHLY" ? "Monat" : "Jahr"}</span></p>
               <div className="my-5 flex-1">
-                <h3 className="mb-3 text-sm font-semibold">Alle enthaltenen Vorteile</h3>
-                <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
-                  {plan.features.map((item) => (
-                    <li key={item.id} className="flex items-start gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
-                      <span className="min-w-0">
-                        <span className="font-medium">{item.feature.name}</span>
-                        {item.limit !== null ? <span className="ml-1 text-xs text-muted-foreground">(bis {item.limit})</span> : null}
-                        {item.feature.description ? <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{item.feature.description}</span> : null}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {plan.features.length === 0 ? <p className="text-sm text-muted-foreground">Für diesen Tarif sind noch keine Vorteile hinterlegt.</p> : null}
+                <h3 className="mb-3 text-sm font-semibold">Zusätzliche Vorteile gegenüber Free</h3>
+                <ul className="space-y-2">{visible.map(benefit)}</ul>
+                {remaining.length > 0 ? (
+                  <details className="group mt-3">
+                    <summary className="cursor-pointer select-none text-sm font-semibold text-primary-700 hover:underline">
+                      <span className="group-open:hidden">Siehe mehr ({remaining.length})</span>
+                      <span className="hidden group-open:inline">Weniger anzeigen</span>
+                    </summary>
+                    <ul className="mt-3 space-y-2">{remaining.map(benefit)}</ul>
+                  </details>
+                ) : null}
+                {upgrades.length === 0 ? <p className="text-sm text-muted-foreground">Keine zusätzlichen Funktionen gegenüber Free hinterlegt.</p> : null}
               </div>
               <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />
             </Card>
