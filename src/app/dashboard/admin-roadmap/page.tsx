@@ -39,7 +39,7 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
   const active = trackedOrgs.filter(o => !["DONE","CANCELLED"].includes(states.get(o.id)?.status ?? ""));
   const statusLabels: Record<string,string> = { ACTIVE: "Aktiv", WAITING: "Warten auf Kunde", PAUSED: "Pausiert", DONE: "Abgeschlossen", CANCELLED: "Abgebrochen" };
   return <div className="space-y-6">
-    <PageHeader title="Admin Roadmap" description="Interne Steuerung der Kundengewinnung, des Onboardings und der Betreuung – nur für Admin und Team." />
+    <PageHeader title="CRM" description="Zentrale Übersicht über Kontakte, Akquise, Onboarding und Kundenbetreuung." />
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
       ["Aktive Prozesse", active.length],
       ["Warten auf Kunde", trackedOrgs.filter(o => states.get(o.id)?.status === "WAITING").length],
@@ -48,7 +48,7 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
     ].map(([label,value]) => <div key={label} className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:bg-card"><div className="text-2xl font-bold">{value}</div><div className="text-sm text-muted-foreground">{label}</div></div>)}</div>
     {dueItems.length > 0 && <section className="rounded-xl border border-amber-400 bg-amber-50 p-4 dark:bg-amber-950/20"><h2 className="mb-2 font-semibold">Fällige Wiedervorlagen</h2><div className="grid gap-2">{dueItems.slice(0, 30).map(o => <Link key={o.id} href={`/dashboard/admin-roadmap/${encodeURIComponent(o.id)}`} className="rounded-lg bg-muted/40 p-3 text-sm hover:underline">{o.name} · {states.get(o.id)?.due}</Link>)}</div></section>}
     <section className="space-y-3 rounded-xl border p-4">
-      <h2 className="text-lg font-semibold">Kundenprozesse</h2>
+      <h2 className="text-lg font-semibold">Organisationen & Kundenprozesse</h2>
       <form action="/dashboard/admin-roadmap" className="flex gap-2"><input name="q" defaultValue={q} placeholder="Organisation suchen …" className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm"/><button className="rounded-lg border px-4 py-2 text-sm">Suchen</button></form>
       <p className="text-xs text-muted-foreground">Aktive Vorgänge und Boarding-Aktivitäten stehen oben. Die ersten 100 Einträge werden angezeigt; suche nach weiteren Organisationen.</p>
       <div className="grid gap-3 sm:grid-cols-2">{visibleOrganizations.map(o => {
