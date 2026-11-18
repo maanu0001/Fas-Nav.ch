@@ -41,7 +41,7 @@ export async function roadmapSignals(organizationId: string) {
     { key: "account", label: "Account zugeordnet", done: org.memberships.length > 0 },
     { key: "profile", label: "Beschreibung und Logo vorhanden", done: Boolean(org.description && org.logoId) },
     { key: "onboarding", label: "Onboarding abgeschlossen", done: org.onboardingCompleted },
-    { key: "tariff", label: "Tarif hinterlegt", done: Boolean(org.subscription && ["ACTIVE","TRIAL"].includes(org.subscription.status)) },
+    { key: "tariff", label: "Aktives oder Test-Abonnement vorhanden", done: Boolean(org.subscription && ["ACTIVE","TRIAL"].includes(org.subscription.status)) },
     { key: "publication", label: "Profil veröffentlicht", done: org.status === "PUBLISHED" },
   ];
   return { org, signals, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
