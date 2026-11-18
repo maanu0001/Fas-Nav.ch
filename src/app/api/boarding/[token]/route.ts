@@ -40,7 +40,8 @@ export async function POST(request:Request,{params}:Params){
    await syncClaimStatus(tx,invite.organizationId);
    return account;
   });
-  await notify({userId:updated.id,organizationId:invite.organizationId,type:"SYSTEM",title:"Deine Organisation ist bereit",body:"Du kannst "+invite.organization.name+" ab sofort verwalten.",link:"/dashboard/onboarding"});
+  try { await notify({userId:updated.id,organizationId:invite.organizationId,type:"SYSTEM",title:"Deine Organisation ist bereit",body:"Du kannst "+invite.organization.name+" ab sofort verwalten.",link:"/dashboard/onboarding"}); }
+  catch (error) { console.error("[boarding] Konto freigeschaltet, Benachrichtigung fehlgeschlagen", error); }
   return jsonOk({status:"APPROVED",accountCreated:true});
  }catch(e){return handleApiError(e);}
 }
