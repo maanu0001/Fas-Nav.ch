@@ -56,7 +56,7 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
   const states = new Map(saved.filter(s => s.key.startsWith("admin-roadmap:")).map(s => [s.key.slice("admin-roadmap:".length), parseRoadmap(s.value)]));
   const trackedIds = [...states.keys()];
   const [organizations, trackedOrgs, recentInvitations] = await Promise.all([
-    prisma.organization.findMany({ where: q ? { name: { contains: q, mode: "insensitive" } } : {}, orderBy: { name: "asc" }, take: 100, select: { id: true, name: true } }),
+    prisma.organization.findMany({ where: q ? { name: { contains: q, mode: "insensitive" } } : {}, orderBy: { name: "asc" }, take: 4000, select: { id: true, name: true } }),
     trackedIds.length ? prisma.organization.findMany({ where: { id: { in: trackedIds } }, select: { id: true, name: true } }) : Promise.resolve([] as { id: string; name: string }[]),
     prisma.boardingInvitation.findMany({ orderBy: { sentAt: "desc" }, take: 2000, select: { organizationId: true, status: true, openCount: true, acceptedAt: true, sentAt: true } }),
   ]);
@@ -76,6 +76,7 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
     };
     return priority(a.id)-priority(b.id) || a.name.localeCompare(b.name,"de-CH");
   });
+  const visibleOrganizations = q ? sortedOrganizations.slice(0, 100) : sortedOrganizations.slice(0, 100);
   const selected = params.org ? await prisma.organization.findUnique({ where: { id: params.org }, select: { id: true, name: true } }) : null;
   const state = selected ? states.get(selected.id) : undefined;
   const details = selected ? await roadmapSignals(selected.id) : null;
@@ -95,8 +96,8 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
     <section className="space-y-3 rounded-xl border p-4">
       <h2 className="text-lg font-semibold">Kundenprozesse</h2>
       <form action="/dashboard/admin-roadmap" className="flex gap-2"><input name="q" defaultValue={q} placeholder="Organisation suchen …" className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm"/><button className="rounded-lg border px-4 py-2 text-sm">Suchen</button></form>
-      <p className="text-xs text-muted-foreground">Die Suche zeigt maximal 100 Organisationen. Ein Prozess wird erst beim ersten Speichern aktiviert.</p>
-      <div className="grid gap-3 sm:grid-cols-2">{sortedOrganizations.map(o => {
+      <p className="text-xs text-muted-foreground">Aktive Vorgänge und Boarding-Aktivitäten stehen oben. Die ersten 100 Einträge werden angezeigt; suche nach weiteren Organisationen.</p>
+      <div className="grid gap-3 sm:grid-cols-2">{visibleOrganizations.map(o => {
         const state = states.get(o.id);
         const invite = invitationByOrg.get(o.id);
         const due = Boolean(state && roadmapDue(state));
