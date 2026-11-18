@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PlatformAnalytics } from "@/components/dashboard/platform-analytics";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { SubscriptionFeatureLocked } from "@/components/dashboard/subscription-feature-locked";
 
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
@@ -230,21 +230,7 @@ async function OrganizationStatistics({
 
   // Statistikzugriff ist tarifabhängig.
   if (!hasFeature(context.subscription, FEATURE_KEYS.STATISTICS)) {
-    return (
-      <>
-        <PageHeader title="Statistik" />
-        <Alert variant="info" title="Statistik ist in deinem Tarif nicht enthalten">
-          <p className="mt-1">
-            Mit dem Premium-Abo siehst du, wie oft deine Seite und deine Veranstaltungen aufgerufen
-            werden und wie häufig auf deine Links geklickt wird.
-          </p>
-          <ButtonLink href="/preise" variant="outline" className="mt-3">
-            <Lock />
-            Tarife vergleichen
-          </ButtonLink>
-        </Alert>
-      </>
-    );
+    return <SubscriptionFeatureLocked title="Statistik" />;
   }
 
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
