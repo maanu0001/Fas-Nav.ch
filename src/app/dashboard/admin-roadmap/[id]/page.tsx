@@ -23,7 +23,7 @@ async function save(form: FormData) {
   const contactEmail = String(form.get("contactEmail") ?? "").trim().slice(0, 254);
   const crmStatus = String(form.get("crmStatus") ?? "IMPORTED");
   if (!["IMPORTED","CONTACTED","REPLIED","CLAIMED","CUSTOMER","NOT_INTERESTED","UNREACHABLE"].includes(crmStatus)) throw new Error("Ungültiger Akquise-Status");
-  if (contactEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contactEmail)) throw new Error("Ungültige Kontakt-E-Mail");
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) throw new Error("Ungültige Kontakt-E-Mail");
   const checked = roadmapManual.filter(s => form.get(s.key) === "on").map(s => s.key);
   const key = roadmapKey(id);
   const existing = await prisma.siteSetting.findUnique({ where: { key }, select: { value: true } });
@@ -71,6 +71,7 @@ export default async function RoadmapOrganizationPage({params}:{params:Promise<{
   <PageHeader title={selected.name} description="Kundenprozess, automatische Meilensteine, manuelle Aufgaben und Änderungshistorie." />
       <section className="space-y-4 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">{selected.name}</h2><Link href={`/dashboard/organisationen/${selected.id}`} className="text-sm underline">Organisation öffnen</Link></div>
+      <p className="text-sm text-muted-foreground">{details.org.city}{details.org.contactPhone ? " · Telefon: " + details.org.contactPhone : ""}</p>
       <h3 className="font-semibold">Automatisch erkannte Meilensteine</h3>
       <p className="text-xs text-muted-foreground">Live aus Organisationsprofil, CRM, Boarding-Einladungen, Account und Abonnement. Nicht relevante Meilensteine können offen bleiben.</p>
       <div className="grid gap-2 sm:grid-cols-2">{details.signals.map(s => <div key={s.key} className={"rounded-lg border p-3 text-sm " + (s.done ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200" : "border-slate-200 bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300")}>{s.done ? "✓" : "○"} {s.label}</div>)}</div>
