@@ -72,6 +72,10 @@ export async function POST(request: Request) {
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://fas-nav.ch").replace(/\/$/, "");
     const params = new URLSearchParams();
     params.set("mode", "subscription");
+    // Managed Payments requires a product tax code for dynamically created products.
+    // This checkout uses inline price_data without a Stripe product tax classification.
+    // Disable Managed Payments for this session; standard Stripe subscription checkout remains enabled.
+    params.set("managed_payments[enabled]", "false");
     params.set("expires_at", String(Math.floor(expiresAt.getTime()/1000)));
     params.set("success_url", `${appUrl}/dashboard/abonnement?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
     params.set("cancel_url", `${appUrl}/dashboard/abonnement?checkout=cancelled`);
