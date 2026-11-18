@@ -25,7 +25,7 @@ export function parseRoadmap(value: unknown): RoadmapState {
 }
 export async function roadmapSignals(organizationId: string) {
   const [org, invitations, crm] = await Promise.all([
-    prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { id: true, name: true, status: true, claimStatus: true, contactEmail: true, description: true, logoId: true, onboardingCompleted: true, memberships: { select: { id: true }, take: 1 }, claimRequests: { select: { status: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 }, subscription: { select: { status: true, plan: { select: { name: true } } } }, _count: { select: { events: true } } } }),
+    prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { id: true, name: true, status: true, claimStatus: true, contactEmail: true, description: true, logoId: true, onboardingCompleted: true, memberships: { select: { id: true }, take: 1 }, claimRequests: { select: { status: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 }, subscription: { select: { status: true, autoRenew: true, endDate: true, plan: { select: { name: true, tier: true } } } }, _count: { select: { events: true } } } }),
     prisma.boardingInvitation.findMany({ where: { organizationId }, orderBy: { sentAt: "desc" }, take: 1, select: { status: true, sentAt: true, acceptedAt: true, expiresAt: true, openCount: true } }),
     prisma.siteSetting.findUnique({ where: { key: "crm.organization." + organizationId }, select: { value: true } }),
   ]);
@@ -41,7 +41,7 @@ export async function roadmapSignals(organizationId: string) {
     { key: "account", label: "Account zugeordnet", done: org.memberships.length > 0 },
     { key: "profile", label: "Beschreibung und Logo vorhanden", done: Boolean(org.description && org.logoId) },
     { key: "onboarding", label: "Onboarding abgeschlossen", done: org.onboardingCompleted },
-    { key: "tariff", label: "Tarif hinterlegt", done: Boolean(org.subscription) },
+    { key: "tariff", label: "Tarif hinterlegt", done: Boolean(org.subscription && ["ACTIVE","TRIAL"].includes(org.subscription.status)) },
     { key: "publication", label: "Profil veröffentlicht", done: org.status === "PUBLISHED" },
   ];
   return { org, signals, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
