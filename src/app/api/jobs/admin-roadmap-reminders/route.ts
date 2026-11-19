@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         if(await prisma.siteSetting.findUnique({where:{key:marker},select:{id:true}}))continue;
         let address=recipient.email;
         if(recipient.role==="ADMIN"){const preferences=await getAdminPreferences(recipient.id,recipient.email);address=preferences.notificationEmail||recipient.email;}
+        if(address.trim().toLowerCase()==="info@fas-nav.ch")continue;
         const sent=await sendTemplate("crm_followup",address,{
           recipientName:recipient.name||"Fas-Nav.ch Team",organizationName:org.name,dueDate:today,
           crmUrl:(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch")+"/dashboard/admin-roadmap/"+encodeURIComponent(organizationId)

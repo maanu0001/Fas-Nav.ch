@@ -78,7 +78,7 @@ const PLANS = [
       public_page: { enabled: true },
       social_links: { enabled: true },
       events: { enabled: true, limit: 3 },
-      marketplace_active: { enabled: true, limit: 1 }, marketplace_images: { enabled: true, limit: 3 }, marketplace_days: { enabled: true, limit: 30 }, audio_samples: { enabled: true, limit: 1 }, audio_seconds: { enabled: true, limit: 30 },
+      marketplace_active: { enabled: true, limit: 1 }, marketplace_images: { enabled: true, limit: 3 }, marketplace_days: { enabled: true, limit: 30 }, marketplace_external_contact: { enabled: true }, audio_samples: { enabled: true, limit: 1 }, audio_seconds: { enabled: true, limit: 30 },
     },
   },
   {

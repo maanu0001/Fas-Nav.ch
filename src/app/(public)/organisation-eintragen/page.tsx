@@ -27,7 +27,7 @@ const BENEFITS = [
   { icon: TrendingUp, title: "Mehr Reichweite gewinnen", body: "Profitiere von der zentralen Sichtbarkeit über Kantons- und Agendaseiten." },
   { icon: Music2, title: "Hörproben für Guggen", body: "Lade MP3-Musikausschnitte hoch. Je nach Tarif sind 1 bis 5 Hörproben mit 30 bis 180 Sekunden möglich." },
   { icon: Megaphone, title: "Inserate für Auftritte, Kostüme und Instrumente", body: "Erstelle Gesuche und Angebote, verwalte Entwürfe, Anfragen und archivierte Inserate im Dashboard." },
-  { icon: Ticket, title: "Flexible Kontaktmöglichkeiten", body: "Interessenten erreichen dich über Fas-Nav.ch oder ab Basic auf Wunsch direkt per E-Mail oder Telefon." },
+  { icon: Ticket, title: "Flexible Kontaktmöglichkeiten", body: "Bereits im Gratis-Tarif: Wähle Kontakt über Fas-Nav.ch, direkt per E-Mail oder Telefon oder beide Wege." },
   { icon: MapPinned, title: "Schweizweite Auffindbarkeit", body: "Deine Organisation und Veranstaltungen sind über Suche, Kantonsübersichten und Karte auffindbar." },
   { icon: ShieldCheck, title: "Organisation selbst verwalten", body: "Verwalte dein Profil, deine Medien, Veranstaltungen und berechtigte Teammitglieder im Dashboard." },
   { icon: CalendarPlus, title: "Programmübersicht", body: "Zeige Programmpunkte auf deiner öffentlichen Profilseite, sofern im Tarif enthalten." },
