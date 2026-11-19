@@ -40,7 +40,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
     AND: [
       scope,
       ...(params.status ? [{ status: params.status as never }] : []),
-      ...(params.kategorie ? [{ category: params.kategorie as never }] : []),
+      ...(params.kategorie === "FEATURE_SUGGESTION" ? [{ subject: { startsWith: "Funktionsvorschlag:", mode: "insensitive" as const } }] : params.kategorie ? [{ category: params.kategorie as never }] : []),
       ...(params.q
         ? [{ subject: { contains: params.q, mode: "insensitive" as const } }]
         : []),
@@ -100,7 +100,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
           {
             name: "kategorie",
             label: "Kategorie",
-            options: supportCategories.map(([value, label]) => ({ value, label })),
+            options: [...supportCategories.map(([value, label]) => ({ value, label })), ...(context.staff ? [{value:"FEATURE_SUGGESTION",label:"Funktionsvorschlag"}] : [])],
           },
         ]}
       />
@@ -143,7 +143,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Sear
                     </Td>
                   ) : null}
                   <Td className="text-muted-foreground">
-                    {TICKET_CATEGORY_LABELS[ticket.category]}
+                    {context.staff && ticket.subject.startsWith("Funktionsvorschlag:") ? "Funktionsvorschlag" : TICKET_CATEGORY_LABELS[ticket.category]}
                   </Td>
                   <Td>
                     <PriorityBadge priority={ticket.priority} />
