@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 
 import { StripePortalButton } from "@/components/dashboard/stripe-portal-button";
 import Link from "next/link";
+import { StripePlanChangeButton } from "@/components/dashboard/stripe-plan-change-button";
 import { StripeCheckoutButton } from "@/components/dashboard/stripe-checkout-button";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
@@ -37,7 +38,7 @@ export default async function CheckoutPage() {
       {!canManage ? <Alert variant="warning" title="Keine Berechtigung">Nur Owner und Manager können ein Abonnement buchen oder wechseln.</Alert> : null}
       {!configured ? <Alert variant="error" title="Online-Zahlung noch nicht verfügbar" className="mt-4">Stripe ist auf dem Produktionsserver noch nicht vollständig konfiguriert.</Alert> : null}
 
-      {existingStripe?<div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-5"><h2 className="font-semibold text-primary-900 dark:text-white">Dein Stripe-Abo besteht bereits</h2><p className="mt-2 text-sm text-primary-800 dark:text-slate-200">Verwalte dein bestehendes Abo und Zahlungsmittel im Stripe-Kundenportal. Ein zweiter Checkout wird zum Schutz vor doppelten Abbuchungen nicht gestartet. Tarifwechsel sind im Portal verfügbar, sofern diese Funktion in Stripe freigeschaltet ist.</p><div className="mt-4 max-w-sm"><StripePortalButton organizationId={context.organization.id}/></div></div>:null}
+      {existingStripe?<div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-5"><h2 className="font-semibold text-primary-900 dark:text-white">Dein Stripe-Abo besteht bereits</h2><p className="mt-2 text-sm text-primary-800 dark:text-slate-200">Verwalte dein bestehendes Abo und Zahlungsmittel im Stripe-Kundenportal. Ein zweiter Checkout wird zum Schutz vor doppelten Abbuchungen nicht gestartet. Wähle unten einen neuen Tarif. Upgrades werden anteilmässig berechnet, Downgrades zum Laufzeitende vorgemerkt.</p><div className="mt-4 max-w-sm"><StripePortalButton organizationId={context.organization.id}/></div></div>:null}
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {plans.map((plan) => {
           const current = context.subscription?.planId === plan.id;
@@ -81,7 +82,7 @@ export default async function CheckoutPage() {
                 ) : null}
                 {upgrades.length === 0 ? <p className="text-sm text-muted-foreground">Keine zusätzlichen Funktionen gegenüber Free hinterlegt.</p> : null}
               </div>
-              <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />
+              {existingStripe && !current && canManage && configured ? <StripePlanChangeButton organizationId={context.organization.id} planId={plan.id} label={`Zu ${plan.name} wechseln`} /> : <StripeCheckoutButton organizationId={context.organization.id} planId={plan.id} label={current && !context.subscription?.externalSubscriptionId ? `${plan.name} auf Online-Abo umstellen` : current ? "Aktueller Tarif" : `${plan.name} online buchen`} disabled={!canManage || !configured || existingStripe || (current && Boolean(context.subscription?.externalSubscriptionId))} />}
             </Card>
           );
         })}
