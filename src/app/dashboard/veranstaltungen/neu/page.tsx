@@ -48,7 +48,7 @@ export default async function NewEventPage({ searchParams }: { searchParams: Sea
 
   // Limitprüfung auch beim Aufruf der Seite – nicht erst beim Speichern.
   const check = withinLimit(subscription, FEATURE_KEYS.EVENTS, count);
-  if (!check.allowed) redirect(base.staff ? "/dashboard/agenda" : "/dashboard/veranstaltungen");
+  if (!base.staff && !check.allowed) redirect("/dashboard/veranstaltungen");
 
   // Vorschlag: Beginn morgen um 14 Uhr – spart Tipparbeit.
   const suggested = new Date();
@@ -59,7 +59,7 @@ export default async function NewEventPage({ searchParams }: { searchParams: Sea
     <>
       <PageHeader
         title="Neue Veranstaltung"
-        description="Erfasse deinen Termin. Nach der Veröffentlichung erscheint er in der schweizweiten Agenda."
+        description={base.staff ? "Erfasse eine Veranstaltung für die ausgewählte Organisation. Nach der Veröffentlichung erscheint sie in der schweizweiten Agenda." : "Erfasse deinen Termin. Nach der Veröffentlichung erscheint er in der schweizweiten Agenda."}
         breadcrumbs={[
           { href: "/dashboard/veranstaltungen", label: "Veranstaltungen" },
           { label: "Neu" },
