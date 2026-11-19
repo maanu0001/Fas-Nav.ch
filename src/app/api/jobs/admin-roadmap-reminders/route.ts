@@ -3,6 +3,8 @@ import { jsonError, jsonOk, handleApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { roadmapDue, parseRoadmap, ROADMAP_GROUP, ROADMAP_PREFIX } from "@/lib/admin-roadmap";
 import { reconcileRoadmapCases } from "@/lib/admin-roadmap-reconcile";
+import { sendTemplate } from "@/lib/email-templates";
+import { getAdminPreferences } from "@/lib/admin-preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,32 @@ export async function POST(request: Request) {
     }
       return { checked, created };
     }, { timeout: 120000, maxWait: 120000 });
-    return jsonOk({ ...result, reconciliation });
+    const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Zurich",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const [cases,recipients]=await Promise.all([
+      prisma.siteSetting.findMany({where:{group:ROADMAP_GROUP,key:{startsWith:ROADMAP_PREFIX}},select:{key:true,value:true}}),
+      prisma.user.findMany({where:{role:{in:["ADMIN","TEAM"]},isActive:true},select:{id:true,name:true,email:true,role:true}})
+    ]);
+    let mailsSent=0;
+    for(const entry of cases){
+      const state=parseRoadmap(entry.value);
+      if(state.due!==today||!roadmapDue(state))continue;
+      const organizationId=entry.key.slice(ROADMAP_PREFIX.length);
+      const org=await prisma.organization.findUnique({where:{id:organizationId},select:{name:true}});
+      if(!org)continue;
+      for(const recipient of recipients){
+        if(!recipient.email)continue;
+        const marker="crm.followup.email."+organizationId+"."+today+"."+recipient.id;
+        if(await prisma.siteSetting.findUnique({where:{key:marker},select:{id:true}}))continue;
+        let address=recipient.email;
+        if(recipient.role==="ADMIN"){const preferences=await getAdminPreferences(recipient.id,recipient.email);address=preferences.notificationEmail||recipient.email;}
+        const sent=await sendTemplate("crm_followup",address,{
+          recipientName:recipient.name||"Fas-Nav.ch Team",organizationName:org.name,dueDate:today,
+          crmUrl:(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch")+"/dashboard/admin-roadmap/"+encodeURIComponent(organizationId)
+        });
+        if(sent.sent){await prisma.siteSetting.upsert({where:{key:marker},create:{key:marker,group:"crm_followup_delivery",value:{sentAt:new Date().toISOString()}},update:{}});mailsSent++;}
+        else if(sent.reason!=="disabled")console.warn("[crm-followup] E-Mail nicht zugestellt",{organizationId,recipientId:recipient.id,reason:sent.reason,message:sent.message});
+      }
+    }
+    return jsonOk({ ...result, reconciliation, mailsSent });
   } catch (error) { return handleApiError(error); }
 }

@@ -2,8 +2,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/rbac";
 import { handleApiError,jsonOk,jsonError } from "@/lib/api";
-import { getEmailTemplate,renderEmailTemplate } from "@/lib/email-templates";
-import { sendMailboxMail } from "@/lib/mail-center-imap";
 import { logAudit } from "@/lib/audit";
 import { syncClaimStatus } from "@/lib/claim-status";
 import { notify } from "@/lib/notifications";
@@ -33,11 +31,7 @@ export async function PATCH(request:Request,{params}:Params){
    }else{
     await prisma.boardingInvitation.update({where:{id},data:{status:"REJECTED",reviewedAt:new Date(),reviewedById:actor.id}});
    }
-   const template=await getEmailTemplate(action==="approve"?"boarding_approved":"boarding_rejected");
-   if(template.enabled){
-    const message=renderEmailTemplate(template,{contactName:invitation.user?.name||invitation.contactName||"zusammen",organizationName:invitation.organization.name,dashboardUrl:(process.env.NEXT_PUBLIC_APP_URL||"https://fas-nav.ch")+"/dashboard/onboarding"});
-    try{await sendMailboxMail({to:invitation.user?.email ?? invitation.email,subject:message.subject,text:message.text});}catch(error){console.error("[boarding] Status geändert, Benachrichtigungsmail fehlgeschlagen",error);}
-   }
+
   }
   await logAudit({userId:actor.id,userLabel:actor.email,action:"boarding."+action,entity:"BoardingInvitation",entityId:id,after:{organizationId:invitation.organizationId,email:invitation.email}});
   return jsonOk({ok:true});
