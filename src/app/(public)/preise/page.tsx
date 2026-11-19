@@ -46,7 +46,7 @@ export default async function PricingPage() {
     getSiteSettings(),
   ]);
 
-  const allFeatures = vergleichszeilen;
+  const allFeatures = vergleichszeilen.filter(feature => feature.key !== "marketplace_external_contact");
   const session=await auth();
   const hasOrg=Boolean(session?.user?.id && await prisma.membership.findFirst({where:{userId:session.user.id},select:{userId:true}}));
 
@@ -67,6 +67,7 @@ export default async function PricingPage() {
               "Präsentiere deine Organisation auf Fas-Nav.ch und erreiche Fasnachtsbegeisterte in der ganzen Schweiz. Faire Jahrespreise, jederzeit selbst bearbeitbar.",
             )}
           </p>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-white/80">Kontakt über Fas-Nav.ch, direkt per E-Mail oder Telefon oder über beide Wege ist für alle Organisationen kostenlos.</p>
         </div>
       </div>
 
@@ -127,7 +128,7 @@ export default async function PricingPage() {
 
                   <ul className="mt-6 flex-1 space-y-2.5">
                     {plan.features
-                      .filter((pf) => pf.enabled)
+                      .filter((pf) => pf.enabled && pf.feature.key !== "marketplace_external_contact")
                       .map((pf) => (
                         <li key={pf.id} className="flex gap-2.5 text-sm">
                           <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />

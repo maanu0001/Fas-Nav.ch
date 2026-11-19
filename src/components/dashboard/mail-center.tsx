@@ -129,6 +129,12 @@ export function MailCenter({initial,connected,mailbox,initialSelected}:{initial:
   if(!window.confirm("Diese Konversation endgültig aus Papierkorb und Mailbox löschen? Das kann nicht rückgängig gemacht werden."))return;
   await action({action:"delete-permanent",id:active.id},()=>{setSelected("");setPreviewFile(null);});
  }
+ async function emptyTrash(){
+  const count=conversations.filter(c=>c.folder==="TRASH").length;
+  if(!count||busy)return;
+  if(!window.confirm(`Alle ${count} Konversationen im Papierkorb endgültig löschen – auch aus der Mailbox? Dies kann nicht rückgängig gemacht werden.`))return;
+  await action({action:"empty-trash"},result=>{setSelected("");setPreviewFile(null);setNotice(`Papierkorb geleert: ${result.deleted} Konversationen endgültig gelöscht.`);});
+ }
  async function markUnread(){
   if(!active)return;
   await action({action:"read",id:active.id,unread:!active.unread},()=>{setSelected("");});

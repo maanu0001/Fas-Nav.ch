@@ -56,6 +56,29 @@ export async function POST(request:Request){try{const actor=await requireAdmin()
   await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.delete.permanent",entity:"MailConversation",entityId:id});
   return jsonOk({deleted:true});
  }
+ if(body.action==="empty-trash"){
+  if(!checkRateLimit("mail-empty-trash:"+actor.id,3,60000).ok)return jsonError("Bitte kurz warten.",429);
+  const trash=await prisma.mailConversation.findMany({where:{folder:"TRASH"},select:{id:true,providerThreadId:true,messages:{select:{internetMessageId:true}}}});
+  let deleted=0;
+  for(const conversation of trash){
+   try{
+    const ids=conversation.messages.map(m=>m.internetMessageId).filter((id):id is string=>!!id);
+    await deleteMailboxThreadMessages(ids);
+    await prisma.$transaction(async tx=>{
+     await tx.deletedMailThread.upsert({where:{threadKey:conversation.providerThreadId},create:{threadKey:conversation.providerThreadId},update:{}});
+     await tx.acquisitionOpen.deleteMany({where:{messageId:{in:ids}}});
+     await tx.mailConversation.deleteMany({where:{id:conversation.id,folder:"TRASH"}});
+    });
+    deleted++;
+   }catch(error){
+    console.error("[mail-center] Papierkorb teilweise geleert",error);
+    await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.trash.empty.partial",entity:"MailConversation",after:{deleted,total:trash.length}});
+    return jsonError(`Papierkorb teilweise geleert: ${deleted} von ${trash.length} Konversationen gelöscht. Bitte erneut versuchen.`,500);
+   }
+  }
+  await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.trash.empty",entity:"MailConversation",after:{deleted}});
+  return jsonOk({deleted});
+ }
  if(body.action==="folder"){const id=z.string().parse(body.id);const folder=z.enum(["INBOX","SENT","ARCHIVE","TRASH","AQUISE"]).parse(body.folder);await prisma.mailConversation.update({where:{id},data:{folder}});await logAudit({userId:actor.id,userLabel:actor.email,action:"mailCenter.folder",entity:"MailConversation",entityId:id,after:{folder}});return jsonOk({ok:true});}
  return jsonError("Ungültige Aktion.",400);
  }catch(e){return handleApiError(e);}}
