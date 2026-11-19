@@ -1,17 +1,11 @@
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isStaff } from "@/lib/rbac";
-import { ticketBadgeStatuses } from "@/lib/ticket-status";
 
 /** Number of pending, actionable items shown alongside Dashboard in the sidebar. */
 export async function dashboardTodoCount(user: { id: string; role: string }, testMode = false): Promise<number> {
   if (!isStaff(user.role as Role) || testMode) {
-    const own = await prisma.membership.findMany({ where: { userId: user.id }, select: { organizationId: true } });
-    return prisma.ticket.count({
-      where: { category: { not: "CONTACT" }, status: { in: ticketBadgeStatuses(user.role as Role) }, OR: [
-        { authorId: user.id }, { organizationId: { in: own.map(m => m.organizationId) } },
-      ] },
-    });
+    return 0;
   }
 
   const admin = user.role === "ADMIN";

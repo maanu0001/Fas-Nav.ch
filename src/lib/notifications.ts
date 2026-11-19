@@ -75,6 +75,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     if (!nachricht) return;
 
     const result = await sendMail({ ...nachricht, to: user.email });
+    if (!result.sent) console.warn("[notify] E-Mail nicht zugestellt", { type: input.type, notificationId: notification.id, reason: result.reason, message: result.message });
     if (result.sent) {
       await prisma.notification.update({
         where: { id: notification.id },

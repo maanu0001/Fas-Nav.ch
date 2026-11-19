@@ -12,7 +12,6 @@ import { EmptyState } from "@/components/ui/states";
 import {
   PUBLICATION_STATUS_LABELS,
   SUBSCRIPTION_STATUS_LABELS,
-  TICKET_STATUS_LABELS,
 } from "@/lib/constants";
 import { organizationStats } from "@/lib/analytics";
 import type { DashboardContext } from "@/lib/dashboard-context";
@@ -41,7 +40,7 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
   const publicHref = org.type === "CARNIVAL" ? `/fasnacht/${org.slug}` : `/gugge/${org.slug}`;
   const today = startOfToday();
 
-  const [profile, upcomingEvents, nextEvents, openTickets, stats] = await Promise.all([
+  const [profile, upcomingEvents, nextEvents, stats] = await Promise.all([
     prisma.organization.findUnique({ where: { id: org.id }, select: completenessSelect }),
     prisma.event.count({ where: { organizationId: org.id, startDate: { gte: today } } }),
     prisma.event.findMany({
@@ -49,15 +48,6 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
       orderBy: { startDate: "asc" },
       take: 5,
       select: { id: true, title: true, slug: true, startDate: true, status: true, city: true },
-    }),
-    prisma.ticket.findMany({
-      where: {
-        organizationId: org.id,
-        status: { in: ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER"] },
-      },
-      orderBy: { lastReplyAt: "desc" },
-      take: 4,
-      select: { id: true, number: true, subject: true, status: true, lastReplyAt: true },
     }),
     organizationStats(org.id),
   ]);
@@ -174,13 +164,6 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
             href="/dashboard/veranstaltungen"
           />
           <StatCard
-            label="Offene Tickets"
-            value={openTickets.length}
-            icon="ticket"
-            href="/dashboard/tickets"
-            tone={openTickets.length > 0 ? "warning" : "default"}
-          />
-          <StatCard
             label="Abonnement"
             value={
               subscription
@@ -293,33 +276,7 @@ export async function OrganizationDashboard({ context }: { context: DashboardCon
         </Card>
       </div>
 
-      {openTickets.length ? (
-        <Card className="mt-6 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-display text-base font-semibold">Deine offenen Tickets</h2>
-            <Link href="/dashboard/tickets" className="text-sm text-primary-700 hover:underline">
-              Alle anzeigen
-            </Link>
-          </div>
-          <ul className="divide-y divide-border">
-            {openTickets.map((ticket) => (
-              <li key={ticket.id}>
-                <Link
-                  href={`/dashboard/tickets/${ticket.id}`}
-                  className="flex items-center justify-between gap-3 py-2.5"
-                >
-                  <span className="min-w-0 truncate text-sm font-medium text-primary-900">
-                    #{ticket.number} {ticket.subject}
-                  </span>
-                  <Badge variant={ticket.status === "OPEN" ? "warning" : "info"}>
-                    {TICKET_STATUS_LABELS[ticket.status]}
-                  </Badge>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+
     </>
   );
 }
