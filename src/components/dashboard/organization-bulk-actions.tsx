@@ -14,6 +14,8 @@ export function BulkActions(){
  const [status,setStatus]=React.useState("");
  const [verification,setVerification]=React.useState("");
  const [review,setReview]=React.useState(false);
+ const [featured,setFeatured]=React.useState("");
+ const [action,setAction]=React.useState("UPDATE");
  const [busy,setBusy]=React.useState(false);
  const [message,setMessage]=React.useState("");
  const [preview,setPreview]=React.useState<{count:number}|null>(null);
@@ -31,7 +33,7 @@ export function BulkActions(){
    }catch(e){setMessage(errorMessage(e));}finally{setBusy(false);}
  }
  function payload(dry:boolean){return {type,excludedIds:excluded,logoId:logo?.id,headerId:header?.id,
- status:status||undefined,verification:verification||undefined,needsManualReview:review?true:undefined,preview:dry};}
+ status:status||undefined,verification:verification||undefined,needsManualReview:review?true:undefined,featured:featured===""?undefined:featured==="true",action,preview:dry};}
  async function run(dry:boolean){
    setBusy(true);setMessage("");
    try{const result=await apiRequest<{count:number;batchId?:string}>("/api/admin/organization-bulk",{method:"POST",body:payload(dry)});
@@ -49,14 +51,16 @@ export function BulkActions(){
   <div className="flex gap-2"><button type="button" className="rounded border px-3 py-2" onClick={()=>{setExcluded(excluded.filter(id=>!scoped.some(o=>o.id===id)));invalidate();}}>Alle auswählen</button><button type="button" className="rounded border px-3 py-2" onClick={()=>{setExcluded([...new Set([...excluded,...scoped.map(o=>o.id)])]);invalidate();}}>Alle abwählen</button></div>
   <div className="max-h-80 space-y-2 overflow-y-auto rounded border p-3">{visible.map(o=><label key={o.id} className="flex items-center gap-3 text-sm"><input type="checkbox" checked={!excluded.includes(o.id)} onChange={e=>{setExcluded(v=>e.target.checked?v.filter(id=>id!==o.id):[...v,o.id]);invalidate();}}/><span>{o.name}</span><span className="ml-auto text-muted-foreground">{o.type==="GUGGE"?"Gugge":"Fasnacht"}</span></label>)}</div></section>
   <section className="space-y-4 rounded-xl border p-5"><h2 className="text-lg font-bold">2. Änderungen auswählen</h2>
-  <div className="grid gap-5 md:grid-cols-2">{(["LOGO","HEADER"] as const).map(kind=>{const value=kind==="LOGO"?logo:header;return <label key={kind} className="block space-y-2"><span className="font-medium">{kind==="LOGO"?"Logo ersetzen":"Banner ersetzen"}</span><input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void upload(e.target.files?.[0],kind);e.target.value="";}} className="block w-full text-sm"/>{value?<div><img src={value.url} alt="Vorschau Ersatzbild" className="max-h-48 w-full rounded border object-contain"/><button type="button" className="mt-2 rounded border px-3 py-1" onClick={()=>{kind==="LOGO"?setLogo(null):setHeader(null);invalidate();}}>Bild entfernen</button></div>:null}</label>;})}</div>
+  <label className="block">Aktion<select value={action} onChange={e=>{setAction(e.target.value);invalidate();}} className="mt-1 block w-full rounded border p-2"><option value="UPDATE">Organisationen aktualisieren</option><option value="DELETE">Organisationen endgültig löschen (nur ohne geschützte Verknüpfungen)</option></select></label>
+  {action==="UPDATE"?<><div className="grid gap-5 md:grid-cols-2">{(["LOGO","HEADER"] as const).map(kind=>{const value=kind==="LOGO"?logo:header;return <label key={kind} className="block space-y-2"><span className="font-medium">{kind==="LOGO"?"Logo ersetzen":"Banner ersetzen"}</span><input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void upload(e.target.files?.[0],kind);e.target.value="";}} className="block w-full text-sm"/>{value?<div><img src={value.url} alt="Vorschau Ersatzbild" className="max-h-48 w-full rounded border object-contain"/><button type="button" className="mt-2 rounded border px-3 py-1" onClick={()=>{kind==="LOGO"?setLogo(null):setHeader(null);invalidate();}}>Bild entfernen</button></div>:null}</label>;})}</div>
   <label className="block">Veröffentlichungsstatus (optional)<select className="mt-1 block w-full rounded border p-2" value={status} onChange={e=>{setStatus(e.target.value);invalidate();}}><option value="">Unverändert</option>{["DRAFT","PENDING_REVIEW","PUBLISHED","UNPUBLISHED","SUSPENDED"].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
   <label className="block">Verifizierung (optional)<select className="mt-1 block w-full rounded border p-2" value={verification} onChange={e=>{setVerification(e.target.value);invalidate();}}><option value="">Unverändert</option>{["UNVERIFIED","VERIFIED","OFFICIAL"].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
   <label className="flex items-center gap-2"><input type="checkbox" checked={review} onChange={e=>{setReview(e.target.checked);invalidate();}}/>Zur manuellen Prüfung markieren</label>
+  <label className="block">Hervorheben<select value={featured} onChange={e=>{setFeatured(e.target.value);invalidate();}} className="mt-1 block w-full rounded border p-2"><option value="">Unverändert</option><option value="true">Hervorheben</option><option value="false">Hervorhebung entfernen</option></select></label></>:<p className="rounded-lg border border-red-300 p-3 text-sm">Endgültiges Löschen ist nur für Organisationen ohne geschützte Verknüpfungen möglich. Vorher ein Backup erstellen.</p>}
   </section>
   <section className="space-y-3 rounded-xl border p-5"><h2 className="text-lg font-bold">3. Vorschau und Ausführung</h2>
   <p className="text-sm text-muted-foreground">Nicht ausgewählte Felder bleiben unverändert. Die bisherigen Medienzuordnungen werden im Audit-Log gespeichert. Alte Bild-URLs können weiterhin erreichbar sein und müssen gesondert bereinigt werden.</p>
-  <button type="button" disabled={busy||selected.length===0||(!logo&&!header&&!status&&!verification&&!review)} onClick={()=>void run(true)} className="rounded border px-5 py-3">Änderungen prüfen</button>
-  {preview?<div className="space-y-3 rounded-lg bg-secondary p-4"><p className="font-semibold">{preview.count} Organisationen werden aktualisiert.</p><label className="flex items-start gap-2"><input type="checkbox" checked={confirm} onChange={e=>setConfirm(e.target.checked)}/>Ich bestätige die Massenänderung an den ausgewählten Organisationen.</label><button type="button" disabled={!confirm||busy} onClick={()=>void run(false)} className="rounded bg-primary px-5 py-3 text-primary-foreground">Jetzt ausführen</button></div>:null}</section>
+  <button type="button" disabled={busy||selected.length===0||(action==="UPDATE"&&!logo&&!header&&!status&&!verification&&!review&&!featured)} onClick={()=>void run(true)} className="rounded border px-5 py-3">Änderungen prüfen</button>
+  {preview?<div className="space-y-3 rounded-lg bg-secondary p-4"><p className="font-semibold">{preview.count} Organisationen werden aktualisiert.</p><label className="flex items-start gap-2"><input type="checkbox" checked={confirm} onChange={e=>setConfirm(e.target.checked)}/>Ich bestätige {action==="DELETE"?"das endgültige Löschen":"die Massenänderung"} der ausgewählten Organisationen.</label><button type="button" disabled={!confirm||busy} onClick={()=>void run(false)} className="rounded bg-primary px-5 py-3 text-primary-foreground">Jetzt ausführen</button></div>:null}</section>
  </div>;
 }

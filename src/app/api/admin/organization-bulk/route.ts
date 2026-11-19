@@ -14,6 +14,8 @@ const schema = z.object({
   status: z.enum(["DRAFT","PENDING_REVIEW","PUBLISHED","UNPUBLISHED","SUSPENDED"]).optional(),
   verification: z.enum(["UNVERIFIED","VERIFIED","OFFICIAL"]).optional(),
   needsManualReview: z.boolean().optional(),
+  featured: z.boolean().optional(),
+  action: z.enum(["UPDATE","DELETE"]).default("UPDATE"),
   preview: z.boolean().default(true),
 });
 export async function GET() {
@@ -30,8 +32,8 @@ export async function POST(request:Request) {
   try {
     const user = await requireAdmin();
     const data = schema.parse(await request.json());
-    const {type,excludedIds,logoId,headerId,status,verification,needsManualReview,preview}=data;
-    if(!logoId&&!headerId&&!status&&!verification&&needsManualReview===undefined)
+    const {type,excludedIds,logoId,headerId,status,verification,needsManualReview,featured,action,preview}=data;
+    if(action==="UPDATE"&&!logoId&&!headerId&&!status&&!verification&&needsManualReview===undefined&&featured===undefined)
       return jsonError("Mindestens eine Änderung auswählen.",400);
     const excluded = new Set(excludedIds);
     const organizations = await prisma.organization.findMany({
@@ -45,6 +47,21 @@ export async function POST(request:Request) {
     if(media.length!==new Set(ids).size) return jsonError("Ersatzbilder müssen als eigene, organisationsunabhängige Medien hochgeladen werden.",400);
     if(logoId&&media.find(m=>m.id===logoId)?.type!=="LOGO")return jsonError("Ungültiges Logo.",400);
     if(headerId&&media.find(m=>m.id===headerId)?.type!=="HEADER")return jsonError("Ungültiger Banner.",400);
+    if(action==="DELETE") {
+      if(organizations.length>100)return jsonError("Löschen ist auf maximal 100 Organisationen pro Vorgang begrenzt.",400);
+      const protectedOrgs=await prisma.organization.findMany({where:{id:{in:organizations.map(o=>o.id)},OR:[{memberships:{some:{}}},{events:{some:{}}},{subscription:{isNot:null}},{payments:{some:{}}},{tickets:{some:{}}},{marketplaceListings:{some:{}}},{claimRequests:{some:{}}},{boardingInvitations:{some:{}}}]},select:{name:true}});
+      if(protectedOrgs.length)return jsonError("Löschen gesperrt: Organisationen mit Accounts, Veranstaltungen, Abos, Zahlungen, Tickets, Inseraten oder Übernahmeanfragen sind geschützt: "+protectedOrgs.slice(0,8).map(o=>o.name).join(", "),409);
+      if(preview)return jsonOk({count:organizations.length,organizations:organizations.map(o=>({id:o.id,name:o.name})),preview:true});
+      if(!organizations.length)return jsonError("Keine Organisationen ausgewählt.",400);
+      const batchId=randomUUID();
+      await prisma.$transaction(async tx=>{
+        for(const org of organizations){
+          await tx.organization.delete({where:{id:org.id}});
+          await tx.auditLog.create({data:{userId:user.id,userLabel:user.email,action:"organization.bulk_delete",entity:"Organization",entityId:org.id,entityLabel:org.name,before:{batchId,name:org.name}}});
+        }
+      },{timeout:120000,maxWait:10000});
+      return jsonOk({count:organizations.length,batchId,preview:false});
+    }
     if(preview)return jsonOk({count:organizations.length,organizations:organizations.map(o=>({id:o.id,name:o.name})),preview:true});
     if(organizations.length===0)return jsonError("Keine Organisationen ausgewählt.",400);
     const batchId=randomUUID();
@@ -67,6 +84,7 @@ export async function POST(request:Request) {
         if(status)updates.status=status;
         if(verification)updates.verification=verification;
         if(needsManualReview!==undefined)updates.needsManualReview=needsManualReview;
+        if(featured!==undefined)updates.isFeatured=featured;
         if(status==="PUBLISHED"&&org.status!=="PUBLISHED")updates.publishedAt=new Date();
         await tx.organization.update({where:{id:org.id},data:updates});
         await tx.auditLog.create({data:{
