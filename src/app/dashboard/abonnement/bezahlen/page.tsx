@@ -14,7 +14,7 @@ import { stripeConfigured } from "@/lib/stripe";
 import { formatChf } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Tarif online buchen" };
+export const metadata: Metadata = { title: "Tarife vergleichen und wechseln" };
 
 export default async function CheckoutPage() {
   const context = await requireOrganizationContext();
@@ -29,16 +29,19 @@ export default async function CheckoutPage() {
     where: { tier: "FREE", isActive: true },
     include: { features: { where: { enabled: true }, include: { feature: true } } },
   })]);
+  const currentSubscription=context.subscription;
+  const currentListed=plans.some(plan=>plan.id===currentSubscription?.planId);
   const freeFeatures = new Map(freePlan?.features.map((entry) => [entry.feature.key, entry]) ?? []);
 
   return (
     <>
-      <PageHeader title="Tarif online buchen" description={`Wähle den passenden Tarif für ${context.organization.name} und buche ihn direkt online. Für Beratungsfragen ist das Team weiterhin erreichbar.`} />
+      <PageHeader title="Tarife vergleichen und wechseln" description={`Wähle den passenden Tarif für ${context.organization.name} und buche ihn direkt online. Für Beratungsfragen ist das Team weiterhin erreichbar.`} />
 
       {!canManage ? <Alert variant="warning" title="Keine Berechtigung">Nur Owner und Manager können ein Abonnement buchen oder wechseln.</Alert> : null}
       {!configured ? <Alert variant="error" title="Online-Zahlung noch nicht verfügbar" className="mt-4">Stripe ist auf dem Produktionsserver noch nicht vollständig konfiguriert.</Alert> : null}
 
       {existingStripe?<div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-5"><h2 className="font-semibold text-primary-900 dark:text-white">Dein Stripe-Abo besteht bereits</h2><p className="mt-2 text-sm text-primary-800 dark:text-slate-200">Verwalte dein bestehendes Abo und Zahlungsmittel im Stripe-Kundenportal. Ein zweiter Checkout wird zum Schutz vor doppelten Abbuchungen nicht gestartet. Wähle unten einen neuen Tarif. Upgrades werden anteilmässig berechnet, Downgrades zum Laufzeitende vorgemerkt.</p><div className="mt-4 max-w-sm"><StripePortalButton organizationId={context.organization.id}/></div></div>:null}
+      {currentSubscription && !currentListed ? <Card className="mt-6 border-2 border-emerald-500 bg-emerald-50/30 p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase text-emerald-700">Dein aktuelles Abonnement</p><h2 className="mt-1 font-display text-xl font-bold">{currentSubscription.plan.name}</h2><p className="mt-1 text-sm text-muted-foreground">{currentSubscription.plan.description}</p><p className="mt-2 text-lg font-semibold">{formatChf(Number(currentSubscription.priceChf))} / {currentSubscription.plan.billingInterval==="MONTHLY"?"Monat":"Jahr"}</p><p className="mt-1 text-xs text-muted-foreground">Laufzeit bis {currentSubscription.endDate?.toLocaleDateString("de-CH")??"unbefristet"}</p></div><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Aktueller Tarif</span></div></Card> : null}
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {plans.map((plan) => {
           const current = context.subscription?.planId === plan.id;
@@ -61,7 +64,7 @@ export default async function CheckoutPage() {
             </li>
           );
           return (
-            <Card key={plan.id} className="flex h-full flex-col p-6">
+            <Card key={plan.id} className={`flex h-full flex-col p-6 ${current?"border-2 border-emerald-500 bg-emerald-50/20":""}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-display text-xl font-bold text-primary-900 dark:text-slate-100">{plan.name}</h2>

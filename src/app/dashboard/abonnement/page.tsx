@@ -187,7 +187,7 @@ export default async function SubscriptionPage() {
                 ))}
               </ul>
 
-              <ButtonLink href="/preise" variant="outline" block className="mt-5">
+              <ButtonLink href="/dashboard/abonnement/bezahlen" variant="outline" block className="mt-5">
                 Tarife vergleichen
               </ButtonLink>
             </Card>
