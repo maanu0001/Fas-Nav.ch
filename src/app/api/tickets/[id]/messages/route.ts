@@ -6,6 +6,7 @@ import { isStaff, requireUser } from "@/lib/rbac";
 import { getVisibleTicket } from "@/lib/queries/tickets";
 import {
   ticketReplyNotifyMail,
+  sendStaffTicketFallback,
 } from "@/lib/ticket-mail-delivery";
 import { nextTicketStatus, ticketReplyNotificationTitle } from "@/lib/ticket-status";
 import { ticketMessageSchema } from "@/lib/validation/schemas";
@@ -111,7 +112,12 @@ export async function POST(request: Request, { params }: Params) {
             // Organisation ist.
             { skipUserId: user.id },
           );
-        } else if (ticket.authorId && ticket.authorId !== user.id) {
+        }
+        // Ticket-Ersteller ohne aktive Mitgliedschaft nicht vergessen.
+        const isMember = ticket.organizationId && ticket.authorId
+          ? await prisma.membership.findFirst({ where: { organizationId: ticket.organizationId, userId: ticket.authorId }, select: { id: true } })
+          : null;
+        if (ticket.authorId && ticket.authorId !== user.id && !isMember) {
           await notify({
             userId: ticket.authorId,
             type: "TICKET_REPLY",
@@ -138,8 +144,9 @@ export async function POST(request: Request, { params }: Params) {
           },
           { skipUserId: user.id },
         );
-
-
+        // Wenn kein anderes aktives Teamkonto vorhanden ist, wird die
+        // konfigurierte zentrale Ticketadresse als Fallback verwendet.
+        await sendStaffTicketFallback(kontext, user.id);
       }
     }
 

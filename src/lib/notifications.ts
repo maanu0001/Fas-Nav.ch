@@ -57,13 +57,13 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     if (!input.email && !input.mail) return;
     const preferences = await getNotificationPreferences(input.userId);
-    if (!preferences[input.type]) return;
+    if (!preferences[input.type]) { console.info("[notify] Ticket-Mail durch persönliche Präferenz deaktiviert", { userId: input.userId, type: input.type }); return; }
 
     const user = await prisma.user.findUnique({
       where: { id: input.userId },
       select: { id: true, email: true, name: true, ticketEmails: true, role: true },
     });
-    if (!user?.email) return;
+    if (!user?.email) { console.warn("[notify] Keine Empfängeradresse", { userId: input.userId, type: input.type }); return; }
     if (!notificationTypesForRole(user.role).includes(input.type)) return;
 
     const nachricht = input.mail
@@ -73,7 +73,7 @@ export async function notify(input: NotifyInput): Promise<void> {
           text: `Hallo ${user.name}\n\n${input.body ?? input.title}\n\nFreundliche Grüsse\nFas-Nav.ch`,
         };
 
-    if (!nachricht) return;
+    if (!nachricht) { console.warn("[notify] Mailvorlage deaktiviert", { type: input.type }); return; }
 
     const result = await sendMail({ ...nachricht, to: user.email });
     if (!result.sent) console.warn("[notify] E-Mail nicht zugestellt", { type: input.type, notificationId: notification.id, reason: result.reason, message: result.message });
