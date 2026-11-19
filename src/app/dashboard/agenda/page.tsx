@@ -1,3 +1,4 @@
+import { ContentBulkActions } from "@/components/dashboard/content-bulk-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
@@ -47,7 +48,7 @@ export default async function AdminAgendaPage({ searchParams }: { searchParams: 
       : {}),
   };
 
-  const [events, total] = await Promise.all([
+  const [events, total, bulkEvents] = await Promise.all([
     prisma.event.findMany({
       where,
       orderBy: { startDate: "desc" },
@@ -66,6 +67,7 @@ export default async function AdminAgendaPage({ searchParams }: { searchParams: 
       },
     }),
     prisma.event.count({ where }),
+    prisma.event.findMany({where,orderBy:{startDate:"desc"},take:100,select:{id:true,title:true,status:true,organizationId:true,organization:{select:{name:true}}}}),
   ]);
 
   function buildHref(p: number) {
@@ -118,6 +120,7 @@ export default async function AdminAgendaPage({ searchParams }: { searchParams: 
         ]}
       />
 
+      <ContentBulkActions kind="EVENT" items={bulkEvents.map(e=>({id:e.id,name:e.title,organizationId:e.organizationId,organizationName:e.organization.name,status:e.status}))}/>
       {events.length ? (
         <>
           <TableWrapper>
