@@ -17,7 +17,7 @@ export const NOTIFICATION_CATEGORIES = {
 
 export type NotificationPreferences = Record<NotificationType, boolean>;
 /** Only expose events belonging to the organization account, never staff-only operations. */
-export const ORGANIZATION_NOTIFICATION_CATEGORIES: NotificationType[] = ["TICKET_REPLY","TICKET_STATUS","SUBSCRIPTION_EXPIRING","SUBSCRIPTION_EXPIRED","PAYMENT_DUE","PAYMENT_RECEIVED","EVENT_PUBLISHED","ORGANIZATION_VERIFIED","ORGANIZATION_PUBLISHED"];
+export const ORGANIZATION_NOTIFICATION_CATEGORIES: NotificationType[] = ["TICKET_REPLY","SUBSCRIPTION_EXPIRING","SUBSCRIPTION_EXPIRED","PAYMENT_RECEIVED","EVENT_PUBLISHED"];
 export function notificationTypesForRole(role: string): NotificationType[] {
   return role === "ADMIN" || role === "TEAM" ? Object.keys(NOTIFICATION_CATEGORIES) as NotificationType[] : ORGANIZATION_NOTIFICATION_CATEGORIES;
 }

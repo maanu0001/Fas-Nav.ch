@@ -1,12 +1,10 @@
 import { handleApiError, jsonError, jsonOk, parseBody } from "@/lib/api";
-import { sendMail } from "@/lib/mail";
+
 import { notify, notifyOrganization, notifyStaff } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { isStaff, requireUser } from "@/lib/rbac";
 import { getVisibleTicket } from "@/lib/queries/tickets";
 import {
-  staffMailTarget,
-  staffTicketMail,
   ticketReplyNotifyMail,
 } from "@/lib/ticket-mail-delivery";
 import { nextTicketStatus, ticketReplyNotificationTitle } from "@/lib/ticket-status";
@@ -136,20 +134,12 @@ export async function POST(request: Request, { params }: Params) {
             }),
             body: ticket.subject,
             link: `/dashboard/tickets/${id}`,
+            mail: await ticketReplyNotifyMail(kontext),
           },
           { skipUserId: user.id },
         );
 
-        // Die E-Mail dagegen geht an genau eine Adresse: an die zuständige
-        // Person, sonst an die hinterlegte Sammeladresse.
-        try {
-          const ziel = await staffMailTarget(ticket);
-          if (ziel) await sendMail(await staffTicketMail(kontext, ziel));
-        } catch (error) {
-          // Die Antwort ist längst gespeichert. Ein Fehler beim Benachrichtigen
-          // darf sie nicht nachträglich zum Fehlschlag machen.
-          console.error("[tickets] Teammeldung per E-Mail fehlgeschlagen:", error);
-        }
+
       }
     }
 
