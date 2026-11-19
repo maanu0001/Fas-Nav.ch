@@ -17,11 +17,11 @@ export const roadmapManual = [
   { key: "handoff", label: "Betreuung und nächste Schritte vereinbart", href: "/dashboard/tickets" },
 ] as const;
 export type RoadmapStatus = "ACTIVE" | "WAITING" | "PAUSED" | "DONE" | "CANCELLED";
-export type RoadmapState = { source: string; status: RoadmapStatus; checked: string[]; note: string; due: string; contactPerson: string; contactEmail: string; crmStatus: string; updatedAt?: string; updatedBy?: string };
+export type RoadmapState = { source: string; status: RoadmapStatus; checked: string[]; note: string; due: string; contactPerson: string; contactEmail: string; crmStatus: string; followUpCompletedAt?: string; updatedAt?: string; updatedBy?: string };
 export function parseRoadmap(value: unknown): RoadmapState {
   const v = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const status = typeof v.status === "string" && ["ACTIVE","WAITING","PAUSED","DONE","CANCELLED"].includes(v.status) ? v.status as RoadmapStatus : "ACTIVE";
-  return { source: typeof v.source === "string" ? v.source : "CONTACT", status, checked: Array.isArray(v.checked) ? v.checked.filter((x): x is string => typeof x === "string") : [], note: typeof v.note === "string" ? v.note : "", due: typeof v.due === "string" ? v.due : "", contactPerson: typeof v.contactPerson === "string" ? v.contactPerson : "", contactEmail: typeof v.contactEmail === "string" ? v.contactEmail : "", crmStatus: typeof v.crmStatus === "string" ? v.crmStatus : "", updatedAt: typeof v.updatedAt === "string" ? v.updatedAt : undefined, updatedBy: typeof v.updatedBy === "string" ? v.updatedBy : undefined };
+  return { source: typeof v.source === "string" ? v.source : "CONTACT", status, checked: Array.isArray(v.checked) ? v.checked.filter((x): x is string => typeof x === "string") : [], note: typeof v.note === "string" ? v.note : "", due: typeof v.due === "string" ? v.due : "", contactPerson: typeof v.contactPerson === "string" ? v.contactPerson : "", contactEmail: typeof v.contactEmail === "string" ? v.contactEmail : "", crmStatus: typeof v.crmStatus === "string" ? v.crmStatus : "", followUpCompletedAt: typeof v.followUpCompletedAt === "string" ? v.followUpCompletedAt : undefined, updatedAt: typeof v.updatedAt === "string" ? v.updatedAt : undefined, updatedBy: typeof v.updatedBy === "string" ? v.updatedBy : undefined };
 }
 export async function roadmapSignals(organizationId: string) {
   const [org, invitations, crm] = await Promise.all([
@@ -47,5 +47,5 @@ export async function roadmapSignals(organizationId: string) {
   return { org, signals, crmValue, crmStatus: String(crmValue.status ?? ""), invitation: invite ?? null, pendingClaim: org.claimRequests[0]?.status === "PENDING" };
 }
 export function roadmapDue(state: RoadmapState, now = new Date()) {
-  return Boolean(state.due && /^\d{4}-\d{2}-\d{2}$/.test(state.due) && state.due <= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich", year: "numeric", month: "2-digit", day: "2-digit" }).format(now) && !["DONE","CANCELLED","PAUSED"].includes(state.status));
+  return Boolean(state.due && /^\d{4}-\d{2}-\d{2}$/.test(state.due) && !state.followUpCompletedAt && state.due <= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich", year: "numeric", month: "2-digit", day: "2-digit" }).format(now) && !["DONE","CANCELLED","PAUSED"].includes(state.status));
 }

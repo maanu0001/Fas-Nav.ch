@@ -43,10 +43,10 @@ export default async function AdminRoadmapPage({ searchParams }: { searchParams:
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
       ["Aktive Prozesse", active.length],
       ["Warten auf Kunde", trackedOrgs.filter(o => states.get(o.id)?.status === "WAITING").length],
-      ["Wiedervorlagen fällig", dueItems.length],
+      ["Follow-Ups fällig", dueItems.length],
       ["Abgeschlossen", trackedOrgs.filter(o => states.get(o.id)?.status === "DONE").length],
     ].map(([label,value]) => <div key={label} className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:bg-card"><div className="text-2xl font-bold">{value}</div><div className="text-sm text-muted-foreground">{label}</div></div>)}</div>
-    {dueItems.length > 0 && <section className="rounded-xl border border-amber-400 bg-amber-50 p-4 dark:bg-amber-950/20"><h2 className="mb-2 font-semibold">Fällige Wiedervorlagen</h2><div className="grid gap-2">{dueItems.slice(0, 30).map(o => <Link key={o.id} href={`/dashboard/admin-roadmap/${encodeURIComponent(o.id)}`} className="rounded-lg bg-muted/40 p-3 text-sm hover:underline">{o.name} · {states.get(o.id)?.due}</Link>)}</div></section>}
+    {dueItems.length > 0 && <section className="rounded-xl border border-amber-400 bg-amber-50 p-4 dark:bg-amber-950/20"><h2 className="mb-2 font-semibold">Fällige Follow-Ups</h2><div className="grid gap-2">{dueItems.slice(0, 30).map(o => <Link key={o.id} href={`/dashboard/admin-roadmap/${encodeURIComponent(o.id)}`} className="rounded-lg bg-muted/40 p-3 text-sm hover:underline">{o.name} · {states.get(o.id)?.due}</Link>)}</div></section>}
     <section className="space-y-3 rounded-xl border p-4">
       <h2 className="text-lg font-semibold">Organisationen & Kundenprozesse</h2>
       <form action="/dashboard/admin-roadmap" className="flex gap-2"><input name="q" defaultValue={q} placeholder="Organisation suchen …" className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm"/><button className="rounded-lg border px-4 py-2 text-sm">Suchen</button></form>

@@ -31,11 +31,16 @@ async function save(form: FormData) {
   const submittedVersion = String(form.get("version") ?? "");
   if (existing && submittedVersion !== (previous?.updatedAt ?? "")) throw new Error("Dieser Prozess wurde zwischenzeitlich geändert. Bitte Seite neu laden und Änderungen erneut prüfen.");
   if (!existing && submittedVersion) throw new Error("Der Prozess wurde zwischenzeitlich geändert. Bitte Seite neu laden.");
-  const next = { source, status, due, note, contactPerson, contactEmail, crmStatus, checked, updatedAt: new Date().toISOString(), updatedBy: context.user.id };
+  const markFollowUpDone = form.get("followUpDone") === "on";
+  const now = new Date().toISOString();
+  const followUpCompletedAt = markFollowUpDone && due ? (previous?.due === due && previous.followUpCompletedAt ? previous.followUpCompletedAt : now) : previous?.due === due ? previous?.followUpCompletedAt : undefined;
+  const next = { source, status, due, note, contactPerson, contactEmail, crmStatus, checked, followUpCompletedAt, updatedAt: now, updatedBy: context.user.id };
   const changes: string[] = [];
   if (!previous || previous.source !== source) changes.push("Einstieg: " + source);
   if (!previous || previous.status !== status) changes.push("Status: " + status);
-  if (!previous || previous.due !== due) changes.push("Wiedervorlage: " + (due || "entfernt"));
+  if (!previous || previous.due !== due) changes.push("Follow-Up: " + (due || "entfernt"));
+  if (followUpCompletedAt && !previous?.followUpCompletedAt) changes.push("Follow-Up erledigt: " + due);
+  if (!followUpCompletedAt && previous?.followUpCompletedAt) changes.push("Follow-Up erneut geöffnet");
   if (!previous || previous.note !== note) changes.push("Notiz geändert");
   if (!previous || previous.contactPerson !== contactPerson || previous.contactEmail !== contactEmail) changes.push("Kontakt aktualisiert");
   if (!previous || previous.crmStatus !== crmStatus) changes.push("Akquise-Status aktualisiert");
@@ -102,7 +107,7 @@ export default async function RoadmapOrganizationPage({params}:{params:Promise<{
         </div>
         <h3 className="font-semibold">Manuelle Aufgaben</h3>
         {roadmapManual.map(s => <label key={s.key} className="flex items-center gap-2 text-sm"><input type="checkbox" name={s.key} defaultChecked={state?.checked.includes(s.key) ?? false}/><span>{s.label} <Link href={s.href} className="text-xs text-muted-foreground underline">Modul öffnen</Link></span></label>)}
-        <label className="block text-sm">Wiedervorlage<input name="due" type="date" defaultValue={dueDate} className="mt-1 block rounded-lg border bg-background p-2"/></label>
+        <label className="block text-sm">Follow-Up<input name="due" type="date" defaultValue={dueDate} className="mt-1 block rounded-lg border bg-background p-2"/></label><label className="flex items-center gap-2 text-sm"><input name="followUpDone" type="checkbox" defaultChecked={Boolean(state?.followUpCompletedAt)} />Follow-Up als erledigt markieren</label>
         <label className="block text-sm">Interne Notiz<textarea name="note" rows={3} maxLength={4000} defaultValue={notes} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
         <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Prozess speichern</button>
       </form>
